@@ -1,0 +1,45 @@
+version: '3.1'
+
+secrets:
+  PG_PASS:
+    file: ./config/pg_pass.secret
+  MB_CONFIG:
+    file: ./config/mb_config.secret
+
+services:
+  db:
+    image: postgres
+    restart: unless-stopped
+    container_name: "db"
+    secrets:
+      - PG_PASS
+    networks:
+      backend:
+        aliases:
+          - database
+    volumes:
+      - moebot-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/PG_PASS
+
+  bot:
+    build: ./moebot_bot
+    restart: unless-stopped
+    container_name: "moebot"
+    ports:
+      - "80:80"
+    secrets:
+      - MB_CONFIG
+    depends_on:
+      - db
+    networks:
+      - backend
+    environment:
+      MOEBOT_CONFIG_PATH: /run/secrets/MB_CONFIG
+
+networks:
+  backend:
+
+volumes:
+  moebot-data:
+    external: true
