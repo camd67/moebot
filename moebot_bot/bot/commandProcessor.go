@@ -86,6 +86,7 @@ func commSubmit(pack *commPackage) {
 	if raffleData[raffleDataIndex] != "NONE" {
 		// if they've already got a submission, don't award bonus tickets
 		ticketsToAdd = 0
+		pack.session.ChannelMessageSend("378354584587862025", "Potential duplicate submission by "+pack.message.Author.Username+". Old url: "+raffleData[raffleDataIndex])
 	}
 	if raffleDataIndex == 0 {
 		raffles[0].SetRaffleData(pack.params[1] + db.RaffleDataSeparator + raffleData[1])
