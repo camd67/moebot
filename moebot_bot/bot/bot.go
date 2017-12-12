@@ -149,7 +149,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			if len(raffles) == 1 {
 				db.RaffleEntryUpdate(raffles[0], 1)
 				currTickets := raffles[0].TicketCount + 1
-				session.ChannelMessageSend("360966363528953857", message.Author.Mention()+", congrats! You just earned another ticket! Your current tickets are: "+strconv.Itoa(currTickets))
+				session.ChannelMessageSend("378680855339728918", message.Author.Mention()+", congrats! You just earned another ticket! Your current tickets are: "+strconv.Itoa(currTickets))
 			}
 		}
 	}
