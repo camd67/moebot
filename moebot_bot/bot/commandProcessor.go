@@ -34,6 +34,17 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	}
 }
 
+func commChange(pack *commPackage) {
+	// should load this from db
+	prefix := "\n`->` "
+	changeMessage := prefix + "Included this command!" +
+		prefix + "Updated `Rank` command to prevent removal of lowest role." +
+		prefix + "Added random drops for tickets" +
+		prefix + "Added `Raffle` related commands... For rafflin'" +
+		prefix + "For future reference, previous versions included help, team, rank, and NSFW commands as well as a welcome message to the server."
+	pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeMessage)
+}
+
 func commHelp(pack *commPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, "Moebot has the following commands:\n"+
 		"`"+ComPrefix+" team <role name>` - Changes your role to one of the approved roles. `"+ComPrefix+" team` to list all teams\n"+
@@ -86,7 +97,7 @@ func commSubmit(pack *commPackage) {
 	if raffleData[raffleDataIndex] != "NONE" {
 		// if they've already got a submission, don't award bonus tickets
 		ticketsToAdd = 0
-		pack.session.ChannelMessageSend("378354584587862025", "Potential duplicate submission by "+pack.message.Author.Username+". Old url: "+raffleData[raffleDataIndex])
+		pack.session.ChannelMessageSend("378354584587862025", "Potential duplicate submission by "+pack.message.Author.Username+". Old url: `"+raffleData[raffleDataIndex]+"`")
 	}
 	if raffleDataIndex == 0 {
 		raffles[0].SetRaffleData(pack.params[1] + db.RaffleDataSeparator + raffleData[1])
@@ -96,7 +107,7 @@ func commSubmit(pack *commPackage) {
 	db.RaffleEntryUpdate(raffles[0], ticketsToAdd)
 	pack.session.ChannelMessageSend(pack.channel.ID, "Submission accepted!")
 	pack.session.ChannelMessagePin(pack.channel.ID, pack.message.ID)
-	pack.session.ChannelMessageSend("388150028390105089", pack.message.Author.Mention()+" submitted "+raffleWord+": "+pack.params[1])
+	pack.session.ChannelMessageSend("388150028390105089", pack.message.Author.Mention()+" submitted "+raffleWord+": `"+pack.params[1]+"`")
 }
 
 func commRaffle(pack *commPackage) {
@@ -137,7 +148,7 @@ func commRaffle(pack *commPackage) {
 		// already joined the raffle, let them know their ticket count and other information
 		raffleData := strings.Split(raffleEntries[0].RaffleData, db.RaffleDataSeparator)
 		pack.session.ChannelMessageSend(pack.channel.ID, pack.message.Author.Mention()+" you're already in the raffle! Your ticket count is: "+
-			strconv.Itoa(raffleEntries[0].TicketCount)+". Your art submission is: "+raffleData[0]+". Your relic submission is: "+raffleData[1])
+			strconv.Itoa(raffleEntries[0].TicketCount)+". Your art submission is: `"+raffleData[0]+"`. Your relic submission is: `"+raffleData[1]+"`")
 	}
 }
 
@@ -156,16 +167,6 @@ func commRank(pack *commPackage) {
 func commNsfw(pack *commPackage) {
 	// force NSFW comm param so we can reuse guild role
 	processGuildRole([]string{"NSFW"}, pack.session, []string{"NSFW"}, pack.channel, pack.guild, pack.message, false)
-}
-
-func commChange(pack *commPackage) {
-	// should load this from db
-	prefix := "\n`->` "
-	changeMessage := prefix + "Included this command!" +
-		prefix + "Updated `Rank` command to prevent removal of lowest role." +
-		prefix + "Added `Raffle` related commands... For rafflin'" +
-		prefix + "For future reference, previous versions included help, team, rank, and NSFW commands as well as a welcome message to the server."
-	pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeMessage)
 }
 
 /*

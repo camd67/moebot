@@ -2,6 +2,8 @@ package bot
 
 import (
 	"log"
+	"math/rand"
+	"strconv"
 	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -100,10 +102,11 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		}
 	}
 	// temp ignore IHG + Salt
-	if err != nil || guild.ID == "84724034129907712" { // || guild.ID == "93799773856862208" {
+	if err != nil || guild.ID == "84724034129907712" {
 		// missing guild
 		return
 	}
+
 	if strings.HasPrefix(message.Content, ComPrefix) {
 		if util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
 			// bail out to prevent any new users from using bot commands
@@ -128,6 +131,26 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.GuildMemberRoleAdd(guild.ID, member.User.ID, starterRole.ID)
 			session.GuildMemberRoleRemove(guild.ID, member.User.ID, oldStarterRole.ID)
 			log.Println("Updated user <" + member.User.Username + "> after reading the rules")
+		}
+	}
+	// distribute tickets
+	if guild.ID == "378336255030722570" || guild.ID == "93799773856862208" {
+		const maxChance = 100
+		const ticketChance = 5
+		if rand.Int()%maxChance <= ticketChance {
+			// they've won a ticket, let them know and update
+			raffles, err := db.RaffleEntryQuery(message.Author.ID, guild.ID)
+			if err != nil {
+				session.ChannelMessageSend(message.ChannelID, "Sorry, there was an issue finding your raffle information")
+				return
+			}
+
+			// just ignore anything that isn't in the database
+			if len(raffles) == 1 {
+				db.RaffleEntryUpdate(raffles[0], 1)
+				currTickets := raffles[0].TicketCount + 1
+				session.ChannelMessageSend("360966363528953857", message.Author.Mention()+", congrats! You just earned another ticket! Your current tickets are: "+strconv.Itoa(currTickets))
+			}
 		}
 	}
 }
