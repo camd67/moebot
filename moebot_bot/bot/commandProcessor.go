@@ -23,6 +23,7 @@ var commands = map[string]func(pack *commPackage){
 	"CHANGELOG": commChange,
 	"RAFFLE":    commRaffle,
 	"SUBMIT":    commSubmit,
+	"KILL":      commKill,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -40,6 +41,7 @@ func commChange(pack *commPackage) {
 	changeMessage := prefix + "Included this command!" +
 		prefix + "Updated `Rank` command to prevent removal of lowest role." +
 		prefix + "Added random drops for tickets" +
+		prefix + "Fixed the cooldown so users wouldn't be spammed due to high luck stat" +
 		prefix + "Added `Raffle` related commands... For rafflin'" +
 		prefix + "For future reference, previous versions included help, team, rank, and NSFW commands as well as a welcome message to the server."
 	pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeMessage)
@@ -54,6 +56,10 @@ func commHelp(pack *commPackage) {
 		"`"+ComPrefix+" submit <TYPE> <URL>` - Submits a link for relic/art competitions! Valid types are: art, relic. Valid URLS are from youtube, pastebin, and imgur.\n"+
 		"`"+ComPrefix+" NSFW` - Gives you NSFW channel permissions\n"+
 		"`"+ComPrefix+" help` - Displays this message")
+}
+
+func commKill(pack *commPackage) {
+	// todo: kill off commands/actions that are breaking things
 }
 
 func commSubmit(pack *commPackage) {

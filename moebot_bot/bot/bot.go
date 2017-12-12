@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -30,6 +31,8 @@ var (
 	allowedNonComServers = []string{"378336255030722570", "93799773856862208"}
 	ComPrefix            string
 	Config               = make(map[string]string)
+	killList             = make(map[string]bool)
+	userTicketCooldown   = make(map[string]int64)
 )
 
 func SetupMoebot(session *discordgo.Session) {
@@ -85,6 +88,8 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
+	messageTime, _ := message.Timestamp.Parse()
+
 	guild, err := session.Guild(channel.GuildID)
 
 	member, err := session.GuildMember(guild.ID, message.Author.ID)
@@ -108,6 +113,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 
 	if strings.HasPrefix(message.Content, ComPrefix) {
+		// should add a check here for command spam
 		if util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
 			// bail out to prevent any new users from using bot commands
 			return
@@ -134,11 +140,24 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		}
 	}
 	// distribute tickets
+	distributeTickets(guild, message, session, messageTime)
+}
+
+func distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {
+	const ticketCooldown = int64(time.Hour * 24)
 	if guild.ID == "378336255030722570" || guild.ID == "93799773856862208" {
+		if oldTime, hasTime := userTicketCooldown[message.Author.ID]; hasTime {
+			// they've got an old time, check for how long it's been
+			if oldTime+ticketCooldown > messageTime.UnixNano() {
+				// they haven't waited enough, bail
+				return
+			}
+		}
 		const maxChance = 100
 		const ticketChance = 5
 		if rand.Int()%maxChance <= ticketChance {
-			// they've won a ticket, let them know and update
+			// they've won a ticket, let them know and update timestamp + db
+			userTicketCooldown[message.Author.ID] = messageTime.UnixNano()
 			raffles, err := db.RaffleEntryQuery(message.Author.ID, guild.ID)
 			if err != nil {
 				session.ChannelMessageSend(message.ChannelID, "Sorry, there was an issue finding your raffle information")
