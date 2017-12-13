@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -31,8 +32,6 @@ var (
 	allowedNonComServers = []string{"378336255030722570", "93799773856862208"}
 	ComPrefix            string
 	Config               = make(map[string]string)
-	killList             = make(map[string]bool)
-	userTicketCooldown   = make(map[string]int64)
 )
 
 func SetupMoebot(session *discordgo.Session) {
@@ -85,16 +84,22 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	channel, err := session.State.Channel(message.ChannelID)
 	if err != nil {
 		// missing channel
+		log.Println("ERROR! Unable to get guild in messageCreate ", err, channel)
 		return
 	}
 
 	messageTime, _ := message.Timestamp.Parse()
 
 	guild, err := session.Guild(channel.GuildID)
+	if err != nil {
+		log.Println("ERROR! Unable to get guild in messageCreate ", err, guild)
+		return
+	}
 
 	member, err := session.GuildMember(guild.ID, message.Author.ID)
 	if err != nil {
-		log.Println("ERROR! Unable to get member in messageCreate", err, message)
+		log.Println("ERROR! Unable to get member in messageCreate ", err, message)
+		return
 	}
 	// should change this to store the ID of the starting role
 	var starterRole *discordgo.Role
@@ -118,7 +123,6 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			// bail out to prevent any new users from using bot commands
 			return
 		}
-		session.ChannelTyping(message.ChannelID)
 		RunCommand(session, message.Message, guild, channel, member)
 	} else if util.StrContains(allowedNonComServers, guild.ID, util.CaseSensitive) {
 		// message may have other bot related commands, but not with a prefix
@@ -146,30 +150,30 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 func distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {
 	const ticketCooldown = int64(time.Hour * 24)
 	if guild.ID == "378336255030722570" || guild.ID == "93799773856862208" {
-		if oldTime, hasTime := userTicketCooldown[message.Author.ID]; hasTime {
-			// they've got an old time, check for how long it's been
-			if oldTime+ticketCooldown > messageTime.UnixNano() {
-				// they haven't waited enough, bail
-				return
-			}
-		}
 		const maxChance = 100
 		const ticketChance = 5
 		if rand.Int()%maxChance <= ticketChance {
-			// they've won a ticket, let them know and update timestamp + db
-			userTicketCooldown[message.Author.ID] = messageTime.UnixNano()
 			raffles, err := db.RaffleEntryQuery(message.Author.ID, guild.ID)
 			if err != nil {
-				session.ChannelMessageSend(message.ChannelID, "Sorry, there was an issue finding your raffle information")
+				session.ChannelMessageSend(Config["debugChannel"], "Error loading raffle information during ticket distribution"+fmt.Sprintf("%+v | %+v", guild, message))
 				return
 			}
 
-			// just ignore anything that isn't in the database
-			if len(raffles) == 1 {
-				db.RaffleEntryUpdate(raffles[0], 1)
-				currTickets := raffles[0].TicketCount + 1
-				session.ChannelMessageSend("378680855339728918", message.Author.Mention()+", congrats! You just earned another ticket! Your current tickets are: "+strconv.Itoa(currTickets))
+			if len(raffles) != 1 {
+				// if they're not in the raffle, bail out
+				return
 			}
+			r := raffles[0]
+			// check to see if their last ticket time is more than the cooldown
+			if r.LastTicketUpdate+ticketCooldown > messageTime.UnixNano() {
+				// they haven't waited enough, bail
+				return
+			}
+			// they've won a ticket and passed the timestamp check, let them know and update db
+			r.LastTicketUpdate = messageTime.UnixNano()
+			db.RaffleEntryUpdate(r, 1)
+			currTickets := r.TicketCount + 1
+			session.ChannelMessageSend("378680855339728918", message.Author.Mention()+", congrats! You just earned another ticket! Your current tickets are: "+strconv.Itoa(currTickets))
 		}
 	}
 }

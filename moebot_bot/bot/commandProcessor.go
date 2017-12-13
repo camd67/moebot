@@ -28,9 +28,14 @@ var commands = map[string]func(pack *commPackage){
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
 	messageParts := strings.Split(message.Content, " ")
+	if len(messageParts) <= 1 {
+		// bad command, missing command after prefix
+		return
+	}
 	command := strings.ToUpper(messageParts[1])
 
 	if commFunc, commPresent := commands[command]; commPresent {
+		session.ChannelTyping(message.ChannelID)
 		commFunc(&commPackage{session, message, guild, member, channel, messageParts[2:]})
 	}
 }

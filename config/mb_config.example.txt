@@ -3,3 +3,4 @@ prefix~
 dbPass~
 moeDataPass~
 masterId~
+debugChannel~
