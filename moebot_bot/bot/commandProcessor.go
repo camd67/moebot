@@ -23,7 +23,6 @@ var commands = map[string]func(pack *commPackage){
 	"CHANGELOG": commChange,
 	"RAFFLE":    commRaffle,
 	"SUBMIT":    commSubmit,
-	"KILL":      commKill,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -38,33 +37,6 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 		session.ChannelTyping(message.ChannelID)
 		commFunc(&commPackage{session, message, guild, member, channel, messageParts[2:]})
 	}
-}
-
-func commChange(pack *commPackage) {
-	// should load this from db
-	prefix := "\n`->` "
-	changeMessage := prefix + "Included this command!" +
-		prefix + "Updated `Rank` command to prevent removal of lowest role." +
-		prefix + "Added random drops for tickets" +
-		prefix + "Fixed the cooldown so users wouldn't be spammed due to high luck stat" +
-		prefix + "Added `Raffle` related commands... For rafflin'" +
-		prefix + "For future reference, previous versions included help, team, rank, and NSFW commands as well as a welcome message to the server."
-	pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeMessage)
-}
-
-func commHelp(pack *commPackage) {
-	pack.session.ChannelMessageSend(pack.channel.ID, "Moebot has the following commands:\n"+
-		"`"+ComPrefix+" team <role name>` - Changes your role to one of the approved roles. `"+ComPrefix+" team` to list all teams\n"+
-		"`"+ComPrefix+" rank <rank name>` - Changes your rank to one of the approved ranks. `"+ComPrefix+" rank` to list all the ranks\n"+
-		"`"+ComPrefix+" changelog` - Displays the changelog for moebot\n"+
-		"`"+ComPrefix+" raffle` - Enters you into the raffle (if enabled on the server). Displays ticket count if already in the raffle\n"+
-		"`"+ComPrefix+" submit <TYPE> <URL>` - Submits a link for relic/art competitions! Valid types are: art, relic. Valid URLS are from youtube, pastebin, and imgur.\n"+
-		"`"+ComPrefix+" NSFW` - Gives you NSFW channel permissions\n"+
-		"`"+ComPrefix+" help` - Displays this message")
-}
-
-func commKill(pack *commPackage) {
-	// todo: kill off commands/actions that are breaking things
 }
 
 func commSubmit(pack *commPackage) {
