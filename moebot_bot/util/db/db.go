@@ -38,7 +38,6 @@ Creates all the tables for moebot
 */
 func createTables() {
 	// NOTE: varchar(20) for any snowflake ID's, which is the max for UINT64
-
 	// SERVER
 	moeDb.Exec(serverTable)
 	// ROLE
@@ -109,6 +108,5 @@ func openDb(connString string) *sql.DB {
 }
 
 func createConnString(user string, pass string, db string) string {
-	// todo: need to setup ssl on the server
 	return "host=database user=" + user + " password=" + pass + " dbname=" + db + " sslmode=disable"
 }

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -57,4 +58,12 @@ func MakeAlphaOnly(s string) string {
 func NormalizeNewlines(s string) string {
 	reg := regexp.MustCompile("(\r\n|\r|\n)")
 	return reg.ReplaceAllString(s, "\n")
+}
+
+/*
+Converts a user's ID into a mention.
+This is useful when you don't have a User object, but want to mention them
+*/
+func UserIdToMention(userId string) string {
+	return fmt.Sprintf("<@%s>", userId)
 }

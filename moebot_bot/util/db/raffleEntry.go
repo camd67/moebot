@@ -26,9 +26,13 @@ type RaffleEntry struct {
 }
 
 const (
-	raffleQuery = `SELECT id, GuildUid, UserUid, RaffleType, TicketCount, RaffleData, LastTicketUpdate
-					FROM raffle_entry AS re
+	raffleSelect = `SELECT id, GuildUid, UserUid, RaffleType, TicketCount, RaffleData, LastTicketUpdate `
+
+	raffleQuery = raffleSelect + `FROM raffle_entry AS re
 					WHERE re.UserUid = $1 AND re.GuildUid = $2`
+
+	raffleQueryAny = raffleSelect + `FROM raffle_entry AS re
+						WHERE re.GuildUid = $1`
 
 	raffleTable = `CREATE TABLE IF NOT EXISTS raffle_entry(
 					id SERIAL NOT NULL PRIMARY KEY,
@@ -68,6 +72,24 @@ func RaffleEntryUpdate(entry RaffleEntry, ticketAdd int) error {
 
 func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries []RaffleEntry, err error) {
 	rows, err := moeDb.Query(raffleQuery, userUid, guildUid)
+	if err != nil {
+		log.Println("Error querying for raffle entries")
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var re RaffleEntry
+		if err := rows.Scan(&re.id, &re.GuildUid, &re.UserUid, &re.RaffleType, &re.TicketCount, &re.RaffleData, &re.LastTicketUpdate); err != nil {
+			log.Println("Error scanning raffle entry to object - ", err)
+			return nil, err
+		}
+		raffleEntries = append(raffleEntries, re)
+	}
+	return raffleEntries, nil
+}
+
+func RaffleEntryQueryAny(guildUid string) (raffleEntries []RaffleEntry, err error) {
+	rows, err := moeDb.Query(raffleQueryAny, guildUid)
 	if err != nil {
 		log.Println("Error querying for raffle entries")
 		return nil, err

@@ -2,11 +2,7 @@ package bot
 
 import (
 	"log"
-	"regexp"
-	"strconv"
 	"strings"
-
-	"github.com/camd67/moebot/moebot_bot/util/db"
 
 	"github.com/camd67/moebot/moebot_bot/util"
 
@@ -36,102 +32,6 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	if commFunc, commPresent := commands[command]; commPresent {
 		session.ChannelTyping(message.ChannelID)
 		commFunc(&commPackage{session, message, guild, member, channel, messageParts[2:]})
-	}
-}
-
-func commSubmit(pack *commPackage) {
-	// Salt + MIA
-	if !(pack.guild.ID == "378336255030722570" || pack.guild.ID == "93799773856862208") {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Raffles are not enabled in this server! Speak to Salt to get your server added to the raffle!")
-		return
-	}
-	if len(pack.params) < 2 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "You must provide a submission type and a URL in order to submit a link.")
-		return
-	}
-	reg := regexp.MustCompile(".*(youtube.com|imgur.com|pastebin.com).*")
-	if !reg.MatchString(pack.params[1]) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must provide a link to an approved site! See submissions rules for more information")
-		return
-	}
-	var raffleDataIndex int
-	var raffleWord string
-	if strings.ToUpper(pack.params[0]) == "ART" {
-		raffleDataIndex = 0
-		raffleWord = "art"
-	} else if strings.ToUpper(pack.params[0]) == "RELIC" {
-		raffleDataIndex = 1
-		raffleWord = "relic"
-	} else {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, I don't recognize that submission type. Valid types are: art, relic.")
-		return
-	}
-	raffles, err := db.RaffleEntryQuery(pack.message.Author.ID, pack.guild.ID)
-	if err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error trying to get your raffle information!")
-		return
-	}
-	if len(raffles) != 1 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching your raffle information! Make sure you're already in the raffle! (raffle command)")
-		return
-	}
-	raffleData := strings.Split(raffles[0].RaffleData, db.RaffleDataSeparator)
-	var ticketsToAdd = 2
-	if raffleData[raffleDataIndex] != "NONE" {
-		// if they've already got a submission, don't award bonus tickets
-		ticketsToAdd = 0
-		pack.session.ChannelMessageSend("378354584587862025", "Potential duplicate submission by "+pack.message.Author.Username+". Old url: `"+raffleData[raffleDataIndex]+"`")
-	}
-	if raffleDataIndex == 0 {
-		raffles[0].SetRaffleData(pack.params[1] + db.RaffleDataSeparator + raffleData[1])
-	} else if raffleDataIndex == 1 {
-		raffles[0].SetRaffleData(raffleData[0] + db.RaffleDataSeparator + pack.params[1])
-	}
-	db.RaffleEntryUpdate(raffles[0], ticketsToAdd)
-	pack.session.ChannelMessageSend(pack.channel.ID, "Submission accepted!")
-	pack.session.ChannelMessagePin(pack.channel.ID, pack.message.ID)
-	pack.session.ChannelMessageSend("388150028390105089", pack.message.Author.Mention()+" submitted "+raffleWord+": `"+pack.params[1]+"`")
-}
-
-func commRaffle(pack *commPackage) {
-	// Salt + MIA
-	if !(pack.guild.ID == "378336255030722570" || pack.guild.ID == "93799773856862208") {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Raffles are not enabled in this server! Speak to Salt to get your server added to the raffle!")
-		return
-	}
-	const startTickets = 5
-	raffleEntries, err := db.RaffleEntryQuery(pack.message.Author.ID, pack.guild.ID)
-	if err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching your raffle information!")
-		return
-	}
-	// there should only be 1 of each raffle entry for every user + guild combo
-	if len(raffleEntries) > 1 {
-		log.Println("Queried for more than one raffle entry: userUid-", raffleEntries[0].UserUid)
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching your raffle information!")
-		return
-	}
-	if len(raffleEntries) == 0 {
-		// haven't joined the raffle yet, make an entry + add tickets
-		newRaffle := db.RaffleEntry{
-			GuildUid:    pack.guild.ID,
-			UserUid:     pack.message.Author.ID,
-			RaffleType:  db.RaffleMIA,
-			TicketCount: startTickets,
-			RaffleData:  "NONE" + db.RaffleDataSeparator + "NONE",
-		}
-		err := db.RaffleEntryAdd(newRaffle)
-		if err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue adding your raffle entry!")
-			return
-		}
-		pack.session.ChannelMessageSend(pack.channel.ID, pack.message.Author.Mention()+", welcome to the raffle! You get "+
-			strconv.Itoa(startTickets)+" tickets for joining!")
-	} else {
-		// already joined the raffle, let them know their ticket count and other information
-		raffleData := strings.Split(raffleEntries[0].RaffleData, db.RaffleDataSeparator)
-		pack.session.ChannelMessageSend(pack.channel.ID, pack.message.Author.Mention()+" you're already in the raffle! Your ticket count is: "+
-			strconv.Itoa(raffleEntries[0].TicketCount)+". Your art submission is: `"+raffleData[0]+"`. Your relic submission is: `"+raffleData[1]+"`")
 	}
 }
 

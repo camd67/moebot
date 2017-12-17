@@ -148,7 +148,6 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 }
 
 func distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {
-	const ticketCooldown = int64(time.Hour * 24)
 	if guild.ID == "378336255030722570" || guild.ID == "93799773856862208" {
 		const maxChance = 100
 		const ticketChance = 5
