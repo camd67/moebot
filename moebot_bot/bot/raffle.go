@@ -93,7 +93,7 @@ func commRaffle(pack *commPackage) {
 			// make sure to pause between message sends so we don't get discord throttled
 			submissions := strings.Split(r.RaffleData, db.RaffleDataSeparator)
 			if submissions[0] != "NONE" {
-				sent, _ := pack.session.ChannelMessageSend("392528129412956170", "--------------------------------------------------------------------\n"+
+				sent, _ := pack.session.ChannelMessageSend("392528129412956170", "-----------------------\n"+
 					util.UserIdToMention(r.UserUid)+"'s submitted art: "+submissions[0])
 				if sent != nil {
 					pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
@@ -101,7 +101,7 @@ func commRaffle(pack *commPackage) {
 				time.Sleep(sleepTime)
 			}
 			if submissions[1] != "NONE" {
-				sent, _ := pack.session.ChannelMessageSend("392528172245319680", "--------------------------------------------------------------------\n"+
+				sent, _ := pack.session.ChannelMessageSend("392528172245319680", "-----------------------\n"+
 					util.UserIdToMention(r.UserUid)+"'s submitted relic: "+submissions[1])
 				if sent != nil {
 					pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
