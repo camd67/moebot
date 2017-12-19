@@ -93,16 +93,18 @@ func commRaffle(pack *commPackage) {
 			// make sure to pause between message sends so we don't get discord throttled
 			submissions := strings.Split(r.RaffleData, db.RaffleDataSeparator)
 			if submissions[0] != "NONE" {
-				sentMessage, _ := pack.session.ChannelMessageSend("392528129412956170", util.UserIdToMention(r.UserUid)+"'s submitted art: "+submissions[0])
-				if sentMessage != nil {
-					pack.session.MessageReactionAdd(sentMessage.ChannelID, sentMessage.ID, "👍")
+				sent, _ := pack.session.ChannelMessageSend("392528129412956170", "--------------------------------------------------------------------\n"+
+					util.UserIdToMention(r.UserUid)+"'s submitted art: "+submissions[0])
+				if sent != nil {
+					pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
 				}
 				time.Sleep(sleepTime)
 			}
 			if submissions[1] != "NONE" {
-				sentMessage, _ := pack.session.ChannelMessageSend("392528172245319680", util.UserIdToMention(r.UserUid)+"'s submitted relic: "+submissions[1])
-				if sentMessage != nil {
-					pack.session.MessageReactionAdd(sentMessage.ChannelID, sentMessage.ID, "👍")
+				sent, _ := pack.session.ChannelMessageSend("392528172245319680", "--------------------------------------------------------------------\n"+
+					util.UserIdToMention(r.UserUid)+"'s submitted relic: "+submissions[1])
+				if sent != nil {
+					pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
 				}
 				time.Sleep(sleepTime)
 			}
