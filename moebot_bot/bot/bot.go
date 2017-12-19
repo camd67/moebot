@@ -137,7 +137,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 				log.Println("ERROR! Unable to find roles for guild " + guild.Name)
 				return
 			}
-			session.ChannelMessageSend(message.ChannelID, "We hope you enjoy your stay in our Discord server! Make sure to head over #announcements and #role-request to see whats new and get your roles!")
+			session.ChannelMessageSend(message.ChannelID, "Welcome "+message.Author.Mention()+"! We hope you enjoy your stay in our Discord server! Make sure to head over #announcements and #bot-stuff to see whats new and get your roles!")
 			session.GuildMemberRoleAdd(guild.ID, member.User.ID, starterRole.ID)
 			session.GuildMemberRoleRemove(guild.ID, member.User.ID, oldStarterRole.ID)
 			log.Println("Updated user <" + member.User.Username + "> after reading the rules")
