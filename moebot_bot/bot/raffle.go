@@ -15,11 +15,17 @@ import (
 const ticketCooldown = int64(time.Hour * 24)
 
 func commSubmit(pack *commPackage) {
-	// Salt + MIA
-	if !(pack.guild.ID == "378336255030722570" || pack.guild.ID == "93799773856862208") {
+	// Previous servers
+	if pack.guild.ID == "378336255030722570" {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, submissions are closed!")
+		return
+	}
+	// Salt
+	if pack.guild.ID != "93799773856862208" {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Raffles are not enabled in this server! Speak to Salt to get your server added to the raffle!")
 		return
 	}
+
 	if len(pack.params) < 2 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "You must provide a submission type and a URL in order to submit a link.")
 		return
@@ -87,14 +93,14 @@ func commRaffle(pack *commPackage) {
 			// make sure to pause between message sends so we don't get discord throttled
 			submissions := strings.Split(r.RaffleData, db.RaffleDataSeparator)
 			if submissions[0] != "NONE" {
-				sentMessage, _ := pack.session.ChannelMessageSend(pack.channel.ID, util.UserIdToMention(r.UserUid)+"'s submitted art: "+submissions[0])
+				sentMessage, _ := pack.session.ChannelMessageSend("392528129412956170", util.UserIdToMention(r.UserUid)+"'s submitted art: "+submissions[0])
 				if sentMessage != nil {
 					pack.session.MessageReactionAdd(sentMessage.ChannelID, sentMessage.ID, "👍")
 				}
 				time.Sleep(sleepTime)
 			}
 			if submissions[1] != "NONE" {
-				sentMessage, _ := pack.session.ChannelMessageSend(pack.channel.ID, util.UserIdToMention(r.UserUid)+"'s submitted relic: "+submissions[1])
+				sentMessage, _ := pack.session.ChannelMessageSend("392528172245319680", util.UserIdToMention(r.UserUid)+"'s submitted relic: "+submissions[1])
 				if sentMessage != nil {
 					pack.session.MessageReactionAdd(sentMessage.ChannelID, sentMessage.ID, "👍")
 				}
