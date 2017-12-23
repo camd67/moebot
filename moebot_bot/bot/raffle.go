@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -185,7 +186,21 @@ func commRaffle(pack *commPackage) {
 				userSubmissionVotes[maxVoteKey] = 0
 			}
 		} else if pack.params[0] == "winner" {
-
+			raffles, err := db.RaffleEntryQueryAny(pack.guild.ID)
+			if err != nil {
+				pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue fetching raffle entries")
+				return
+			}
+			// go through and add users based on how many tickets they got (if a user had 5 tickets they'd have 5 entries in the array
+			users := make([]string, 0)
+			for _, r := range raffles {
+				for i := 0; i < r.TicketCount; i++ {
+					users = append(users, r.UserUid)
+				}
+			}
+			// now that we have a list of users and their ticket values ["123", "123", "123", "456", 456", "789" ...] figure out who won
+			selected := rand.Int() % len(users)
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Congrats "+util.UserIdToMention(users[selected])+" you've won the raffle!")
 		}
 	} else {
 		const startTickets = 5
