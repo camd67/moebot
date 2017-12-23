@@ -2,6 +2,8 @@ package db
 
 import (
 	"log"
+	"strconv"
+	"strings"
 )
 
 // Raffle type enum
@@ -49,6 +51,8 @@ const (
 
 	raffleUpdate = `UPDATE raffle_entry SET RaffleData = $2, TicketCount = TicketCount + $3, LastTicketUpdate = $4 WHERE id = $1`
 
+	raffleUpdateMany = `UPDATE raffle_entry SET TicketCount = TicketCount + $1 WHERE id = ANY ($2::integer[])`
+
 	RaffleDataSeparator = "|"
 )
 
@@ -63,6 +67,20 @@ func RaffleEntryAdd(entry RaffleEntry) error {
 
 func RaffleEntryUpdate(entry RaffleEntry, ticketAdd int) error {
 	_, err := moeDb.Exec(raffleUpdate, entry.id, entry.RaffleData, ticketAdd, entry.LastTicketUpdate)
+	if err != nil {
+		log.Println("Error updating raffle entry to database, ", err)
+		return err
+	}
+	return nil
+}
+
+func RaffleEntryUpdateMany(entries []RaffleEntry, ticketAdd int) error {
+	ids := make([]string, len(entries))
+	for i, e := range entries {
+		ids[i] = strconv.Itoa(e.id)
+	}
+	idCollection := "{" + strings.Join(ids, ",") + "}"
+	_, err := moeDb.Exec(raffleUpdateMany, ticketAdd, idCollection)
 	if err != nil {
 		log.Println("Error updating raffle entry to database, ", err)
 		return err

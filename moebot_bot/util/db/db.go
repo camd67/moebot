@@ -73,6 +73,15 @@ func createMoebotDatabase(rootDb *sql.DB, moeDataPass string) {
 	}
 }
 
+func OpenTransaction() (tx *sql.Tx) {
+	tx, err := moeDb.Begin()
+	if err != nil {
+		log.Println("Error beginning transaction!")
+		return
+	}
+	return
+}
+
 func connectToRoot(dbPass string) *sql.DB {
 	sleepTime := 5 * time.Second
 	for {

@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -77,37 +78,114 @@ func commRaffle(pack *commPackage) {
 		return
 	}
 
-	// special check for when a master (or later admins) request a vote
-	if len(pack.params) > 0 && pack.params[0] == "vote" && pack.message.Author.ID == Config["masterId"] {
-		// delete original message
-		pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
-		// post all the raffle entries
-		allRaffles, err := db.RaffleEntryQueryAny(pack.guild.ID)
-		if err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, an error occured when fetching raffles!")
-			return
-		}
-		const sleepTime = time.Second
+	if len(pack.params) > 0 && pack.message.Author.ID == Config["masterId"] {
+		// special master only commands
+		if pack.params[0] == "vote" {
+			// delete original message
+			pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
+			// post all the raffle entries
+			allRaffles, err := db.RaffleEntryQueryAny(pack.guild.ID)
+			if err != nil {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, an error occured when fetching raffles!")
+				return
+			}
+			const sleepTime = time.Second
 
-		for _, r := range allRaffles {
-			// make sure to pause between message sends so we don't get discord throttled
-			submissions := strings.Split(r.RaffleData, db.RaffleDataSeparator)
-			if submissions[0] != "NONE" {
-				sent, _ := pack.session.ChannelMessageSend("392528129412956170", "-----------------------\n"+
-					util.UserIdToMention(r.UserUid)+"'s submitted art: "+submissions[0])
-				if sent != nil {
-					pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
+			for _, r := range allRaffles {
+				// make sure to pause between message sends so we don't get discord throttled
+				submissions := strings.Split(r.RaffleData, db.RaffleDataSeparator)
+				if submissions[0] != "NONE" {
+					sent, _ := pack.session.ChannelMessageSend("392528129412956170", "-----------------------\n"+
+						util.UserIdToMention(r.UserUid)+"'s submitted art: "+submissions[0])
+					if sent != nil {
+						pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
+					}
+					time.Sleep(sleepTime)
 				}
-				time.Sleep(sleepTime)
-			}
-			if submissions[1] != "NONE" {
-				sent, _ := pack.session.ChannelMessageSend("392528172245319680", "-----------------------\n"+
-					util.UserIdToMention(r.UserUid)+"'s submitted relic: "+submissions[1])
-				if sent != nil {
-					pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
+				if submissions[1] != "NONE" {
+					sent, _ := pack.session.ChannelMessageSend("392528172245319680", "-----------------------\n"+
+						util.UserIdToMention(r.UserUid)+"'s submitted relic: "+submissions[1])
+					if sent != nil {
+						pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
+					}
+					time.Sleep(sleepTime)
 				}
-				time.Sleep(sleepTime)
 			}
+		} else if pack.params[0] == "count" {
+			// count up any reactions to the images and award bonus tickets
+			pack.session.ChannelMessageDelete(pack.message.ChannelID, pack.message.ID)
+			messages, err := pack.session.ChannelMessages(pack.message.ChannelID, 100, pack.message.ID, "", "")
+			if err != nil {
+				pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue fetching historical messages")
+				return
+			}
+			// loop over every message and count up reactions per ID
+			userReactCounts := make(map[string]int)
+			userSubmissionVotes := make(map[string]int)
+			const waitTime = time.Millisecond * 50
+			for _, m := range messages {
+				// only process bot messages (presumably by moebot) since that was how submissions were sent in
+				if m.Author.Bot && strings.HasPrefix(m.Content, "-----------------------") {
+					userReacts, err := pack.session.MessageReactions(pack.message.ChannelID, m.ID, "👍", 100)
+					if len(m.Mentions) != 1 {
+						pack.session.ChannelMessageSend(Config["debugChannel"], "Error processing raffle submission count: "+fmt.Sprintf("%+v", m))
+						continue
+					}
+					if err != nil {
+						pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, unable to get reactions for one of the messages!")
+						return
+					}
+					// add up all the reactions
+					userSubmissionVotes[m.Mentions[0].ID] = len(userReacts) - 1
+					for _, ur := range userReacts {
+						if !ur.Bot {
+							userReactCounts[ur.ID] = userReactCounts[ur.ID] + 1
+						}
+					}
+					// just pause for a bit so we don't hit the ratelimit
+					time.Sleep(waitTime)
+				}
+			}
+			// go through each of the user react counts, and give a bonus ticket for everyone who got >3 votes
+			const minVotes = 3
+			raffles, err := db.RaffleEntryQueryAny(pack.guild.ID)
+			if err != nil {
+				pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue fetching raffle entries for this server")
+				return
+			}
+			rafflesToUpdate := make([]db.RaffleEntry, 0)
+			for user, count := range userReactCounts {
+				for _, r := range raffles {
+					// only those with valid raffle entries and the min number of votes get updated
+					if r.UserUid == user && count >= minVotes {
+						rafflesToUpdate = append(rafflesToUpdate, r)
+						break
+					}
+				}
+			}
+			if len(rafflesToUpdate) > 0 {
+				db.RaffleEntryUpdateMany(rafflesToUpdate, 1)
+			}
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Top 3 submissions:")
+			// find the top 3 votes (probably a better way than this, but it works...)
+			for i := 1; i <= 3; i++ {
+				maxVoteKey := ""
+				for user, count := range userSubmissionVotes {
+					if maxVoteKey == "" {
+						// always grab the first one
+						maxVoteKey = user
+					} else if count > userSubmissionVotes[maxVoteKey] {
+						// found a larger value, use it
+						maxVoteKey = user
+					}
+				}
+				// grab that user, reset their votes, and say they won
+				pack.session.ChannelMessageSend(pack.message.ChannelID, strconv.Itoa(i)+": "+util.UserIdToMention(maxVoteKey)+" with "+
+					strconv.Itoa(userSubmissionVotes[maxVoteKey])+" votes!")
+				userSubmissionVotes[maxVoteKey] = 0
+			}
+		} else if pack.params[0] == "winner" {
+
 		}
 	} else {
 		const startTickets = 5
