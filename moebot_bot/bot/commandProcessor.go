@@ -2,6 +2,7 @@ package bot
 
 import (
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -19,6 +20,7 @@ var commands = map[string]func(pack *commPackage){
 	"CHANGELOG": commChange,
 	"RAFFLE":    commRaffle,
 	"SUBMIT":    commSubmit,
+	"ECHO":      commEcho,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -33,6 +35,19 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 		session.ChannelTyping(message.ChannelID)
 		commFunc(&commPackage{session, message, guild, member, channel, messageParts[2:]})
 	}
+}
+
+func commEcho(pack *commPackage) {
+	if pack.message.Author.ID != Config["masterId"] {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, only my master can use this command!")
+		return
+	}
+	_, err := strconv.Atoi(pack.params[0])
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, that's an invalid channel ID")
+		return
+	}
+	pack.session.ChannelMessageSend(pack.params[0], strings.Join(pack.params[1:], " "))
 }
 
 func commRole(pack *commPackage) {
