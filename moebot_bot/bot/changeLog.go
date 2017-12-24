@@ -19,5 +19,5 @@ var changeLog = map[string]string{
 }
 
 func commChange(pack *commPackage) {
-	pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeLog["0.2.1"])
+	pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeLog["0.2.2"])
 }

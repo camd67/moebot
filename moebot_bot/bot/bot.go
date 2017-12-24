@@ -88,7 +88,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
-	messageTime, _ := message.Timestamp.Parse()
+	//messageTime, _ := message.Timestamp.Parse()
 
 	guild, err := session.Guild(channel.GuildID)
 	if err != nil {
