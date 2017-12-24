@@ -144,11 +144,12 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		}
 	}
 	// distribute tickets
-	distributeTickets(guild, message, session, messageTime)
+	// temporarily disable ticket distribution
+	//distributeTickets(guild, message, session, messageTime)
 }
 
 func distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {
-	if guild.ID == "378336255030722570" || guild.ID == "93799773856862208" {
+	if false {
 		const maxChance = 100
 		const ticketChance = 5
 		if rand.Int()%maxChance <= ticketChance {

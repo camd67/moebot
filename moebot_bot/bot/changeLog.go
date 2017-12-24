@@ -12,6 +12,10 @@ var changeLog = map[string]string{
 		changeLogPrefix + "For future reference, previous versions included help, team, rank, and NSFW commands as well as a welcome message to the server.",
 
 	"0.2.1": changeLogPrefix + "Updated raffle art/relic submissions to post all submissions on command instead of over time.",
+
+	"0.2.2": changeLogPrefix + "Added echo command for master only" +
+		changeLogPrefix + "added `raffle winner` and `raffle count` to get the raffle winner and vote counts" +
+		changeLogPrefix + "removed ticket generation",
 }
 
 func commChange(pack *commPackage) {

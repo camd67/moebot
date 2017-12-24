@@ -73,8 +73,13 @@ func commSubmit(pack *commPackage) {
 }
 
 func commRaffle(pack *commPackage) {
-	// Salt + MIA
-	if !(pack.guild.ID == "378336255030722570" || pack.guild.ID == "93799773856862208") {
+	// Previous servers
+	if pack.guild.ID == "378336255030722570" {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, the raffle has ended!")
+		return
+	}
+	// Salt
+	if pack.guild.ID != "93799773856862208" {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Raffles are not enabled in this server! Speak to Salt to get your server added to the raffle!")
 		return
 	}
