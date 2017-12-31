@@ -25,8 +25,10 @@ const (
 		FROM customRole AS cr, server, role AS r
 		WHERE server.GuildUid = $1`
 	customRoleQueryTrigger = `SELECT r.RoleUid
-		FROM customRole AS cr, server, role AS r
-		WHERE server.GuildUid = $1 AND cr.trigger = $2`
+		FROM customRole AS cr
+		JOIN server AS s ON cr.GuildId = s.Id
+		JOIN role AS r ON cr.RoleId = r.Id
+		WHERE s.GuildUid = $1 AND cr.trigger = $2`
 	customRoleInsert = `INSERT INTO customRole(GuildId, RoleId, Trigger) VALUES ($1, $2, $3)`
 	customRoleSearch = `SELECT customRole.Id FROM customRole, server WHERE Trigger = $1 AND GuildUid = $2`
 	customRoleDelete = `DELETE FROM customRole WHERE Id = $1`

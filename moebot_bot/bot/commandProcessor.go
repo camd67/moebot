@@ -123,6 +123,10 @@ func commCustom(pack *commPackage) {
 		}
 		roleName := strings.Join(pack.params[1:], " ")
 		r := util.FindRoleByName(pack.guild.Roles, roleName)
+		if r == nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, it doesn't seem like that role exists on this server.")
+			return
+		}
 		role, err := db.RoleQueryOrInsert(db.Role{
 			ServerId: server.Id,
 			RoleUid:  r.ID,
