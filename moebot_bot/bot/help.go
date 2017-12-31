@@ -7,6 +7,8 @@ func commHelp(pack *commPackage) {
 			"`"+ComPrefix+" rank <rank name>` - Changes your rank to one of the approved ranks. `"+ComPrefix+" rank` to list all the ranks\n"+
 			"`"+ComPrefix+" changelog` - Displays the changelog for moebot\n"+
 			"`"+ComPrefix+" NSFW` - Gives you NSFW channel permissions\n"+
+			"`"+ComPrefix+" permit <perm level> <role name>` - Master/All only. Grants permission to the selected role.\n"+
+			"`"+ComPrefix+" custom <command name> <role name>` - Links up a role to be toggable by the command name. Type `"+ComPrefix+" role <command name> to toggle`\n"+
 			"`"+ComPrefix+" help` - Displays this message")
 	}
 }

@@ -29,6 +29,7 @@ const (
 	RoleRank
 	RoleTeam
 	RoleNone
+	RoleCustom
 )
 
 type Role struct {
@@ -49,8 +50,9 @@ const (
 	)`
 
 	roleQueryServerRole = `SELECT Id, ServerId, RoleUid, Permission, RoleType FROM role WHERE ServerId = $1 AND RoleUid = $2`
+	roleQuery           = `SELECT Id, ServerId, RoleUid, Permission, RoleType FROM role WHERE Id = $1`
 	roleUpdate          = `UPDATE role SET Permission = $1, RoleType = $2 WHERE Id = $3`
-	roleInsert          = `INSERT INTO role(ServerId, RoleUid, Permission, RoleType) VALUES($1, $2, $3, $4)`
+	roleInsert          = `INSERT INTO role(ServerId, RoleUid, Permission, RoleType) VALUES($1, $2, $3, $4) RETURNING id`
 )
 
 func RoleInsertOrUpdate(role Role) error {
@@ -86,6 +88,34 @@ func RoleInsertOrUpdate(role Role) error {
 		}
 	}
 	return nil
+}
+
+func RoleQueryOrInsert(role Role) (r Role, err error) {
+	row := moeDb.QueryRow(roleQueryServerRole, role.ServerId, role.RoleUid)
+	if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.RoleType); err != nil {
+		if err == sql.ErrNoRows {
+			// no row, so insert it add in default values
+			if role.Permission == -1 {
+				role.Permission = PermNone
+			}
+			if role.RoleType == -1 {
+				role.RoleType = RoleNone
+			}
+			var insertId int
+			err = moeDb.QueryRow(roleInsert, role.ServerId, role.RoleUid, role.Permission, role.RoleType).Scan(&insertId)
+			if err != nil {
+				log.Println("Error inserting role to db")
+				return
+			}
+			row := moeDb.QueryRow(roleQuery, insertId)
+			if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.RoleType); err != nil {
+				log.Println("Failed to read the newly inserted Role row. This should pretty much never happen...", err)
+				return Role{}, err
+			}
+		}
+	}
+	// got a row, return it
+	return
 }
 
 func GetPermissionFromString(s string) Permission {

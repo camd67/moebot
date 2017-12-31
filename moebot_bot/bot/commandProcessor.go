@@ -15,8 +15,7 @@ import (
 )
 
 var commands = map[string]func(pack *commPackage){
-	"TEAM": commTeam,
-	// used for historical purposes since TEAM used to be ROLE
+	"TEAM":      commTeam,
 	"ROLE":      commRole,
 	"RANK":      commRank,
 	"NSFW":      commNsfw,
@@ -81,7 +80,31 @@ func commPermit(pack *commPackage) {
 }
 
 func commCustom(pack *commPackage) {
+	// should have params: command name - role name
+	if len(pack.params) < 2 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Please provide command name followed by the role name")
+		return
+	}
 
+	// get the role and server
+	server, err := db.ServerQueryOrInsert(pack.guild.ID)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Error storing server information")
+		return
+	}
+	roleName := strings.Join(pack.params[1:], " ")
+	r := util.FindRole(pack.guild.Roles, roleName)
+	role, err := db.RoleQueryOrInsert(db.Role{
+		ServerId: server.Id,
+		RoleUid:  r.ID,
+	})
+
+	err = db.CustomRoleAdd(pack.params[0], server.Id, role.Id)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Error adding custom role")
+		return
+	}
+	pack.session.ChannelMessageSend(pack.channel.ID, "Added custom command `"+pack.params[0]+"` tied to the role: "+roleName)
 }
 
 func commEcho(pack *commPackage) {
