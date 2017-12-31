@@ -76,14 +76,6 @@ func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd
 	session.GuildMemberRoleAdd(member.GuildID, member.User.ID, starterRole.ID)
 }
 
-func checkValidMasterId(pack *commPackage) bool {
-	if pack.message.Author.ID != Config["masterId"] {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, only my master can use this command!")
-		return false
-	}
-	return true
-}
-
 func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
 	// bail out if we have any messages we want to ignore such as bot messages
 	if message.Author.ID == session.State.User.ID {

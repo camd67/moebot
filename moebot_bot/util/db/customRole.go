@@ -1,6 +1,10 @@
 package db
 
-import "log"
+import (
+	"database/sql"
+	"log"
+	"strings"
+)
 
 type CustomRole struct {
 	Id      int
@@ -24,7 +28,18 @@ const (
 		FROM customRole AS cr, server, role AS r
 		WHERE server.GuildUid = $1 AND cr.trigger = $2`
 	customRoleInsert = `INSERT INTO customRole(GuildId, RoleId, Trigger) VALUES ($1, $2, $3)`
+	customRoleSearch = `SELECT customRole.Id FROM customRole, server WHERE Trigger = $1 AND GuildUid = $2`
+	customRoleDelete = `DELETE FROM customRole WHERE Id = $1`
 )
+
+func CustomRoleRowExists(trigger string, guildUid string) (id int, exists bool) {
+	row := moeDb.QueryRow(customRoleSearch, trigger, guildUid)
+	err := row.Scan(&id)
+	if err == sql.ErrNoRows {
+		return -1, false
+	}
+	return id, true
+}
 
 func CustomRoleQuery(trigger string, guildUid string) (rId string, err error) {
 	err = moeDb.QueryRow(customRoleQueryTrigger, guildUid, trigger).Scan(&rId)
@@ -35,9 +50,19 @@ func CustomRoleQuery(trigger string, guildUid string) (rId string, err error) {
 }
 
 func CustomRoleAdd(trigger string, guildId int, roleId int) (err error) {
-	_, err = moeDb.Exec(customRoleInsert, guildId, roleId, trigger)
+	_, err = moeDb.Exec(customRoleInsert, guildId, roleId, strings.TrimSpace(trigger))
 	if err != nil {
 		log.Println("Error inserting new custom role: {trigger, guildId, roleId}", trigger, guildId, roleId)
 	}
 	return
+}
+
+func CustomRoleDelete(id int) int64 {
+	r, err := moeDb.Exec(customRoleDelete, id)
+	if err != nil {
+		log.Println("Error deleting custom role: ", id)
+		return -1
+	}
+	rCount, _ := r.RowsAffected()
+	return rCount
 }

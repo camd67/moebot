@@ -11,10 +11,9 @@ import (
 type Permission int
 
 const (
-	_ Permission = iota
-	PermAll
-	PermMod
-	PermNone
+	PermAll  Permission = 2
+	PermMod  Permission = 50
+	PermNone Permission = 100
 )
 
 // RoleType enum
@@ -49,10 +48,11 @@ const (
 		RoleType SMALLINT NOT NULL
 	)`
 
-	roleQueryServerRole = `SELECT Id, ServerId, RoleUid, Permission, RoleType FROM role WHERE ServerId = $1 AND RoleUid = $2`
-	roleQuery           = `SELECT Id, ServerId, RoleUid, Permission, RoleType FROM role WHERE Id = $1`
-	roleUpdate          = `UPDATE role SET Permission = $1, RoleType = $2 WHERE Id = $3`
-	roleInsert          = `INSERT INTO role(ServerId, RoleUid, Permission, RoleType) VALUES($1, $2, $3, $4) RETURNING id`
+	roleQueryServerRole  = `SELECT Id, ServerId, RoleUid, Permission, RoleType FROM role WHERE ServerId = $1 AND RoleUid = $2`
+	roleQuery            = `SELECT Id, ServerId, RoleUid, Permission, RoleType FROM role WHERE Id = $1`
+	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
+	roleUpdate           = `UPDATE role SET Permission = $1, RoleType = $2 WHERE Id = $3`
+	roleInsert           = `INSERT INTO role(ServerId, RoleUid, Permission, RoleType) VALUES($1, $2, $3, $4) RETURNING id`
 )
 
 func RoleInsertOrUpdate(role Role) error {
@@ -67,7 +67,7 @@ func RoleInsertOrUpdate(role Role) error {
 			if role.RoleType == -1 {
 				role.RoleType = RoleNone
 			}
-			_, err = moeDb.Exec(roleInsert, role.ServerId, role.RoleUid, role.Permission, role.RoleType)
+			_, err = moeDb.Exec(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.RoleType)
 			if err != nil {
 				log.Println("Error inserting role to db")
 				return err
@@ -102,7 +102,7 @@ func RoleQueryOrInsert(role Role) (r Role, err error) {
 				role.RoleType = RoleNone
 			}
 			var insertId int
-			err = moeDb.QueryRow(roleInsert, role.ServerId, role.RoleUid, role.Permission, role.RoleType).Scan(&insertId)
+			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.RoleType).Scan(&insertId)
 			if err != nil {
 				log.Println("Error inserting role to db")
 				return
@@ -115,6 +115,21 @@ func RoleQueryOrInsert(role Role) (r Role, err error) {
 		}
 	}
 	// got a row, return it
+	return
+}
+
+func RoleQueryPermission(roleUid []string) (p []Permission) {
+	idCollection := "{" + strings.Join(roleUid, ",") + "}"
+	r, err := moeDb.Query(roleQueryPermissions, idCollection)
+	if err != nil {
+		log.Println("Error querying for user permissions", err)
+		return
+	}
+	for r.Next() {
+		var newPerm Permission
+		r.Scan(&newPerm)
+		p = append(p, newPerm)
+	}
 	return
 }
 

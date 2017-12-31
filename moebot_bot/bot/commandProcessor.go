@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"strconv"
@@ -38,9 +39,21 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	command := strings.ToUpper(messageParts[1])
 
 	if commFunc, commPresent := commands[command]; commPresent {
-		log.Println("Processing command: " + command + " from user: " + fmt.Sprintf("%+v", message.Author))
+		var buf bytes.Buffer
+		params := messageParts[2:]
+		buf.WriteString("Processing command: ")
+		buf.WriteString(command)
+		buf.WriteString(" from user: {")
+		buf.WriteString(fmt.Sprintf("%+v", message.Author))
+		buf.WriteString("}| With Params:{")
+		for _, p := range params {
+			buf.WriteString(p)
+			buf.WriteString(",")
+		}
+		buf.WriteString("}")
+		log.Println(buf.String())
 		session.ChannelTyping(message.ChannelID)
-		commFunc(&commPackage{session, message, guild, member, channel, messageParts[2:]})
+		commFunc(&commPackage{session, message, guild, member, channel, params})
 	}
 }
 
@@ -60,7 +73,7 @@ func commPermit(pack *commPackage) {
 	}
 	// find the correct role
 	roleName := strings.Join(pack.params[1:], " ")
-	r := util.FindRole(pack.guild.Roles, roleName)
+	r := util.FindRoleByName(pack.guild.Roles, roleName)
 	if r == nil {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Unknown role name")
 	}
@@ -76,35 +89,56 @@ func commPermit(pack *commPackage) {
 		RoleUid:    r.ID,
 		Permission: permLevel,
 	})
-	pack.session.ChannelMessageSend(pack.channel.ID, "Added permission "+db.SprintPermission(permLevel)+" level for role "+roleName)
+	pack.session.ChannelMessageSend(pack.channel.ID, "Set permission ("+db.SprintPermission(permLevel)+") level for role "+roleName)
 }
 
 func commCustom(pack *commPackage) {
-	// should have params: command name - role name
+	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
+		return
+	}
+	// should have params: command name - role name or delete - id
 	if len(pack.params) < 2 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Please provide command name followed by the role name")
 		return
 	}
-
-	// get the role and server
-	server, err := db.ServerQueryOrInsert(pack.guild.ID)
-	if err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Error storing server information")
-		return
+	if strings.ToUpper(pack.params[0]) == "DELETE" {
+		id, err := strconv.Atoi(pack.params[1])
+		if err != nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a valid ID to delete")
+			return
+		}
+		count := db.CustomRoleDelete(id)
+		if count == -1 {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue deleting that custom role. Perhaps it doesn't exist?")
+		} else {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Deleted "+strconv.FormatInt(count, 10)+" custom role commands")
+		}
+	} else {
+		// get the role and server
+		server, err := db.ServerQueryOrInsert(pack.guild.ID)
+		if err != nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Error storing server information")
+			return
+		}
+		roleName := strings.Join(pack.params[1:], " ")
+		r := util.FindRoleByName(pack.guild.Roles, roleName)
+		role, err := db.RoleQueryOrInsert(db.Role{
+			ServerId: server.Id,
+			RoleUid:  r.ID,
+		})
+		oldId, exists := db.CustomRoleRowExists(pack.params[0], server.GuildUid)
+		if !exists {
+			err = db.CustomRoleAdd(pack.params[0], server.Id, role.Id)
+			if err != nil {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Error adding custom role")
+				return
+			}
+			pack.session.ChannelMessageSend(pack.channel.ID, "Added custom command `"+pack.params[0]+"` tied to the role: "+roleName)
+		} else {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Custom command already exists. Delete with `"+ComPrefix+" custom delete "+strconv.Itoa(oldId)+"`")
+		}
 	}
-	roleName := strings.Join(pack.params[1:], " ")
-	r := util.FindRole(pack.guild.Roles, roleName)
-	role, err := db.RoleQueryOrInsert(db.Role{
-		ServerId: server.Id,
-		RoleUid:  r.ID,
-	})
-
-	err = db.CustomRoleAdd(pack.params[0], server.Id, role.Id)
-	if err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Error adding custom role")
-		return
-	}
-	pack.session.ChannelMessageSend(pack.channel.ID, "Added custom command `"+pack.params[0]+"` tied to the role: "+roleName)
 }
 
 func commEcho(pack *commPackage) {
@@ -127,7 +161,28 @@ func commPing(pack *commPackage) {
 }
 
 func commRole(pack *commPackage) {
-	pack.session.ChannelMessageSend(pack.channel.ID, "`"+ComPrefix+" role` has been renamed to `"+ComPrefix+" team`. Please use team instead!")
+	// load up the trigger to see if it exists
+	if len(pack.params) != 1 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a valid role command")
+	}
+	roleId, err := db.CustomRoleQuery(pack.params[0], pack.guild.ID)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role command or contact my master if the problem continues.")
+		return
+	}
+	role := util.FindRoleById(pack.guild.Roles, roleId)
+	if role == nil {
+		log.Println("Nil role when searching for role id:" + roleId)
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server.")
+		return
+	}
+	if util.StrContains(pack.member.Roles, roleId, util.CaseSensitive) {
+		pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, roleId)
+		pack.session.ChannelMessageSend(pack.channel.ID, "Removed role "+role.Name+" for "+pack.message.Author.Mention())
+	} else {
+		pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, roleId)
+		pack.session.ChannelMessageSend(pack.channel.ID, "Added role "+role.Name+" for "+pack.message.Author.Mention())
+	}
 }
 
 func commTeam(pack *commPackage) {

@@ -24,10 +24,10 @@ var changeLog = map[string]string{
 
 func commChange(pack *commPackage) {
 	if len(pack.params) == 0 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeLog[version])
+		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot update log `(ver "+version+")`: \n"+changeLog[version])
 	} else if log, present := changeLog[pack.params[0]]; present {
-		pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+pack.params[0]+"): \n"+log)
+		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot update log `(ver "+pack.params[0]+")`: \n"+log)
 	} else {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Unknown version number. Latest log:\n`Moebot update log` (ver "+version+"): \n"+changeLog[version])
+		pack.session.ChannelMessageSend(pack.channel.ID, "Unknown version number. Latest log:\nMoebot update log `(ver "+version+")`: \n"+changeLog[version])
 	}
 }
