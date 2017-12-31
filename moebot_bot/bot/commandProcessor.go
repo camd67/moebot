@@ -1,9 +1,13 @@
 package bot
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/camd67/moebot/moebot_bot/util/db"
 
 	"github.com/camd67/moebot/moebot_bot/util"
 
@@ -21,6 +25,9 @@ var commands = map[string]func(pack *commPackage){
 	"RAFFLE":    commRaffle,
 	"SUBMIT":    commSubmit,
 	"ECHO":      commEcho,
+	"PERMIT":    commPermit,
+	"CUSTOM":    commCustom,
+	"PING":      commPing,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -32,14 +39,53 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	command := strings.ToUpper(messageParts[1])
 
 	if commFunc, commPresent := commands[command]; commPresent {
+		log.Println("Processing command: " + command + " from user: " + fmt.Sprintf("%+v", message.Author))
 		session.ChannelTyping(message.ChannelID)
 		commFunc(&commPackage{session, message, guild, member, channel, messageParts[2:]})
 	}
 }
 
+func commPermit(pack *commPackage) {
+	if m := checkValidMasterId(pack); !m {
+		return
+	}
+	// should always have more than 2 params: permission level, role name ... role name
+	if len(pack.params) < 2 {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a permission level followed by the role name")
+		return
+	}
+	permLevel := db.GetPermissionFromString(pack.params[0])
+	if permLevel == -1 {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Invalid permission level")
+		return
+	}
+	// find the correct role
+	roleName := strings.Join(pack.params[1:], " ")
+	r := util.FindRole(pack.guild.Roles, roleName)
+	if r == nil {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Unknown role name")
+	}
+	// we've got the role, add it to the db, updating if necessary
+	// but first grab the server (probably want to move this out to include in the commPackage
+	s, err := db.ServerQueryOrInsert(pack.guild.ID)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Error retrieving server information")
+		return
+	}
+	db.RoleInsertOrUpdate(db.Role{
+		ServerId:   s.Id,
+		RoleUid:    r.ID,
+		Permission: permLevel,
+	})
+	pack.session.ChannelMessageSend(pack.channel.ID, "Added permission "+db.SprintPermission(permLevel)+" level for role "+roleName)
+}
+
+func commCustom(pack *commPackage) {
+
+}
+
 func commEcho(pack *commPackage) {
-	if pack.message.Author.ID != Config["masterId"] {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, only my master can use this command!")
+	if m := checkValidMasterId(pack); m {
 		return
 	}
 	_, err := strconv.Atoi(pack.params[0])
@@ -48,6 +94,13 @@ func commEcho(pack *commPackage) {
 		return
 	}
 	pack.session.ChannelMessageSend(pack.params[0], strings.Join(pack.params[1:], " "))
+}
+
+func commPing(pack *commPackage) {
+	// seems this has some time drift when using docker for windows... need to verify if it's accurate on the server
+	messageTime, _ := pack.message.Timestamp.Parse()
+	pingTime := time.Duration(time.Now().UnixNano() - messageTime.UnixNano())
+	pack.session.ChannelMessageSend(pack.channel.ID, "Latency to server: "+pingTime.String())
 }
 
 func commRole(pack *commPackage) {

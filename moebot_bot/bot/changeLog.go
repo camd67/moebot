@@ -16,8 +16,18 @@ var changeLog = map[string]string{
 	"0.2.2": changeLogPrefix + "Added echo command for master only" +
 		changeLogPrefix + "added `raffle winner` and `raffle count` to get the raffle winner and vote counts" +
 		changeLogPrefix + "removed ticket generation",
+
+	"0.2.3": changeLogPrefix + "Added ping command" +
+		changeLogPrefix + "Added permit command" +
+		changeLogPrefix + "Added custom command",
 }
 
 func commChange(pack *commPackage) {
-	pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeLog["0.2.2"])
+	if len(pack.params) == 0 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+version+"): \n"+changeLog[version])
+	} else if log, present := changeLog[pack.params[0]]; present {
+		pack.session.ChannelMessageSend(pack.channel.ID, "`Moebot update log` (ver "+pack.params[0]+"): \n"+log)
+	} else {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Unknown version number. Latest log:\n`Moebot update log` (ver "+version+"): \n"+changeLog[version])
+	}
 }

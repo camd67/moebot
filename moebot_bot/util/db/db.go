@@ -42,8 +42,8 @@ func createTables() {
 	moeDb.Exec(serverTable)
 	// ROLE
 	moeDb.Exec(roleTable)
-	// CHANNEL
-	moeDb.Exec(channelTable)
+	// CHANNEL (removed till needed
+	//moeDb.Exec(channelTable)
 	// RAFFLE ENTRY
 	moeDb.Exec(raffleTable)
 }

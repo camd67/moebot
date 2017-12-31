@@ -32,6 +32,7 @@ func commSubmit(pack *commPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "You must provide a submission type and a URL in order to submit a link.")
 		return
 	}
+	// not a perfect pattern match, but if someone submits a link with a random "youtube.com" later in the url then it can be removed manually
 	reg := regexp.MustCompile(".*(youtube.com|imgur.com|pastebin.com).*")
 	if !reg.MatchString(pack.params[1]) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must provide a link to an approved site! See submissions rules for more information")

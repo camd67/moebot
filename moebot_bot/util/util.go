@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 const (
@@ -66,4 +68,14 @@ This is useful when you don't have a User object, but want to mention them
 */
 func UserIdToMention(userId string) string {
 	return fmt.Sprintf("<@%s>", userId)
+}
+
+func FindRole(roles []*discordgo.Role, toFind string) *discordgo.Role {
+	toFind = strings.ToUpper(toFind)
+	for _, r := range roles {
+		if strings.ToUpper(r.Name) == toFind {
+			return r
+		}
+	}
+	return nil
 }

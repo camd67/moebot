@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	version = "0.3"
+	version = "0.2.3"
 )
 
 type commPackage struct {
@@ -74,6 +74,14 @@ func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd
 	}
 	session.ChannelMessageSend(dmChannel.ID, "Hello "+member.User.Mention()+" and welcome to "+guild.Name+"! Please read the #rules channel for more information")
 	session.GuildMemberRoleAdd(member.GuildID, member.User.ID, starterRole.ID)
+}
+
+func checkValidMasterId(pack *commPackage) bool {
+	if pack.message.Author.ID != Config["masterId"] {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, only my master can use this command!")
+		return false
+	}
+	return true
 }
 
 func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
