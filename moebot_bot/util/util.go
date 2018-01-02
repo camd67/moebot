@@ -1,11 +1,18 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/color"
+	"image/gif"
 	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 const (
@@ -89,4 +96,49 @@ func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {
 		}
 	}
 	return nil
+}
+
+func GetSpoilerContents(messageParams []string) (title string, text string) {
+	if messageParams == nil {
+		return "", ""
+	}
+	reg := regexp.MustCompile("^(\\[.+?\\])")
+	return strings.Replace(reg.FindString(strings.Join(messageParams, " ")), "]", "", 2), reg.ReplaceAllString(strings.Join(messageParams, " "), "")
+}
+
+func MakeGif(text string) []byte {
+	var images []*image.Paletted
+	img, _ := UniformColorImage(image.Rect(0, 0, font.MeasureString(basicfont.Face7x13, text).Ceil()+100, 100),
+		color.RGBA{0x00, 0x00, 0x00, 0xff}, fixed.Point26_6{fixed.Int26_6(1 * 64), fixed.Int26_6(1 * 64)})
+	images = append(images, img)
+
+	for i := 0; i < 10; i++ {
+		img, d := UniformColorImage(image.Rect(0, 0, font.MeasureString(basicfont.Face7x13, text).Ceil()+100, 100),
+			color.RGBA{0xff, 0xff, 0xff, 0xff}, fixed.Point26_6{fixed.Int26_6(1 * 64), fixed.Int26_6(1 * 64)})
+		d.DrawString(text)
+		images = append(images, img)
+	}
+
+	buf := new(bytes.Buffer)
+	gif.EncodeAll(buf, &gif.GIF{
+		Image:     images,
+		LoopCount: 1,
+		Delay:     []int{5, 5, 5, 5, 5, 5, 5, 5, 5, 5},
+	})
+	return buf.Bytes()
+}
+
+func UniformColorImage(size image.Rectangle, c color.RGBA, startPoint fixed.Point26_6) (result *image.Paletted, drawer *font.Drawer) {
+	var palette = []color.Color{
+		color.RGBA{0x00, 0x00, 0x00, 0xff},
+		color.RGBA{0xff, 0xff, 0xff, 0xff},
+	}
+	img := image.NewPaletted(size, palette)
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(c),
+		Face: basicfont.Face7x13,
+		Dot:  startPoint,
+	}
+	return img, d
 }
