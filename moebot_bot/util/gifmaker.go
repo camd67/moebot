@@ -84,26 +84,36 @@ func formatTextSize(text string, def string) (string, image.Rectangle) {
 		return text, r
 	}
 
-	lines := []string{text}
+	lines := strings.Split(text, "\n")
+	result := []string{}
+	for _, line := range lines {
+		result = append(result, formatLine(line)...)
+	}
+
+	size := image.Point{X: 0, Y: 0}
+	if len(result) > 1 {
+		size.X = maxWidth
+	} else {
+		size.X = font.MeasureString(basicfont.Face7x13, text).Ceil()
+	}
+	size.Y = lineSpace*len(result) + yBorder
+	r = image.Rect(0, 0, size.X, size.Y)
+	return strings.Join(result, "\n"), r
+}
+
+func formatLine(text string) []string {
+	result := []string{text}
 	currentLine := text
 
 	for font.MeasureString(basicfont.Face7x13, currentLine).Ceil() > maxWidth-xBorder {
 		lineFragments := strings.Split(currentLine, " ")
-		lines = append(lines, "")
+		result = append(result, "")
 		for i := len(lineFragments) - 2; i >= 0 && font.MeasureString(basicfont.Face7x13, currentLine).Ceil() > maxWidth-xBorder; i-- {
 			currentLine = strings.Join(lineFragments[:i], " ")
-			lines[len(lines)-2] = currentLine
-			lines[len(lines)-1] = strings.Join(lineFragments[i:], " ")
+			result[len(result)-2] = currentLine
+			result[len(result)-1] = strings.Join(lineFragments[i:], " ")
 		}
-		currentLine = lines[len(lines)-1]
+		currentLine = result[len(result)-1]
 	}
-	size := image.Point{X: 0, Y: 0}
-	if len(lines) > 1 {
-		size.X = maxWidth
-	} else {
-		size.X = font.MeasureString(basicfont.Face7x13, currentLine).Ceil()
-	}
-	size.Y = lineSpace*len(lines) + yBorder
-	r = image.Rect(0, 0, size.X, size.Y)
-	return strings.Join(lines, "\n"), r
+	return result
 }
