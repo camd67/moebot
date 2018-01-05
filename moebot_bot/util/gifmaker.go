@@ -12,13 +12,15 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-const lineSpace int = 16
-const xBorder int = 30
-const yBorder int = 14
-const maxWidth int = 500
+const (
+	lineSpace = 16
+	xBorder   = 30
+	yBorder   = 14
+	maxWidth  = 500
+)
 
 func MakeGif(text string) []byte {
-	const defaultText string = "Hover to view"
+	const defaultText = "Hover to view"
 	var frames []*image.Paletted
 
 	text, imageSize := formatTextSize(text, defaultText)
