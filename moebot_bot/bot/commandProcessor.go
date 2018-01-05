@@ -28,6 +28,7 @@ var commands = map[string]func(pack *commPackage){
 	"PERMIT":    commPermit,
 	"CUSTOM":    commCustom,
 	"PING":      commPing,
+	"POLL":      commPoll,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -200,6 +201,10 @@ func commRank(pack *commPackage) {
 func commNsfw(pack *commPackage) {
 	// force NSFW comm param so we can reuse guild role
 	processGuildRole([]string{"NSFW"}, pack.session, []string{"NSFW"}, pack.channel, pack.guild, pack.message, false)
+}
+
+func commPoll(pack *commPackage) {
+
 }
 
 /*

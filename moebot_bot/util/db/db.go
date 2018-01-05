@@ -48,6 +48,9 @@ func createTables() {
 	moeDb.Exec(raffleTable)
 	// CUSTOM ROLE
 	moeDb.Exec(customRoleTable)
+	//POLL
+	moeDb.Exec(pollTable)
+	moeDb.Exec(pollOptionTable)
 }
 
 /*
