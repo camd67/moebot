@@ -221,6 +221,7 @@ func commSpoiler(pack *commPackage) {
 			Reader:      bytes.NewReader(spoilerGif),
 		},
 	})
+}
 
 func commPoll(pack *commPackage) {
 	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
