@@ -90,3 +90,11 @@ func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {
 	}
 	return nil
 }
+
+func GetSpoilerContents(messageParams []string) (title string, text string) {
+	if messageParams == nil {
+		return "", ""
+	}
+	reg := regexp.MustCompile("^(\\[.+?\\])")
+	return strings.Replace(strings.Replace(reg.FindString(strings.Join(messageParams, " ")), "]", "", 1), "[", "", 1), reg.ReplaceAllString(strings.Join(messageParams, " "), "")
+}

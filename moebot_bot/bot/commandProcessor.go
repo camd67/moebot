@@ -28,6 +28,7 @@ var commands = map[string]func(pack *commPackage){
 	"PERMIT":    commPermit,
 	"CUSTOM":    commCustom,
 	"PING":      commPing,
+	"SPOILER":   commSpoiler,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -200,6 +201,24 @@ func commRank(pack *commPackage) {
 func commNsfw(pack *commPackage) {
 	// force NSFW comm param so we can reuse guild role
 	processGuildRole([]string{"NSFW"}, pack.session, []string{"NSFW"}, pack.channel, pack.guild, pack.message, false)
+}
+
+func commSpoiler(pack *commPackage) {
+	content := pack.message.Author.Mention() + " sent a spoiler"
+	pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
+	spoilerTitle, spoilerText := util.GetSpoilerContents(pack.params)
+	if spoilerTitle != "" {
+		content += ": **" + spoilerTitle + "**"
+	}
+	spoilerGif := util.MakeGif(spoilerText)
+	pack.session.ChannelMessageSendComplex(pack.channel.ID, &discordgo.MessageSend{
+		Content: content,
+		File: &discordgo.File{
+			Name:        "Spoiler.gif",
+			ContentType: "image/gif",
+			Reader:      bytes.NewReader(spoilerGif),
+		},
+	})
 }
 
 /*
