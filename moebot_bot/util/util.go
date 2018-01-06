@@ -3,9 +3,11 @@ package util
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
 const (
@@ -89,4 +91,147 @@ func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {
 		}
 	}
 	return nil
+}
+
+func UpdatePollVotes(poll *db.Poll, session *discordgo.Session) error {
+	message, err := session.ChannelMessage(poll.ChannelId, poll.MessageId)
+	if err != nil {
+		return err
+	}
+	for _, o := range poll.Options {
+		r := getReactionById(message, o.ReactionId)
+		if r != nil {
+			o.Votes = r.Count - 1
+		}
+	}
+	return nil
+}
+
+func getReactionById(message *discordgo.Message, reactionId string) *discordgo.MessageReactions {
+	for _, r := range message.Reactions {
+		if reactionId == r.Emoji.Name {
+			return r
+		}
+	}
+	return nil
+}
+
+func OpenPollMessage(poll *db.Poll, user *discordgo.User) string {
+	message := user.Mention() + " created the poll **" + poll.Title + "**!\n"
+	for _, o := range poll.Options {
+		message += ":" + o.ReactionName + ":  " + o.Description + "\n"
+	}
+	message += "Poll ID: " + strconv.Itoa(poll.Id)
+	return message
+}
+
+func ClosePollMessage(poll *db.Poll, user *discordgo.User) string {
+	var message string
+	if poll.Open {
+		message = user.Mention() + " closed " + UserIdToMention(poll.UserId) + "'s poll **" + poll.Title + "**!\n"
+	} else {
+		message = "Poll **" + poll.Title + "** is already closed!\n"
+	}
+	winners := pollWinners(poll)
+	if len(winners) == 0 || winners[0].Votes == 0 {
+		message += "There are no winners!"
+		return message
+	}
+	if len(winners) > 1 {
+		message += "Tied for first place:\n"
+	} else {
+		message += "Poll winner:\n"
+	}
+	for _, o := range winners {
+		message += ":" + o.ReactionName + ":  " + o.Description + "\n"
+	}
+	message += "With " + strconv.Itoa(winners[0].Votes) + " votes!"
+	return message
+}
+
+func pollWinners(poll *db.Poll) []*db.PollOption {
+	var winningOptions []*db.PollOption
+	maxVotes := 0
+	for _, option := range poll.Options {
+		if option.Votes > maxVotes {
+			maxVotes = option.Votes
+		}
+	}
+
+	for _, option := range poll.Options {
+		if option.Votes == maxVotes {
+			winningOptions = append(winningOptions, option)
+		}
+	}
+
+	return winningOptions
+}
+
+func CreatePollOptions(options []string) []*db.PollOption {
+	//TODO: Move to a database table?
+	optionNames := []string{
+		"regional_indicator_a",
+		"regional_indicator_b",
+		"regional_indicator_c",
+		"regional_indicator_d",
+		"regional_indicator_e",
+		"regional_indicator_f",
+		"regional_indicator_g",
+		"regional_indicator_h",
+		"regional_indicator_i",
+		"regional_indicator_j",
+		"regional_indicator_k",
+		"regional_indicator_l",
+		"regional_indicator_m",
+		"regional_indicator_n",
+		"regional_indicator_o",
+		"regional_indicator_p",
+		"regional_indicator_q",
+		"regional_indicator_r",
+		"regional_indicator_s",
+		"regional_indicator_t",
+		"regional_indicator_u",
+		"regional_indicator_v",
+		"regional_indicator_w",
+		"regional_indicator_x",
+		"regional_indicator_y",
+		"regional_indicator_z",
+	}
+	optionIds := []string{
+		"🇦",
+		"🇧",
+		"🇨",
+		"🇩",
+		"🇪",
+		"🇫",
+		"🇬",
+		"🇭",
+		"🇮",
+		"🇯",
+		"🇰",
+		"🇱",
+		"🇲",
+		"🇳",
+		"🇴",
+		"🇵",
+		"🇶",
+		"🇷",
+		"🇸",
+		"🇹",
+		"🇺",
+		"🇻",
+		"🇼",
+		"🇽",
+		"🇾",
+		"🇿",
+	}
+	result := []*db.PollOption{}
+	for i, s := range options {
+		result = append(result, &db.PollOption{
+			Description:  strings.Trim(s, " "),
+			ReactionId:   optionIds[i],
+			ReactionName: optionNames[i],
+		})
+	}
+	return result
 }

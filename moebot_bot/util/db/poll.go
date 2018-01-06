@@ -2,13 +2,14 @@ package db
 
 import "log"
 
-type poll struct {
+type Poll struct {
 	Id        int
-	Options   []*pollOption
+	Options   []*PollOption
 	Title     string
 	Open      bool
 	UserId    string
 	ChannelId string
+	MessageId string
 }
 
 const (
@@ -17,37 +18,75 @@ const (
 		Title VARCHAR(100) NOT NULL,
 		ChannelId VARCHAR(20) NOT NULL,
 		UserId VARCHAR(20) NOT NULL,
-		Open BOOLEAN NOT NULL DEFAULT 1
+		MessageId VARCHAR(20),
+		Open BOOLEAN NOT NULL DEFAULT TRUE
 	)`
 
-	pollSelect = `SELECT (Id, Title, ChannelId, UserId, Open) FROM poll WHERE Id = $1`
+	pollSelect = `SELECT Id, Title, ChannelId, UserId, MessageId, Open FROM poll WHERE Id = $1`
 
-	pollSelectOpen = `SELECT (Id, Title, ChannelId, UserId, Open) FROM poll WHERE Open = 1`
+	pollSelectOpen = `SELECT Id, Title, ChannelId, UserId, MessageId, Open FROM poll WHERE Open = TRUE`
+
+	pollClose = `UPDATE poll SET Open = FALSE WHERE Id = $1`
+
+	pollInsert = `INSERT INTO poll (Title, ChannelId, UserId) VALUES($1, $2, $3) RETURNING Id`
+
+	pollSetMessageId = `UPDATE poll SET MessageId = $1 WHERE Id = $2`
 )
 
-func PollQuery(id int) (*poll, error) {
+func PollQuery(id int) (*Poll, error) {
 	var err error
 	row := moeDb.QueryRow(pollSelect, id)
-	result := new(poll)
-	if err = row.Scan(&result.Id, &result.Title, &result.ChannelId, &result.UserId, &result.Open); err != nil {
+	result := new(Poll)
+	if err = row.Scan(&result.Id, &result.Title, &result.ChannelId, &result.UserId, &result.MessageId, &result.Open); err != nil {
 		log.Println("Error querying for poll", err)
 		return nil, err
 	}
 	result.Options, err = PollOptionQuery(result.Id)
+	if err != nil {
+		log.Println("Error retreiving poll options", err)
+		return nil, err
+	}
 	return result, nil
 }
 
-func PollsOpenQuery() ([]*poll, error) {
+func PollsOpenQuery() ([]*Poll, error) {
 	rows, err := moeDb.Query(pollSelectOpen, nil)
 	if err != nil {
 		log.Println("Error querying for polls", err)
 		return nil, err
 	}
-	result := []*poll{}
+	result := []*Poll{}
 	for rows.Next() {
-		p := new(poll)
-		rows.Scan(&p.Id, &p.Title, &p.ChannelId, &p.UserId, &p.Open)
+		p := new(Poll)
+		rows.Scan(&p.Id, &p.Title, &p.ChannelId, &p.UserId, &p.MessageId, &p.Open)
 		result = append(result, p)
 	}
 	return result, nil
+}
+
+func PollClose(id int) error {
+	_, err := moeDb.Exec(pollClose, id)
+	if err != nil {
+		log.Println("Error closing the poll", err)
+		return err
+	}
+	return nil
+}
+
+func PollAdd(poll *Poll) error {
+	err := moeDb.QueryRow(pollInsert, poll.Title, poll.ChannelId, poll.UserId).Scan(&poll.Id)
+	if err != nil {
+		log.Println("Error creating the poll", err)
+		return err
+	}
+	return nil
+}
+
+func PollSetMessageId(poll *Poll) error {
+	_, err := moeDb.Exec(pollSetMessageId, poll.MessageId, poll.Id)
+	if err != nil {
+		log.Println("Error updating the message Id for the poll", err)
+		return err
+	}
+	return nil
 }

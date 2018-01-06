@@ -2,6 +2,7 @@ package bot
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
@@ -204,7 +205,112 @@ func commNsfw(pack *commPackage) {
 }
 
 func commPoll(pack *commPackage) {
+	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
+		return
+	}
+	if pack.params[0] == "-close" {
+		closePoll(pack)
+		return
+	}
+	openPoll(pack)
+}
 
+func openPoll(pack *commPackage) {
+	var options []string
+	var title string
+	for i := 0; i < len(pack.params); i++ {
+		if pack.params[i] == "-options" {
+			options = parseOptions(pack.params[i+1:])
+		}
+		if pack.params[i] == "-title" {
+			title = parseTitle(pack.params[i+1:])
+		}
+	}
+	if len(options) > 25 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there can only be a maximum of 25 options per poll.")
+		return
+	}
+	poll := &db.Poll{
+		Title:     title,
+		UserId:    pack.message.Author.ID,
+		ChannelId: pack.channel.ID,
+		Open:      true,
+		Options:   util.CreatePollOptions(options),
+	}
+	err := db.PollAdd(poll)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
+		return
+	}
+	db.PollOptionAdd(poll)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
+		return
+	}
+	message, _ := pack.session.ChannelMessageSend(pack.channel.ID, util.OpenPollMessage(poll, pack.message.Author))
+	for _, o := range poll.Options {
+		pack.session.MessageReactionAdd(pack.channel.ID, message.ID, o.ReactionId)
+	}
+	poll.MessageId = message.ID
+	err = db.PollSetMessageId(poll)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem updating the poll. Please delete and create it again.")
+	}
+}
+
+func parseOptions(params []string) []string {
+	for i := 0; i < len(params); i++ {
+		if params[i][0] == '-' {
+			return strings.Split(strings.Join(params[:i], " "), ",")
+		}
+	}
+	return strings.Split(strings.Join(params, " "), ",")
+}
+
+func parseTitle(params []string) string {
+	for i := 0; i < len(params); i++ {
+		if params[i][0] == '-' {
+			return strings.Join(params[:i], " ")
+		}
+	}
+	return strings.Join(params, " ")
+}
+
+func closePoll(pack *commPackage) {
+	if len(pack.params) < 2 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you have to specify a valid ID for the poll")
+		return
+	}
+	id, err := strconv.Atoi(pack.params[1])
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem parsing the poll ID, please check if it's a valid ID")
+		return
+	}
+	poll, err := db.PollQuery(id)
+	if err == sql.ErrNoRows {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there is no valid poll with the given ID")
+		return
+	} else if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem retreiving the poll with the given ID")
+		return
+	}
+	if !poll.Open {
+		pack.session.ChannelMessageSend(pack.channel.ID, util.ClosePollMessage(poll, pack.message.Author))
+		return
+	}
+	err = util.UpdatePollVotes(poll, pack.session)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem retrieving the votes count for the given Poll")
+		return
+	}
+	db.PollOptionUpdateVotes(poll)
+	err = db.PollClose(id)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem closing the poll.")
+		return
+	}
+	pack.session.ChannelMessageSend(pack.channel.ID, util.ClosePollMessage(poll, pack.message.Author))
 }
 
 /*
