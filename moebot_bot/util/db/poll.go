@@ -50,7 +50,7 @@ func PollQuery(id int) (*Poll, error) {
 }
 
 func PollsOpenQuery() ([]*Poll, error) {
-	rows, err := moeDb.Query(pollSelectOpen, nil)
+	rows, err := moeDb.Query(pollSelectOpen)
 	if err != nil {
 		log.Println("Error querying for polls", err)
 		return nil, err
