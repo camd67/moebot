@@ -94,7 +94,11 @@ func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {
 }
 
 func UpdatePollVotes(poll *db.Poll, session *discordgo.Session) error {
-	message, err := session.ChannelMessage(poll.ChannelId, poll.MessageId)
+	channel, err := db.ChannelQueryById(poll.ChannelId)
+	if err != nil {
+		return err
+	}
+	message, err := session.ChannelMessage(channel.ChannelUid, poll.MessageUid)
 	if err != nil {
 		return err
 	}
@@ -128,7 +132,7 @@ func OpenPollMessage(poll *db.Poll, user *discordgo.User) string {
 func ClosePollMessage(poll *db.Poll, user *discordgo.User) string {
 	var message string
 	if poll.Open {
-		message = user.Mention() + " closed " + UserIdToMention(poll.UserId) + "'s poll **" + poll.Title + "**!\n"
+		message = user.Mention() + " closed " + UserIdToMention(poll.UserUid) + "'s poll **" + poll.Title + "**!\n"
 	} else {
 		message = "Poll **" + poll.Title + "** is already closed!\n"
 	}

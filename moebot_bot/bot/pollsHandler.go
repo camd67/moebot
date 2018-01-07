@@ -36,14 +36,24 @@ func (handler *PollsHandler) openPoll(pack *commPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there can only be a maximum of 25 options per poll.")
 		return
 	}
+	server, err := db.ServerQueryOrInsert(pack.guild.ID)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
+		return
+	}
+	channel, err := db.ChannelQueryOrInsert(pack.channel.ID, &server)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
+		return
+	}
 	poll := &db.Poll{
 		Title:     title,
-		UserId:    pack.message.Author.ID,
-		ChannelId: pack.channel.ID,
+		UserUid:   pack.message.Author.ID,
+		ChannelId: channel.Id,
 		Open:      true,
 		Options:   util.CreatePollOptions(options),
 	}
-	err := db.PollAdd(poll)
+	err = db.PollAdd(poll)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return
@@ -57,7 +67,7 @@ func (handler *PollsHandler) openPoll(pack *commPackage) {
 	for _, o := range poll.Options {
 		pack.session.MessageReactionAdd(pack.channel.ID, message.ID, o.ReactionId)
 	}
-	poll.MessageId = message.ID
+	poll.MessageUid = message.ID
 	err = db.PollSetMessageId(poll)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem updating the poll. Please delete and create it again.")
@@ -105,6 +115,15 @@ func (handler *PollsHandler) closePoll(pack *commPackage) {
 		}
 		handler.pollsList = append(handler.pollsList, poll)
 	}
+	channel, err := db.ChannelQueryById(poll.ChannelId)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem retrieving poll data")
+		return
+	}
+	if channel.ChannelUid != pack.channel.ID {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you can't close a poll opened in another channel")
+		return
+	}
 	if !poll.Open {
 		pack.session.ChannelMessageSend(pack.channel.ID, util.ClosePollMessage(poll, pack.message.Author))
 		return
@@ -136,7 +155,7 @@ func (handler *PollsHandler) pollFromId(id int) *db.Poll {
 func (handler *PollsHandler) checkSingleVote(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
 	var err error
 	for _, p := range handler.pollsList {
-		if p.MessageId == reactionAdd.MessageID {
+		if p.MessageUid == reactionAdd.MessageID {
 			p.Options, err = db.PollOptionQuery(p.Id)
 			if err != nil {
 				log.Println("Cannot retrieve poll options informations", err)
@@ -150,7 +169,12 @@ func (handler *PollsHandler) checkSingleVote(session *discordgo.Session, reactio
 }
 
 func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *db.Poll, reactionAdd *discordgo.MessageReactionAdd) {
-	message, err := session.ChannelMessage(poll.ChannelId, poll.MessageId)
+	channel, err := db.ChannelQueryById(poll.ChannelId)
+	if err != nil {
+		log.Println("Cannot retrieve poll channel informations", err)
+		return
+	}
+	message, err := session.ChannelMessage(channel.ChannelUid, poll.MessageUid)
 	if err != nil {
 		log.Println("Cannot retrieve poll message informations", err)
 		return
@@ -163,7 +187,7 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 			continue
 		}
 		//Getting a list of users for every reaction
-		users, err := session.MessageReactions(poll.ChannelId, poll.MessageId, r.Emoji.Name, 100)
+		users, err := session.MessageReactions(channel.ChannelUid, poll.MessageUid, r.Emoji.Name, 100)
 		if err != nil {
 			log.Println("Cannot retrieve reaction informations", err)
 			return
@@ -171,7 +195,7 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 		for _, u := range users {
 			//If the user has other votes, we remove them
 			if u.ID == reactionAdd.UserID && r.Emoji.Name != reactionAdd.Emoji.Name && reactionIsOption(poll.Options, reactionAdd.Emoji.Name) {
-				session.MessageReactionRemove(poll.ChannelId, poll.MessageId, r.Emoji.Name, u.ID)
+				session.MessageReactionRemove(channel.ChannelUid, poll.MessageUid, r.Emoji.Name, u.ID)
 				break
 			}
 		}

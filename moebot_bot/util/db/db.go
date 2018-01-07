@@ -43,7 +43,7 @@ func createTables() {
 	// ROLE
 	moeDb.Exec(roleTable)
 	// CHANNEL (removed till needed
-	//moeDb.Exec(channelTable)
+	moeDb.Exec(channelTable)
 	// RAFFLE ENTRY
 	moeDb.Exec(raffleTable)
 	// CUSTOM ROLE
