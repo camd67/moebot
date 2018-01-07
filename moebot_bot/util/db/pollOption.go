@@ -23,7 +23,7 @@ const (
 
 	pollOptionSelectPoll = `SELECT Id, PollId, ReactionId, ReactionName, Description, Votes FROM poll_option WHERE PollId = $1 ORDER BY Id`
 
-	pollOptionInsert = `INSERT INTO poll_option (PollId, ReactionId, ReactionName, Description) VALUES($1, $2, $3, $4)`
+	pollOptionInsert = `INSERT INTO poll_option (PollId, ReactionId, ReactionName, Description) VALUES($1, $2, $3, $4) RETURNING Id`
 
 	pollOptionUpdateVotes = `UPDATE poll_option SET Votes = $1 WHERE Id = $2`
 )
@@ -49,7 +49,7 @@ func PollOptionQuery(pollId int) ([]*PollOption, error) {
 
 func PollOptionAdd(poll *Poll) error {
 	for _, o := range poll.Options {
-		_, err := moeDb.Exec(pollOptionInsert, poll.Id, o.ReactionId, o.ReactionName, o.Description)
+		err := moeDb.QueryRow(pollOptionInsert, poll.Id, o.ReactionId, o.ReactionName, o.Description).Scan(&o.Id)
 		if err != nil {
 			log.Println("Error inserting poll options", err)
 			return err

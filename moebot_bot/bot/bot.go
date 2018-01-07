@@ -32,11 +32,13 @@ var (
 	allowedNonComServers = []string{"378336255030722570", "93799773856862208"}
 	ComPrefix            string
 	Config               = make(map[string]string)
+	pollsHandler         = new(PollsHandler)
 )
 
 func SetupMoebot(session *discordgo.Session) {
 	addHandlers(session)
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
+	pollsHandler.loadFromDb()
 }
 
 func addHandlers(discord *discordgo.Session) {
@@ -150,51 +152,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 }
 
 func messageReactionAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
-	polls, err := db.PollsOpenQuery()
-	if err != nil {
-		return
-	}
-	for _, p := range polls {
-		if p.MessageId == reactionAdd.MessageID {
-			p.Options, err = db.PollOptionQuery(p.Id)
-			if err != nil {
-				log.Println("Cannot retrieve poll options informations", err)
-				return
-			}
-			//If the user is reacting to a poll, we check if he has already cast a vote and remove it
-			handleSingleVote(session, p, reactionAdd)
-			return
-		}
-	}
-}
-
-func handleSingleVote(session *discordgo.Session, poll *db.Poll, reactionAdd *discordgo.MessageReactionAdd) {
-	message, err := session.ChannelMessage(poll.ChannelId, poll.MessageId)
-	if err != nil {
-		log.Println("Cannot retrieve poll message informations", err)
-		return
-	}
-	if message.Author.ID == reactionAdd.UserID {
-		return //The bot is modifying its own reactions
-	}
-	for _, r := range message.Reactions {
-		if !reactionIsOption(poll.Options, r.Emoji.Name) {
-			continue
-		}
-		//Getting a list of users for every reaction
-		users, err := session.MessageReactions(poll.ChannelId, poll.MessageId, r.Emoji.Name, 100)
-		if err != nil {
-			log.Println("Cannot retrieve reaction informations", err)
-			return
-		}
-		for _, u := range users {
-			//If the user has other votes, we remove them
-			if u.ID == reactionAdd.UserID && r.Emoji.Name != reactionAdd.Emoji.Name && reactionIsOption(poll.Options, reactionAdd.Emoji.Name) {
-				session.MessageReactionRemove(poll.ChannelId, poll.MessageId, r.Emoji.Name, u.ID)
-				break
-			}
-		}
-	}
+	pollsHandler.checkSingleVote(session, reactionAdd)
 }
 
 func reactionIsOption(options []*db.PollOption, emojiID string) bool {
