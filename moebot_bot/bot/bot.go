@@ -32,17 +32,20 @@ var (
 	allowedNonComServers = []string{"378336255030722570", "93799773856862208"}
 	ComPrefix            string
 	Config               = make(map[string]string)
+	pollsHandler         = new(PollsHandler)
 )
 
 func SetupMoebot(session *discordgo.Session) {
 	addHandlers(session)
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
+	pollsHandler.loadFromDb()
 }
 
 func addHandlers(discord *discordgo.Session) {
 	discord.AddHandler(ready)
 	discord.AddHandler(messageCreate)
 	discord.AddHandler(guildMemberAdd)
+	discord.AddHandler(messageReactionAdd)
 }
 
 func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
@@ -146,6 +149,19 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	// distribute tickets
 	// temporarily disable ticket distribution
 	//distributeTickets(guild, message, session, messageTime)
+}
+
+func messageReactionAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
+	pollsHandler.checkSingleVote(session, reactionAdd)
+}
+
+func reactionIsOption(options []*db.PollOption, emojiID string) bool {
+	for _, o := range options {
+		if o.ReactionId == emojiID {
+			return true
+		}
+	}
+	return false
 }
 
 func distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {

@@ -29,6 +29,7 @@ var commands = map[string]func(pack *commPackage){
 	"CUSTOM":    commCustom,
 	"PING":      commPing,
 	"SPOILER":   commSpoiler,
+	"POLL":      commPoll,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -219,6 +220,18 @@ func commSpoiler(pack *commPackage) {
 			Reader:      bytes.NewReader(spoilerGif),
 		},
 	})
+}
+
+func commPoll(pack *commPackage) {
+	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
+		return
+	}
+	if pack.params[0] == "-close" {
+		pollsHandler.closePoll(pack)
+		return
+	}
+	pollsHandler.openPoll(pack)
 }
 
 /*
