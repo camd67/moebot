@@ -17,6 +17,7 @@ const (
 	xBorder   = 30
 	yBorder   = 14
 	maxWidth  = 500
+	viewDelay = 150 // 1/100th of second
 )
 
 func MakeGif(text string) []byte {
@@ -33,7 +34,7 @@ func MakeGif(text string) []byte {
 	gif.EncodeAll(buf, &gif.GIF{
 		Image:     frames,
 		LoopCount: 1,
-		Delay:     []int{300, 100000},
+		Delay:     []int{viewDelay, 100000},
 	})
 	return buf.Bytes()
 }
@@ -96,7 +97,7 @@ func formatTextSize(text string, def string) (string, image.Rectangle) {
 	if len(result) > 1 {
 		size.X = maxWidth
 	} else {
-		size.X = font.MeasureString(basicfont.Face7x13, text).Ceil()
+		size.X = font.MeasureString(basicfont.Face7x13, text).Ceil() + xBorder
 	}
 	size.Y = lineSpace*len(result) + yBorder
 	r = image.Rect(0, 0, size.X, size.Y)

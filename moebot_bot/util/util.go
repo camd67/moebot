@@ -121,7 +121,12 @@ func getReactionById(message *discordgo.Message, reactionId string) *discordgo.M
 }
 
 func OpenPollMessage(poll *db.Poll, user *discordgo.User) string {
-	message := user.Mention() + " created the poll **" + poll.Title + "**!\n"
+	message := user.Mention() + " created "
+	if poll.Title != "" {
+		message += "the poll **" + poll.Title + "**!\n"
+	} else {
+		message += "a poll!\n"
+	}
 	for _, o := range poll.Options {
 		message += ":" + o.ReactionName + ":  " + o.Description + "\n"
 	}
@@ -132,9 +137,22 @@ func OpenPollMessage(poll *db.Poll, user *discordgo.User) string {
 func ClosePollMessage(poll *db.Poll, user *discordgo.User) string {
 	var message string
 	if poll.Open {
-		message = user.Mention() + " closed " + UserIdToMention(poll.UserUid) + "'s poll **" + poll.Title + "**!\n"
+		if user.ID == poll.UserUid {
+			message = user.Mention() + " closed his poll"
+		} else {
+			message = user.Mention() + " closed " + UserIdToMention(poll.UserUid) + "'s poll"
+		}
+		if poll.Title != "" {
+			message += " **" + poll.Title + "**!\n"
+		} else {
+			message += "!\n"
+		}
 	} else {
-		message = "Poll **" + poll.Title + "** is already closed!\n"
+		if poll.Title != "" {
+			message = "Poll **" + poll.Title + "** is already closed!\n"
+		} else {
+			message = "This poll is already closed!"
+		}
 	}
 	winners := pollWinners(poll)
 	if len(winners) == 0 || winners[0].Votes == 0 {
