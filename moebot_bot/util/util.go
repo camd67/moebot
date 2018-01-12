@@ -138,7 +138,7 @@ func ClosePollMessage(poll *db.Poll, user *discordgo.User) string {
 	var message string
 	if poll.Open {
 		if user.ID == poll.UserUid {
-			message = user.Mention() + " closed his poll"
+			message = user.Mention() + " closed their poll"
 		} else {
 			message = user.Mention() + " closed " + UserIdToMention(poll.UserUid) + "'s poll"
 		}
