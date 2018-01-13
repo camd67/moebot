@@ -32,6 +32,10 @@ func (handler *PollsHandler) openPoll(pack *commPackage) {
 			title = parseTitle(pack.params[i+1:])
 		}
 	}
+	if len(options) <= 1 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must specify at least two options to create a poll.")
+		return
+	}
 	if len(options) > 25 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there can only be a maximum of 25 options per poll.")
 		return
@@ -65,7 +69,10 @@ func (handler *PollsHandler) openPoll(pack *commPackage) {
 	}
 	message, _ := pack.session.ChannelMessageSend(pack.channel.ID, util.OpenPollMessage(poll, pack.message.Author))
 	for _, o := range poll.Options {
-		pack.session.MessageReactionAdd(pack.channel.ID, message.ID, o.ReactionId)
+		err = pack.session.MessageReactionAdd(pack.channel.ID, message.ID, o.ReactionId)
+		if err != nil {
+			log.Println("Cannot add reaction to poll message", err)
+		}
 	}
 	poll.MessageUid = message.ID
 	err = db.PollSetMessageId(poll)
