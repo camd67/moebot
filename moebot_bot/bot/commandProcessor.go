@@ -175,7 +175,7 @@ func commRole(pack *commPackage) {
 			return
 		}
 		// little hackey, but include each command in quotes
-		pack.session.ChannelMessageSend(pack.channel.ID, "Possible role commands for this server: `"+strings.Join(triggers, "`, `"+"`"))
+		pack.session.ChannelMessageSend(pack.channel.ID, "Possible role commands for this server: `"+strings.Join(triggers, "`, `")+"`")
 	} else {
 		// load up the trigger to see if it exists
 		roleId, err := db.CustomRoleQuery(pack.params[0], pack.guild.ID)
