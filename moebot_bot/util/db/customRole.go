@@ -21,8 +21,9 @@ const (
 		Trigger VARCHAR(50) NOT NULL
 	)`
 
-	customRoleQueryServer = `SELECT cr.id, cr.Trigger, r.RoleUid
-		FROM customRole AS cr, server, role AS r
+	customRoleQueryServer = `SELECT cr.Trigger
+		FROM customRole AS cr
+		JOIN server ON server.id = cr.GuildId
 		WHERE server.GuildUid = $1`
 	customRoleQueryTrigger = `SELECT r.RoleUid
 		FROM customRole AS cr
@@ -47,6 +48,24 @@ func CustomRoleQuery(trigger string, guildUid string) (rId string, err error) {
 	err = moeDb.QueryRow(customRoleQueryTrigger, guildUid, trigger).Scan(&rId)
 	if err != nil {
 		log.Println("Error querying for custom role {trigger, guildId} ", trigger, guildUid)
+	}
+	return
+}
+
+func CustomRoleQueryServer(guildUid string) (triggers []string, err error) {
+	rows, err := moeDb.Query(customRoleQueryServer, guildUid)
+	if err != nil {
+		log.Println("Error querying for server:", err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var trigger string
+		if err = rows.Scan(&trigger); err != nil {
+			log.Println("Error scanning from customRole table:", err)
+			return
+		}
+		triggers = append(triggers, trigger)
 	}
 	return
 }
