@@ -1,6 +1,6 @@
 # How can I help out?
 First off, thank you for wanting to contribute to Moebot's development!
-I certinaly appreciate it when others want to help moebot be the best bot she can be.
+I certainly appreciate it when others want to help moebot be the best bot she can be.
 However, in order to be the best bot she can be there needs to be some standards when working on her.
 
 ## Setting up moebot locally
