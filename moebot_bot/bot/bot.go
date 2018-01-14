@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	version = "0.2.3"
+	version = "0.2.4"
 )
 
 type commPackage struct {
