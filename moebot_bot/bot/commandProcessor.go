@@ -167,27 +167,35 @@ func commPing(pack *commPackage) {
 }
 
 func commRole(pack *commPackage) {
-	// load up the trigger to see if it exists
-	if len(pack.params) != 1 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a valid role command")
-	}
-	roleId, err := db.CustomRoleQuery(pack.params[0], pack.guild.ID)
-	if err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role command or contact my master if the problem continues.")
-		return
-	}
-	role := util.FindRoleById(pack.guild.Roles, roleId)
-	if role == nil {
-		log.Println("Nil role when searching for role id:" + roleId)
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server.")
-		return
-	}
-	if util.StrContains(pack.member.Roles, roleId, util.CaseSensitive) {
-		pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, roleId)
-		pack.session.ChannelMessageSend(pack.channel.ID, "Removed role "+role.Name+" for "+pack.message.Author.Mention())
+	if len(pack.params) == 0 {
+		// go find all the triggers for this server
+		triggers, err := db.CustomRoleQueryServer(pack.guild.ID)
+		if err != nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the server. This is an issue with moebot!")
+			return
+		}
+		// little hackey, but include each command in quotes
+		pack.session.ChannelMessageSend(pack.channel.ID, "Possible role commands for this server: `"+strings.Join(triggers, "`, `"+"`"))
 	} else {
-		pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, roleId)
-		pack.session.ChannelMessageSend(pack.channel.ID, "Added role "+role.Name+" for "+pack.message.Author.Mention())
+		// load up the trigger to see if it exists
+		roleId, err := db.CustomRoleQuery(pack.params[0], pack.guild.ID)
+		if err != nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role command. Did you perhaps mean `team` or `rank`?")
+			return
+		}
+		role := util.FindRoleById(pack.guild.Roles, roleId)
+		if role == nil {
+			log.Println("Nil role when searching for role id:" + roleId)
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server.")
+			return
+		}
+		if util.StrContains(pack.member.Roles, roleId, util.CaseSensitive) {
+			pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, roleId)
+			pack.session.ChannelMessageSend(pack.channel.ID, "Removed role "+role.Name+" for "+pack.message.Author.Mention())
+		} else {
+			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, roleId)
+			pack.session.ChannelMessageSend(pack.channel.ID, "Added role "+role.Name+" for "+pack.message.Author.Mention())
+		}
 	}
 }
 
@@ -240,7 +248,7 @@ If StrictRole is true then the first role in the list of allowed roles is used i
 */
 func processGuildRole(allowedRoles []string, session *discordgo.Session, params []string, channel *discordgo.Channel, guild *discordgo.Guild, message *discordgo.Message, strictRole bool) {
 	if len(params) == 0 || !util.StrContains(allowedRoles, params[0], util.CaseInsensitive) {
-		session.ChannelMessageSend(channel.ID, message.Author.Mention()+" please provide one of the approved roles: "+strings.Join(allowedRoles, ", "))
+		session.ChannelMessageSend(channel.ID, message.Author.Mention()+" please provide one of the approved roles: "+strings.Join(allowedRoles, ", ")+". Did you perhaps mean `team` or `rank`?")
 		return
 	}
 
@@ -271,7 +279,7 @@ func processGuildRole(allowedRoles []string, session *discordgo.Session, params 
 	memberRoles := guildMember.Roles
 	if strictRole && util.StrContains(memberRoles, roleToAdd.ID, util.CaseSensitive) && strings.HasPrefix(strings.ToUpper(roleToAdd.Name), requestedRole) {
 		// we're in strict mode, and got a removal for the first role. prevent that
-		session.ChannelMessageSend(channel.ID, "You can't remove your lowest role for this command!")
+		session.ChannelMessageSend(channel.ID, "Sorry, you can't remove roles with this command, only change them!")
 		return
 	}
 	removeAllRoles(session, guildMember, allRolesToChange, guild)
