@@ -5,8 +5,8 @@ const changeLogPrefix = "\n`->` "
 // probably want to move this to the DB, but not bad to have it here
 var changeLog = map[string]string{
 
-	"0.2.4": changeLogPrefix + "Added spoiler command" +
-		changeLogPrefix + "Added poll command",
+	"0.2.4": changeLogPrefix + "Added spoiler command (credit: Shadran)" +
+		changeLogPrefix + "Added poll command (credit: Shadran)",
 
 	"0.2.3": changeLogPrefix + "Added ping command" +
 		changeLogPrefix + "Added permit command" +

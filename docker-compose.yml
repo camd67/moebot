@@ -9,7 +9,7 @@ secrets:
 services:
   db:
     image: postgres
-    restart: unless-stopped
+    restart: always
     container_name: "db"
     secrets:
       - PG_PASS
@@ -26,10 +26,8 @@ services:
 
   bot:
     build: ./moebot_bot
-    restart: unless-stopped
+    restart: always
     container_name: "moebot"
-    ports:
-      - "80:80"
     secrets:
       - MB_CONFIG
     depends_on:
@@ -38,6 +36,15 @@ services:
       - backend
     environment:
       MOEBOT_CONFIG_PATH: /run/secrets/MB_CONFIG
+
+  www:
+    build: ./www
+    restart: always
+    container_name: "www"
+    ports:
+      - "8040:8040"
+    networks:
+      - backend
 
 networks:
   backend:
