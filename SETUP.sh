@@ -2,7 +2,7 @@
 
 echo "Downloading required dev tools..."
 # required stuff for setup (tools and stuff)
-go get -u github.com/jteeuwen/go-bindata github.com/golang/dep/cmd/dep
+go get -u github.com/jteeuwen/go-bindata/... github.com/golang/dep/cmd/dep
 
 echo "Downloading required packages..."
 # required stuff for programming
