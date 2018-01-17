@@ -1,7 +1,7 @@
 # moebot
 The bot for discord, but with moe!
 
-## Setup
+## Setup (discord bot)
 * Install docker
 * Duplicate `config/mb_config.example.txt` and rename it to `mb_config.secret`
     * Fill in `secret` with your discord bot's secret
@@ -15,3 +15,8 @@ The bot for discord, but with moe!
 * Create a docker volume: `docker volume create moebot-data`
 * Run `docker-compose up --build -d` to run moebot in the background
 * Invite moebot to your server!
+
+## Setup (website)
+* Follow setup for discord bot
+* Edit your hosts file to include `127.0.0.1 local.moebot.moe`
+* Go into your browser and go to `local.moebot.moe`

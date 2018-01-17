@@ -1,0 +1,7 @@
+server {
+    server_name     moebot.moe *.moebot.moe;
+
+    location / {
+        root        /www/static;
+    }
+}
