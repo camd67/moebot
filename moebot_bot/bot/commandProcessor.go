@@ -31,6 +31,7 @@ var commands = map[string]func(pack *commPackage){
 	"SPOILER":       commSpoiler,
 	"POLL":          commPoll,
 	"TOGGLEMENTION": commToggleMention,
+	"PINMOVE":       commPinMove,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -284,6 +285,50 @@ func restoreMention(pack *commPackage, role *discordgo.Role) {
 		message += "not mentionable"
 	}
 	pack.session.ChannelMessageSend(pack.channel.ID, message)
+}
+
+func commPinMove(pack *commPackage) {
+	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
+		return
+	}
+	if len(pack.params) == 0 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to specify at least a valid channel.")
+		return
+	}
+	var err error
+	var pinChannel string
+	enableText := false
+	for i := 0; i < len(pack.params)-1; i++ {
+		if pack.params[i] == "-sendTo" {
+			pinChannel = pack.params[i+1]
+		}
+		if pack.params[i] == "-text" {
+			enableText = true
+		}
+	}
+	sourceChannelName := pack.params[len(pack.params)-1]
+	if pinChannel != "" {
+		server, err := db.ServerQueryOrInsert(pack.guild.ID)
+		var destPinChannel *discordgo.Channel
+		for _, c := range pack.guild.Channels {
+			if "#"+c.Name == pinChannel {
+				destPinChannel = c
+				break
+			}
+		}
+		if destPinChannel == nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to specify a valid destination channel.")
+		}
+		var currentPinChannel *db.Channel
+		if server.DefaultPinChannelId.Valid && server.DefaultPinChannelId.Int64 > 0 {
+			currentPinChannel, err = db.ChannelQueryById(int(server.DefaultPinChannelId.Int64))
+		}
+		if currentPinChannel == nil || currentPinChannel.ChannelUid != destPinChannel.ID {
+			dbDestPinChannel, err := db.ChannelQueryOrInsert(destPinChannel.ID, &server)
+			db.ServerSetDefaultPinChannel(server.Id, dbDestPinChannel.Id)
+		}
+	}
 }
 
 /*
