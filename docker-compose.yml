@@ -37,14 +37,14 @@ services:
     environment:
       MOEBOT_CONFIG_PATH: /run/secrets/MB_CONFIG
 
-  www:
+  nginx:
     build: ./www
     restart: always
     container_name: "www"
-    ports:
-      - "8040:8040"
     networks:
       - backend
+    ports:
+      - "80:80"
 
 networks:
   backend:

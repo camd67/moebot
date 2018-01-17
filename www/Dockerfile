@@ -1,10 +1,6 @@
-FROM golang
-
-COPY / /go/src/github.com/camd67/www
-
-RUN go install github.com/camd67/www
-
-CMD ["/go/bin/www"]
-
-ENV port 8040
-EXPOSE 8040
+FROM nginx
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+COPY nginx/moebot.moe /etc/nginx/conf.d/moebot.moe
+# switch this during production, maybe another dockerfile?
+COPY /static/ /www/static/
+#VOLUME /static /www/static
