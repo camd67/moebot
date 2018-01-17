@@ -149,7 +149,7 @@ func commCustom(pack *commPackage) {
 }
 
 func commEcho(pack *commPackage) {
-	if m := checkValidMasterId(pack); m {
+	if m := checkValidMasterId(pack); !m {
 		return
 	}
 	_, err := strconv.Atoi(pack.params[0])
