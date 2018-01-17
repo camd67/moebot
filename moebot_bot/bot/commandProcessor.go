@@ -16,20 +16,21 @@ import (
 )
 
 var commands = map[string]func(pack *commPackage){
-	"TEAM":      commTeam,
-	"ROLE":      commRole,
-	"RANK":      commRank,
-	"NSFW":      commNsfw,
-	"HELP":      commHelp,
-	"CHANGELOG": commChange,
-	"RAFFLE":    commRaffle,
-	"SUBMIT":    commSubmit,
-	"ECHO":      commEcho,
-	"PERMIT":    commPermit,
-	"CUSTOM":    commCustom,
-	"PING":      commPing,
-	"SPOILER":   commSpoiler,
-	"POLL":      commPoll,
+	"TEAM":          commTeam,
+	"ROLE":          commRole,
+	"RANK":          commRank,
+	"NSFW":          commNsfw,
+	"HELP":          commHelp,
+	"CHANGELOG":     commChange,
+	"RAFFLE":        commRaffle,
+	"SUBMIT":        commSubmit,
+	"ECHO":          commEcho,
+	"PERMIT":        commPermit,
+	"CUSTOM":        commCustom,
+	"PING":          commPing,
+	"SPOILER":       commSpoiler,
+	"POLL":          commPoll,
+	"TOGGLEMENTION": commToggleMention,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -240,6 +241,49 @@ func commPoll(pack *commPackage) {
 		return
 	}
 	pollsHandler.openPoll(pack)
+}
+
+func commToggleMention(pack *commPackage) {
+	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
+		return
+	}
+	roleName := strings.Join(pack.params, " ")
+	for _, role := range pack.guild.Roles {
+		if role.Name == roleName {
+			editedRole, err := pack.session.GuildRoleEdit(pack.guild.ID, role.ID, role.Name, role.Color, role.Hoist, role.Permissions, !role.Mentionable)
+			if err != nil {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem editing the role, try again later")
+				return
+			}
+			go restoreMention(pack, editedRole)
+			message := "Successfully changed " + editedRole.Name + " to "
+			if editedRole.Mentionable {
+				message += "mentionable"
+			} else {
+				message += "not mentionable"
+			}
+			pack.session.ChannelMessageSend(pack.channel.ID, message)
+			return
+		}
+	}
+	pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, could not find role "+roleName+". Please check the role name and try again.")
+}
+
+func restoreMention(pack *commPackage, role *discordgo.Role) {
+	<-time.After(5 * time.Minute)
+	editedRole, err := pack.session.GuildRoleEdit(pack.guild.ID, role.ID, role.Name, role.Color, role.Hoist, role.Permissions, !role.Mentionable)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem editing the role, try again later")
+		return
+	}
+	message := "Restored role " + editedRole.Name + " to "
+	if editedRole.Mentionable {
+		message += "mentionable"
+	} else {
+		message += "not mentionable"
+	}
+	pack.session.ChannelMessageSend(pack.channel.ID, message)
 }
 
 /*
