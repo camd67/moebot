@@ -7,8 +7,9 @@ import (
 	"image/gif"
 	"strings"
 
+	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/font/gofont/gomono"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -20,10 +21,15 @@ const (
 	viewDelay = 150 // 1/100th of second
 )
 
+var fontFace font.Face
+
 func MakeGif(text string) []byte {
 	const defaultText = "Hover to view"
 	var frames []*image.Paletted
-
+	fnt, _ := truetype.Parse(gomono.TTF)
+	fontFace = truetype.NewFace(fnt, &truetype.Options{
+		Size: 16.0,
+	})
 	text, imageSize := formatTextSize(text, defaultText)
 
 	frames = addImageFrame(frames, imageSize, defaultText, color.RGBA{0xff, 0xff, 0xff, 0xff}, color.RGBA{0x00, 0x00, 0x00, 0xff})
@@ -55,6 +61,10 @@ func addImageFrame(frames []*image.Paletted, size image.Rectangle, text string, 
 func uniformColorImage(size image.Rectangle, imageColor color.RGBA, textColor color.RGBA, startPoint fixed.Point26_6) (result *image.Paletted, drawer *font.Drawer) {
 	var palette = []color.Color{
 		color.RGBA{0x00, 0x00, 0x00, 0xff},
+		color.RGBA{0x33, 0x33, 0x33, 0xff},
+		color.RGBA{0x66, 0x66, 0x66, 0xff},
+		color.RGBA{0x99, 0x99, 0x99, 0xff},
+		color.RGBA{0xcc, 0xcc, 0xcc, 0xff},
 		color.RGBA{0xff, 0xff, 0xff, 0xff},
 	}
 	img := image.NewPaletted(size, palette)
@@ -62,7 +72,7 @@ func uniformColorImage(size image.Rectangle, imageColor color.RGBA, textColor co
 	d := &font.Drawer{
 		Dst:  img,
 		Src:  image.NewUniform(textColor),
-		Face: basicfont.Face7x13,
+		Face: fontFace,
 		Dot:  startPoint,
 	}
 	return img, d
@@ -79,9 +89,9 @@ func setBackground(img *image.Paletted, imgColor color.RGBA) {
 
 func formatTextSize(text string, def string) (string, image.Rectangle) {
 	var r image.Rectangle
-	if font.MeasureString(basicfont.Face7x13, def).Ceil() >= font.MeasureString(basicfont.Face7x13, text).Ceil() {
+	if font.MeasureString(fontFace, def).Ceil() >= font.MeasureString(fontFace, text).Ceil() {
 		r = image.Rect(0, 0,
-			font.MeasureString(basicfont.Face7x13, def).Ceil()+xBorder,
+			font.MeasureString(fontFace, def).Ceil()+xBorder,
 			yBorder+lineSpace,
 		)
 		return text, r
@@ -97,7 +107,7 @@ func formatTextSize(text string, def string) (string, image.Rectangle) {
 	if len(result) > 1 {
 		size.X = maxWidth
 	} else {
-		size.X = font.MeasureString(basicfont.Face7x13, text).Ceil() + xBorder
+		size.X = font.MeasureString(fontFace, text).Ceil() + xBorder
 	}
 	size.Y = lineSpace*len(result) + yBorder
 	r = image.Rect(0, 0, size.X, size.Y)
@@ -108,10 +118,10 @@ func formatLine(text string) []string {
 	result := []string{text}
 	currentLine := text
 
-	for font.MeasureString(basicfont.Face7x13, currentLine).Ceil() > maxWidth-xBorder {
+	for font.MeasureString(fontFace, currentLine).Ceil() > maxWidth-xBorder {
 		lineFragments := strings.Split(currentLine, " ")
 		result = append(result, "")
-		for i := len(lineFragments) - 2; i >= 0 && font.MeasureString(basicfont.Face7x13, currentLine).Ceil() > maxWidth-xBorder; i-- {
+		for i := len(lineFragments) - 2; i >= 0 && font.MeasureString(fontFace, currentLine).Ceil() > maxWidth-xBorder; i-- {
 			currentLine = strings.Join(lineFragments[:i], " ")
 			result[len(result)-2] = currentLine
 			result[len(result)-1] = strings.Join(lineFragments[i:], " ")
