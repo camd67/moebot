@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"mime"
+	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +49,7 @@ func addHandlers(discord *discordgo.Session) {
 	discord.AddHandler(messageCreate)
 	discord.AddHandler(guildMemberAdd)
 	discord.AddHandler(messageReactionAdd)
+	discord.AddHandler(channelPinsUpdate)
 }
 
 func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
@@ -162,6 +166,69 @@ func reactionIsOption(options []*db.PollOption, emojiID string) bool {
 		}
 	}
 	return false
+}
+
+func channelPinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.ChannelPinsUpdate) {
+	log.Println("Pin Timestamp:" + pinsUpdate.LastPinTimestamp) //TODO:REMOVE
+	channel, err := session.Channel(pinsUpdate.ChannelID)
+	if err != nil {
+		log.Println("Error while retrieving channel by UID", err)
+		return
+	}
+	server, err := db.ServerQueryOrInsert(channel.GuildID)
+	if err != nil {
+		log.Println("Error while retrieving server from database", err)
+		return
+	}
+	if !server.DefaultPinChannelId.Valid || server.DefaultPinChannelId.Int64 == 0 {
+		return
+	}
+	dbChannel, err := db.ChannelQueryOrInsert(pinsUpdate.ChannelID, &server)
+	if err != nil {
+		log.Println("Error while retrieving source channel from database", err)
+		return
+	}
+	if !dbChannel.MovePins {
+		return
+	}
+	dbDestChannel, err := db.ChannelQueryById(int(server.DefaultPinChannelId.Int64))
+	if err != nil {
+		log.Println("Error while retrieving destination channel from database", err)
+		return
+	}
+	pinnedMessages, err := session.ChannelMessagesPinned(pinsUpdate.ChannelID)
+	for _, m := range pinnedMessages {
+		log.Println("Message Timestamp:" + string(m.Timestamp)) //TODO:REMOVE
+		if string(m.Timestamp) == pinsUpdate.LastPinTimestamp {
+			moveMessage := false
+			for _, a := range m.Attachments {
+				if strings.Contains(mime.TypeByExtension(filepath.Ext(a.Filename)), "image") {
+					moveMessage = true
+					break
+				}
+			}
+			if (m.Attachments == nil || len(m.Attachments) == 0) && (m.Embeds == nil || len(m.Embeds) == 0) && dbDestChannel.MoveTextPins {
+				moveMessage = true
+			}
+			if moveMessage {
+				session.ChannelMessageDelete(m.ChannelID, m.ID)
+				files := []*discordgo.File{}
+				for _, a := range m.Attachments {
+					response, _ := http.Get(a.URL)
+					files = append(files, &discordgo.File{
+						Name:        a.Filename,
+						Reader:      response.Body,
+						ContentType: mime.TypeByExtension(filepath.Ext(a.Filename)),
+					})
+				}
+				session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+					Content: m.Content,
+					Files:   files,
+				})
+			}
+			return
+		}
+	}
 }
 
 func distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {

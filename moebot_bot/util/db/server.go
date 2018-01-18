@@ -18,7 +18,8 @@ const (
 		Id SERIAL NOT NULL PRIMARY KEY,
 		GuildUid VARCHAR(20) NOT NULL UNIQUE,
 		WelcomeMessage VARCHAR(500),
-		RuleAgreement VARCHAR(50)
+		RuleAgreement VARCHAR(50),
+		DefaultPinChannelId INTEGER NULL REFERENCES channel(Id)
 	)`
 
 	serverQuery                = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, DefaultPinChannelId FROM server WHERE Id = $1`
@@ -28,7 +29,7 @@ const (
 )
 
 var serverUpdateTable = []string{
-	"ALTER TABLE server ADD COLUMN IF NOT EXISTS DefaultPinChannelId INTEGER NULL",
+	"ALTER TABLE server ADD COLUMN IF NOT EXISTS DefaultPinChannelId INTEGER NULL REFERENCES channel(Id)",
 }
 
 func ServerQueryOrInsert(guildUid string) (s Server, e error) {
@@ -56,8 +57,12 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 	return
 }
 
-func ServerSetDefaultPinChannel(serverId int, channelId int) {
-	moeDb.Exec(serverSetDefaultPinChannel, channelId, serverId)
+func ServerSetDefaultPinChannel(serverId int, channelId int) error {
+	_, err := moeDb.Exec(serverSetDefaultPinChannel, channelId, serverId)
+	if err != nil {
+		log.Println("Failed to set pin channel", err)
+	}
+	return err
 }
 
 func serverCreateTable() {

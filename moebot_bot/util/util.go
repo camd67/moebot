@@ -2,6 +2,9 @@ package util
 
 import (
 	"fmt"
+	"mime"
+	"net/http"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -264,4 +267,21 @@ func GetSpoilerContents(messageParams []string) (title string, text string) {
 	}
 	reg := regexp.MustCompile("^(\\[.+?\\])")
 	return strings.Replace(strings.Replace(reg.FindString(strings.Join(messageParams, " ")), "]", "", 1), "[", "", 1), reg.ReplaceAllString(strings.Join(messageParams, " "), "")
+}
+
+func MoveMessage(session *discordgo.Session, message *discordgo.Message, originChannel *discordgo.Channel, destChannelUid string) {
+	session.ChannelMessageDelete(message.ChannelID, message.ID)
+	files := []*discordgo.File{}
+	for _, a := range message.Attachments {
+		response, _ := http.Get(a.URL)
+		files = append(files, &discordgo.File{
+			Name:        a.Filename,
+			Reader:      response.Body,
+			ContentType: mime.TypeByExtension(filepath.Ext(a.Filename)),
+		})
+	}
+	session.ChannelMessageSendComplex(destChannelUid, &discordgo.MessageSend{
+		Content: message.Author.Mention() + " posted in #" + originChannel.Name + ": \"" + message.Content + "\"",
+		Files:   files,
+	})
 }
