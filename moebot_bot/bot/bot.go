@@ -1,13 +1,10 @@
 package bot
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"mime"
-	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -281,27 +278,7 @@ func channelPinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.Channel
 		moveMessage = true
 	}
 	if moveMessage {
-		session.ChannelMessageDelete(newPinnedMessage.ChannelID, newPinnedMessage.ID)
-		files := []*discordgo.File{}
-		for _, a := range newPinnedMessage.Attachments {
-			response, err := http.Get(a.URL)
-			if err != nil {
-				continue
-			}
-			defer response.Body.Close()
-			b, _ := ioutil.ReadAll(response.Body)
-			files = append(files, &discordgo.File{
-				Name:        a.Filename,
-				Reader:      bytes.NewReader(b),
-				ContentType: mime.TypeByExtension(filepath.Ext(a.Filename)),
-			})
-		}
-		content := newPinnedMessage.Author.Mention() + " posted in <#" + newPinnedMessage.ChannelID + ">: " + newPinnedMessage.Content
-
-		session.ChannelMessageSendComplex(dbDestChannel.ChannelUid, &discordgo.MessageSend{
-			Content: content,
-			Files:   files,
-		})
+		util.MoveMessage(session, newPinnedMessage, dbDestChannel.ChannelUid)
 	}
 }
 
