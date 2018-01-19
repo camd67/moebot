@@ -328,13 +328,13 @@ func commPinMove(pack *commPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
 		return
 	}
-	message := "Message move on pin hes been "
+	message := "Message move on pin has been "
 	if pinEnabled {
 		message += "enabled"
 	} else {
 		message += "disabled"
 	}
-	message += " on channel " + sourceChannelUid
+	message += " on channel <#" + sourceChannelUid + ">"
 	pack.session.ChannelMessageSend(pack.channel.ID, message)
 }
 
