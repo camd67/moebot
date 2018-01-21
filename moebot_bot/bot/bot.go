@@ -249,16 +249,13 @@ func channelPinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.Channel
 		log.Println("Error while retrieving destination channel from database", err)
 		return
 	}
-	newPinnedMessages, err := getNewPinnedMessages(session, pinsUpdate.ChannelID)
+	newPinnedMessages, err := getUpdatePinnedMessages(session, pinsUpdate.ChannelID)
 	if err != nil {
 		log.Println("Error while retrieving new pinned messages", err)
 		return
 	}
-	if len(newPinnedMessages) == 0 {
-		return
-	}
-	if len(newPinnedMessages) > 1 {
-		return //the bot is not in sync with the server, abort pinning operation
+	if len(newPinnedMessages) == 0 || len(newPinnedMessages) > 1 {
+		return //removed pin or the bot is not in sync with the server, abort pinning operation
 	}
 	newPinnedMessage := newPinnedMessages[0]
 	moveMessage := false
@@ -282,7 +279,7 @@ func channelPinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.Channel
 	}
 }
 
-func getNewPinnedMessages(session *discordgo.Session, channelId string) ([]*discordgo.Message, error) {
+func getUpdatePinnedMessages(session *discordgo.Session, channelId string) ([]*discordgo.Message, error) {
 	result := []*discordgo.Message{}
 	currentPinnedMessages, err := session.ChannelMessagesPinned(channelId)
 	messagesId := []string{}
