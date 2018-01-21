@@ -323,7 +323,7 @@ func processGuildRole(allowedRoles []string, session *discordgo.Session, params 
 	memberRoles := guildMember.Roles
 	if strictRole && util.StrContains(memberRoles, roleToAdd.ID, util.CaseSensitive) && strings.HasPrefix(strings.ToUpper(roleToAdd.Name), requestedRole) {
 		// we're in strict mode, and got a removal for the first role. prevent that
-		session.ChannelMessageSend(channel.ID, "Sorry, you can't remove roles with this command, only change them!")
+		session.ChannelMessageSend(channel.ID, "You've already got that role! You can change roles but can't remove them with this command.")
 		return
 	}
 	removeAllRoles(session, guildMember, allRolesToChange, guild)
