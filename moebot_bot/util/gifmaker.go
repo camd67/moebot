@@ -21,20 +21,18 @@ const (
 	viewDelay = 150 // 1/100th of second
 )
 
-var fontFace font.Face
-
 func MakeGif(text string) []byte {
 	const defaultText = "Hover to view"
 	var frames []*image.Paletted
 	fnt, _ := truetype.Parse(gomono.TTF)
-	fontFace = truetype.NewFace(fnt, &truetype.Options{
+	fontFace := truetype.NewFace(fnt, &truetype.Options{
 		Size: 16.0,
 	})
-	text, imageSize := formatTextSize(text, defaultText)
+	text, imageSize := formatTextSize(text, defaultText, fontFace)
 
-	frames = addImageFrame(frames, imageSize, defaultText, color.RGBA{0xff, 0xff, 0xff, 0xff}, color.RGBA{0x00, 0x00, 0x00, 0xff})
+	frames = addImageFrame(frames, imageSize, defaultText, color.RGBA{0xff, 0xff, 0xff, 0xff}, color.RGBA{0x00, 0x00, 0x00, 0xff}, fontFace)
 
-	frames = addImageFrame(frames, imageSize, text, color.RGBA{0x00, 0x00, 0x00, 0xff}, color.RGBA{0xff, 0xff, 0xff, 0xff})
+	frames = addImageFrame(frames, imageSize, text, color.RGBA{0x00, 0x00, 0x00, 0xff}, color.RGBA{0xff, 0xff, 0xff, 0xff}, fontFace)
 
 	buf := new(bytes.Buffer)
 	gif.EncodeAll(buf, &gif.GIF{
@@ -45,10 +43,10 @@ func MakeGif(text string) []byte {
 	return buf.Bytes()
 }
 
-func addImageFrame(frames []*image.Paletted, size image.Rectangle, text string, imageColor color.RGBA, textColor color.RGBA) []*image.Paletted {
+func addImageFrame(frames []*image.Paletted, size image.Rectangle, text string, imageColor color.RGBA, textColor color.RGBA, fontFace font.Face) []*image.Paletted {
 	lines := strings.Split(text, "\n")
 	img, d := uniformColorImage(size,
-		imageColor, textColor, fixed.Point26_6{fixed.Int26_6(xBorder / 2 * 64), fixed.Int26_6(lineSpace * 64)})
+		imageColor, textColor, fixed.Point26_6{fixed.Int26_6(xBorder / 2 * 64), fixed.Int26_6(lineSpace * 64)}, fontFace)
 	for i, s := range lines {
 		d.Dot.X = fixed.Int26_6(xBorder / 2 * 64)
 		d.Dot.Y = fixed.Int26_6((i + 1) * lineSpace * 64)
@@ -58,7 +56,7 @@ func addImageFrame(frames []*image.Paletted, size image.Rectangle, text string, 
 	return append(frames, img)
 }
 
-func uniformColorImage(size image.Rectangle, imageColor color.RGBA, textColor color.RGBA, startPoint fixed.Point26_6) (result *image.Paletted, drawer *font.Drawer) {
+func uniformColorImage(size image.Rectangle, imageColor color.RGBA, textColor color.RGBA, startPoint fixed.Point26_6, fontFace font.Face) (result *image.Paletted, drawer *font.Drawer) {
 	var palette = []color.Color{
 		color.RGBA{0x00, 0x00, 0x00, 0xff},
 		color.RGBA{0x33, 0x33, 0x33, 0xff},
@@ -87,7 +85,7 @@ func setBackground(img *image.Paletted, imgColor color.RGBA) {
 	}
 }
 
-func formatTextSize(text string, def string) (string, image.Rectangle) {
+func formatTextSize(text string, def string, fontFace font.Face) (string, image.Rectangle) {
 	var r image.Rectangle
 	if font.MeasureString(fontFace, def).Ceil() >= font.MeasureString(fontFace, text).Ceil() {
 		r = image.Rect(0, 0,
@@ -100,7 +98,7 @@ func formatTextSize(text string, def string) (string, image.Rectangle) {
 	lines := strings.Split(text, "\n")
 	result := []string{}
 	for _, line := range lines {
-		result = append(result, formatLine(line)...)
+		result = append(result, formatLine(line, fontFace)...)
 	}
 
 	size := image.Point{X: 0, Y: 0}
@@ -114,7 +112,7 @@ func formatTextSize(text string, def string) (string, image.Rectangle) {
 	return strings.Join(result, "\n"), r
 }
 
-func formatLine(text string) []string {
+func formatLine(text string, fontFace font.Face) []string {
 	result := []string{text}
 	currentLine := text
 
