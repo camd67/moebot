@@ -219,7 +219,14 @@ func commNsfw(pack *commPackage) {
 
 func commSpoiler(pack *commPackage) {
 	content := pack.message.Author.Mention() + " sent a spoiler"
-	pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
+	for i := 0; i < 2; i++ {
+		err := pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
+		if err == nil {
+			break
+		}
+		log.Println("Error while deleting message", err)
+	}
+
 	spoilerTitle, spoilerText := util.GetSpoilerContents(pack.params)
 	if spoilerTitle != "" {
 		content += ": **" + spoilerTitle + "**"
