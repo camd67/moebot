@@ -2,8 +2,11 @@ package bot
 
 import (
 	"bytes"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +34,7 @@ var commands = map[string]func(pack *commPackage){
 	"SPOILER":       commSpoiler,
 	"POLL":          commPoll,
 	"TOGGLEMENTION": commToggleMention,
+	"PINMOVE":       commPinMove,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -284,6 +288,109 @@ func restoreMention(pack *commPackage, role *discordgo.Role) {
 		message += "not mentionable"
 	}
 	pack.session.ChannelMessageSend(pack.channel.ID, message)
+}
+
+func commPinMove(pack *commPackage) {
+	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
+		return
+	}
+	if len(pack.params) == 0 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to specify at least a valid channel.")
+		return
+	}
+	var err error
+	var pinChannel string
+	regNumbers := regexp.MustCompile("\\d+")
+	enableText := false
+	for i := 0; i < len(pack.params)-1; i++ {
+		if pack.params[i] == "-sendTo" {
+			pinChannel = regNumbers.FindString(pack.params[i+1])
+		}
+		if pack.params[i] == "-text" {
+			enableText = true
+		}
+	}
+	server, err := db.ServerQueryOrInsert(pack.guild.ID)
+	if pinChannel == "" && (!server.DefaultPinChannelId.Valid || server.DefaultPinChannelId.Int64 == 0) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there is no default destination channel set. You need to specify at least a valid destination channel.")
+		return
+	}
+	sourceChannelUid := regNumbers.FindString(pack.params[len(pack.params)-1])
+	if pinChannel != "" {
+		if err = newPinChannel(pinChannel, server, pack); err != nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
+			return
+		}
+	}
+	var pinEnabled bool
+	if pinEnabled, err = togglePin(sourceChannelUid, enableText, server, pack); err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
+		return
+	}
+	message := "Message move on pin has been "
+	if pinEnabled {
+		message += "enabled"
+	} else {
+		message += "disabled"
+	}
+	message += " on channel <#" + sourceChannelUid + ">"
+	pack.session.ChannelMessageSend(pack.channel.ID, message)
+}
+
+func newPinChannel(newPinChannelUid string, server db.Server, pack *commPackage) error {
+	var newPinChannel *discordgo.Channel
+	var err error
+	for _, c := range pack.guild.Channels {
+		if c.ID == newPinChannelUid {
+			newPinChannel = c
+			break
+		}
+	}
+	if newPinChannel == nil {
+		return errors.New("Sorry, you need to specify a valid destination channel")
+	}
+	var currentPinChannel *db.Channel
+	if server.DefaultPinChannelId.Valid && server.DefaultPinChannelId.Int64 > 0 {
+		currentPinChannel, err = db.ChannelQueryById(int(server.DefaultPinChannelId.Int64))
+		if err != nil && err != sql.ErrNoRows {
+			return errors.New("Sorry, there was a problem retrieving the current pin channel")
+		}
+	}
+	if currentPinChannel == nil || currentPinChannel.ChannelUid != newPinChannel.ID {
+		dbNewPinChannel, err := db.ChannelQueryOrInsert(newPinChannel.ID, &server)
+		if err != nil {
+			return errors.New("Sorry, there was a problem retrieving the new pin channel")
+		}
+		err = db.ServerSetDefaultPinChannel(server.Id, dbNewPinChannel.Id)
+		if err != nil {
+			return errors.New("Sorry, there was a problem setting the new pin channel")
+		}
+		server.DefaultPinChannelId.Scan(dbNewPinChannel.Id)
+	}
+	return nil
+}
+
+func togglePin(sourceChannelUid string, enableTextPins bool, server db.Server, pack *commPackage) (bool, error) {
+	var sourceChannel *discordgo.Channel
+	for _, c := range pack.guild.Channels {
+		if c.ID == sourceChannelUid {
+			sourceChannel = c
+			break
+		}
+	}
+	if sourceChannel == nil {
+		return false, errors.New("Sorry, you need to specify a valid source channel")
+	}
+	dbSourceChannel, err := db.ChannelQueryOrInsert(sourceChannel.ID, &server)
+	if err != nil {
+		return false, errors.New("Sorry, there was a problem retrieving the source channel")
+	}
+	err = db.ChannelSetPin(dbSourceChannel.Id, !dbSourceChannel.MovePins, enableTextPins)
+	if err != nil {
+		return false, errors.New("Sorry, there was a problem setting the pin status")
+	}
+	return !dbSourceChannel.MovePins, nil
 }
 
 /*

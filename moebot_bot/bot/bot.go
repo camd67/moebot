@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"mime"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -33,12 +35,14 @@ var (
 	ComPrefix            string
 	Config               = make(map[string]string)
 	pollsHandler         = new(PollsHandler)
+	pinnedMessages       = make(map[string][]string)
 )
 
 func SetupMoebot(session *discordgo.Session) {
 	addHandlers(session)
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
 	pollsHandler.loadFromDb()
+	loadGuilds(session)
 }
 
 func addHandlers(discord *discordgo.Session) {
@@ -46,6 +50,60 @@ func addHandlers(discord *discordgo.Session) {
 	discord.AddHandler(messageCreate)
 	discord.AddHandler(guildMemberAdd)
 	discord.AddHandler(messageReactionAdd)
+	discord.AddHandler(channelPinsUpdate)
+}
+
+func loadGuilds(session *discordgo.Session) {
+	guilds, err := session.UserGuilds(100, "", "")
+	if err != nil {
+		log.Println("Error loading guilds, some functions may not work correctly.", err)
+		return
+	}
+	log.Println("Number of guilds: " + strconv.Itoa(len(guilds)))
+	for _, guild := range guilds {
+		loadGuild(session, guild)
+	}
+}
+
+func loadGuild(session *discordgo.Session, guild *discordgo.UserGuild) {
+	server, err := db.ServerQueryOrInsert(guild.ID)
+	if err != nil {
+		log.Println("Error creating/retrieving server during loading", err)
+		return
+	}
+	channels, err := session.GuildChannels(guild.ID)
+	if err != nil {
+		log.Println("Error retrieving channels during loading", err)
+		return
+	}
+	for _, channel := range channels {
+		if channel.Type == discordgo.ChannelTypeGuildText { //only loading text channels for now
+			loadChannel(session, &server, channel)
+		}
+	}
+}
+
+func loadChannel(session *discordgo.Session, server *db.Server, channel *discordgo.Channel) {
+	log.Println("Loading channel: " + channel.Name + " (" + channel.ID + ")")
+
+	_, err := db.ChannelQueryOrInsert(channel.ID, server)
+	if err != nil {
+		log.Println("Error creating/retrieving channel during loading", err)
+		return
+	}
+	loadPinnedMessages(session, channel)
+}
+
+func loadPinnedMessages(session *discordgo.Session, channel *discordgo.Channel) {
+	pinnedMessages[channel.ID] = []string{}
+	messages, err := session.ChannelMessagesPinned(channel.ID)
+	if err != nil {
+		log.Println("Error retrieving pinned channel messages", err)
+	}
+	log.Println("Loading pinned messages > " + strconv.Itoa(len(messages)))
+	for _, message := range messages {
+		pinnedMessages[channel.ID] = append(pinnedMessages[channel.ID], message.ID)
+	}
 }
 
 func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
@@ -158,6 +216,89 @@ func messageReactionAdd(session *discordgo.Session, reactionAdd *discordgo.Messa
 func reactionIsOption(options []*db.PollOption, emojiID string) bool {
 	for _, o := range options {
 		if o.ReactionId == emojiID {
+			return true
+		}
+	}
+	return false
+}
+
+func channelPinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.ChannelPinsUpdate) {
+	channel, err := session.Channel(pinsUpdate.ChannelID)
+	if err != nil {
+		log.Println("Error while retrieving channel by UID", err)
+		return
+	}
+	server, err := db.ServerQueryOrInsert(channel.GuildID)
+	if err != nil {
+		log.Println("Error while retrieving server from database", err)
+		return
+	}
+	if !server.DefaultPinChannelId.Valid || server.DefaultPinChannelId.Int64 == 0 {
+		return
+	}
+	dbChannel, err := db.ChannelQueryOrInsert(pinsUpdate.ChannelID, &server)
+	if err != nil {
+		log.Println("Error while retrieving source channel from database", err)
+		return
+	}
+	if !dbChannel.MovePins {
+		return
+	}
+	dbDestChannel, err := db.ChannelQueryById(int(server.DefaultPinChannelId.Int64))
+	if err != nil {
+		log.Println("Error while retrieving destination channel from database", err)
+		return
+	}
+	newPinnedMessages, err := getUpdatePinnedMessages(session, pinsUpdate.ChannelID)
+	if err != nil {
+		log.Println("Error while retrieving new pinned messages", err)
+		return
+	}
+	if len(newPinnedMessages) == 0 || len(newPinnedMessages) > 1 {
+		return //removed pin or the bot is not in sync with the server, abort pinning operation
+	}
+	newPinnedMessage := newPinnedMessages[0]
+	moveMessage := false
+	for _, a := range newPinnedMessage.Attachments { //image from direct upload
+		if strings.Contains(mime.TypeByExtension(filepath.Ext(a.Filename)), "image") {
+			moveMessage = true
+			break
+		}
+	}
+
+	if !moveMessage && len(newPinnedMessage.Embeds) == 1 { //image from link
+		if newPinnedMessage.Embeds[0].Type == "image" {
+			moveMessage = true
+		}
+	}
+	if len(newPinnedMessage.Attachments) == 0 && len(newPinnedMessage.Embeds) == 0 && dbChannel.MoveTextPins {
+		moveMessage = true
+	}
+	if moveMessage {
+		util.MoveMessage(session, newPinnedMessage, dbDestChannel.ChannelUid)
+	}
+}
+
+func getUpdatePinnedMessages(session *discordgo.Session, channelId string) ([]*discordgo.Message, error) {
+	result := []*discordgo.Message{}
+	currentPinnedMessages, err := session.ChannelMessagesPinned(channelId)
+	messagesId := []string{}
+	if err != nil {
+		return result, err
+	}
+	for _, m := range currentPinnedMessages {
+		if !pinnedMessageAlreadyLoaded(m.ID, channelId) {
+			result = append(result, m)
+		}
+		messagesId = append(messagesId, m.ID)
+	}
+	pinnedMessages[channelId] = messagesId //refreshes pinned messages in case of messages removed from pins
+	return result, nil
+}
+
+func pinnedMessageAlreadyLoaded(messageId string, channelId string) bool {
+	for _, m := range pinnedMessages[channelId] {
+		if messageId == m {
 			return true
 		}
 	}
