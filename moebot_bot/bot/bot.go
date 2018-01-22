@@ -81,7 +81,7 @@ func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd
 
 func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
 	// bail out if we have any messages we want to ignore such as bot messages
-	if message.Author.ID == session.State.User.ID {
+	if message.Author.ID == session.State.User.ID || message.Author.Bot {
 		return
 	}
 	channel, err := session.State.Channel(message.ChannelID)
@@ -90,8 +90,6 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, channel)
 		return
 	}
-
-	//messageTime, _ := message.Timestamp.Parse()
 
 	guild, err := session.Guild(channel.GuildID)
 	if err != nil {

@@ -2,6 +2,7 @@ package bot
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
@@ -31,6 +32,7 @@ var commands = map[string]func(pack *commPackage){
 	"SPOILER":       commSpoiler,
 	"POLL":          commPoll,
 	"TOGGLEMENTION": commToggleMention,
+	"SERVER":        commServer,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -60,8 +62,59 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	}
 }
 
+func commServer(pack *commPackage) {
+	if m := HasModPerm(pack.message.Author.ID, pack.member.Roles); m {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
+		return
+	}
+	const possibleConfigMessages = "Possible configs: {VeteranRank -> number}, {VeteranRole -> full role name}"
+	if len(pack.params) <= 1 {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, possibleConfigMessages)
+		return
+	}
+	configKey := strings.ToUpper(pack.params[0])
+	configValue := strings.Join(pack.params[1:], " ")
+	s, err := db.ServerQueryOrInsert(pack.guild.ID)
+	if err != nil {
+		log.Println("Error trying to get server", err)
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error getting the server")
+		return
+	}
+	if configKey == "VETERANRANK" {
+		rank, err := strconv.Atoi(configValue)
+		if err != nil || rank < 0 {
+			// don't bother logging this one. Someone's just given a non-number
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a positive number for the veteran rank")
+			return
+		}
+		s.VeteranRank = sql.NullInt64{
+			Int64: int64(rank),
+			Valid: true,
+		}
+	} else if configKey == "VETERANROLE" {
+		role := util.FindRoleByName(pack.guild.Roles, configValue)
+		if role == nil {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid role and make sure it's the full role name")
+			return
+		}
+		s.VeteranRole = sql.NullString{
+			String: role.ID,
+			Valid:  true,
+		}
+	} else {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, I don't know what the config setting is... "+possibleConfigMessages)
+		return
+	}
+	err = db.ServerFullUpdate(s)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the server table. Your change was probably not applied.")
+		return
+	}
+	pack.session.ChannelMessageSend(pack.message.ChannelID, "Updated this server!")
+}
+
 func commPermit(pack *commPackage) {
-	if m := checkValidMasterId(pack); !m {
+	if m := hasValidMasterId(pack); !m {
 		return
 	}
 	// should always have more than 2 params: permission level, role name ... role name
@@ -149,7 +202,7 @@ func commCustom(pack *commPackage) {
 }
 
 func commEcho(pack *commPackage) {
-	if m := checkValidMasterId(pack); !m {
+	if m := hasValidMasterId(pack); !m {
 		return
 	}
 	_, err := strconv.Atoi(pack.params[0])

@@ -12,6 +12,7 @@ func commHelp(pack *commPackage) {
 			"`"+ComPrefix+" custom <command name> <role name>` - Master/All/Mod Links up a role to be toggable by the command name. Type `"+ComPrefix+" role <command name> to toggle`\n"+
 			"`"+ComPrefix+" poll -options <option 1, option 2, option 3, ...> -title <poll title>` - Master/All/Mod set up a poll with the given options. Type `"+ComPrefix+" poll -close <poll id> to close`\n"+
 			"`"+ComPrefix+" role <role name>` - Changes your role to one of the approved roles. `"+ComPrefix+" role` to list all the roles\n"+
+			"`"+ComPrefix+" server <config setting> <value>` - Master/Mod Changes a config setting on the server to a given value. `"+ComPrefix+" server` to list configs.\n"+
 			"`"+ComPrefix+" help` - Displays this message")
 	}
 }
