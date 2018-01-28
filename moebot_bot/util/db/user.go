@@ -5,33 +5,33 @@ import (
 	"log"
 )
 
-type User struct {
+type UserProfile struct {
 	Id      int
 	UserUid string
 }
 
 const (
-	userTable = `CREATE TABLE IF NOT EXISTS user(
+	userProfileTable = `CREATE TABLE IF NOT EXISTS user_profile(
 		Id SERIAL NOT NULL PRIMARY KEY,
 		UserUid VARCHAR(20) NOT NULL UNIQUE
 	)`
 
-	userQueryUid = `SELECT Id, UserUid FROM user WHERE UserUid = $1`
-	userInsert   = `INSERT INTO user(UserUid) VALUES($1)`
+	userProfileQueryUid = `SELECT Id, UserUid FROM user_profile WHERE UserUid = $1`
+	userProfileInsert   = `INSERT INTO user_profile(UserUid) VALUES($1)`
 )
 
-func UserQueryOrInsert(userUid string) (u User, err error) {
-	row := moeDb.QueryRow(userQueryUid, userUid)
+func UserQueryOrInsert(userUid string) (u UserProfile, err error) {
+	row := moeDb.QueryRow(userProfileQueryUid, userUid)
 	if err = row.Scan(&u.Id, &u.UserUid); err != nil {
 		if err == sql.ErrNoRows {
 			var insertId int
-			err = moeDb.QueryRow(userInsert, userUid).Scan(&insertId)
+			err = moeDb.QueryRow(userProfileInsert, userUid).Scan(&insertId)
 			if err != nil {
 				log.Println("Error inserting role to db", err)
 				return
 			}
 			// for now we can just return back that ID since we already have the rest of the user
-			return User{insertId, userUid}, nil
+			return UserProfile{insertId, userUid}, nil
 		}
 	}
 	// got a row, return it
@@ -39,7 +39,7 @@ func UserQueryOrInsert(userUid string) (u User, err error) {
 }
 
 func userCreateTable() {
-	_, err := moeDb.Exec(userTable)
+	_, err := moeDb.Exec(userProfileTable)
 	if err != nil {
 		log.Println("Error creating user table", err)
 		return

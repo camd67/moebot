@@ -118,6 +118,10 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
+	if util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
+		handleVeteranMessage(member, guild.ID)
+	}
+
 	if strings.HasPrefix(message.Content, ComPrefix) {
 		// should add a check here for command spam
 		if util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
@@ -150,7 +154,15 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 }
 
 func messageReactionAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
+	// should make some local caches for channels and guilds...
+	channel, err := session.Channel(reactionAdd.ChannelID)
+	if err != nil {
+		log.Println("Error trying to get channel", err)
+		return
+	}
+
 	pollsHandler.checkSingleVote(session, reactionAdd)
+	handleVeteranReaction(reactionAdd.UserID, channel.GuildID)
 }
 
 func reactionIsOption(options []*db.PollOption, emojiID string) bool {

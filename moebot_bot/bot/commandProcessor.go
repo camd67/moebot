@@ -63,18 +63,27 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 }
 
 func commServer(pack *commPackage) {
-	if m := HasModPerm(pack.message.Author.ID, pack.member.Roles); m {
+	if m := HasModPerm(pack.message.Author.ID, pack.member.Roles); !m {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
 	}
 	const possibleConfigMessages = "Possible configs: {VeteranRank -> number}, {VeteranRole -> full role name}"
+	s, err := db.ServerQueryOrInsert(pack.guild.ID)
+
 	if len(pack.params) <= 1 {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, possibleConfigMessages)
+		rank := int(util.GetInt64OrDefault(s.VeteranRank))
+		role := util.GetStringOrDefault(s.VeteranRole)
+		if role != "unknown" {
+			role = util.FindRoleById(pack.guild.Roles, role).Name
+		}
+		rule := util.GetStringOrDefault(s.RuleAgreement)
+		welcome := util.GetStringOrDefault(s.WelcomeMessage)
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "This server's configs: {Rank: "+strconv.Itoa(rank)+"} {Role: "+role+"} {Welcome: "+welcome+
+			"} {Rule Confirm: "+rule+"}")
 		return
 	}
 	configKey := strings.ToUpper(pack.params[0])
 	configValue := strings.Join(pack.params[1:], " ")
-	s, err := db.ServerQueryOrInsert(pack.guild.ID)
 	if err != nil {
 		log.Println("Error trying to get server", err)
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error getting the server")
@@ -102,7 +111,7 @@ func commServer(pack *commPackage) {
 			Valid:  true,
 		}
 	} else {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, I don't know what the config setting is... "+possibleConfigMessages)
+		pack.session.ChannelMessageSend(pack.message.ChannelID, possibleConfigMessages)
 		return
 	}
 	err = db.ServerFullUpdate(s)

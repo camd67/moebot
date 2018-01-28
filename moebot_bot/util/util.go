@@ -1,6 +1,7 @@
 package util
 
 import (
+	"database/sql"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -80,6 +81,22 @@ func FindRoleByName(roles []*discordgo.Role, toFind string) *discordgo.Role {
 		}
 	}
 	return nil
+}
+
+func GetStringOrDefault(s sql.NullString) string {
+	if s.Valid {
+		return s.String
+	} else {
+		return "unknown"
+	}
+}
+
+func GetInt64OrDefault(i sql.NullInt64) int64 {
+	if i.Valid {
+		return i.Int64
+	} else {
+		return -1
+	}
 }
 
 func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {

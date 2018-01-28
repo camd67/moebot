@@ -10,10 +10,10 @@ type UserServerRank struct {
 }
 
 const (
-	userServerRankTable = `CREATE TABLE IF NOT EXISTS user(
+	userServerRankTable = `CREATE TABLE IF NOT EXISTS user_server_rank(
 		Id SERIAL NOT NULL PRIMARY KEY,
 		ServerId INTEGER NOT NULL REFERENCES server(id) ON DELETE CASCADE,
-		UserId INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+		UserId INTEGER NOT NULL REFERENCES user_profile(id) ON DELETE CASCADE,
 		Rank INTEGER NOT NULL DEFAULT 0
 	)`
 )

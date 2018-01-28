@@ -37,18 +37,18 @@ var serverUpdateTable = []string{
 
 func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 	row := moeDb.QueryRow(serverQueryGuild, guildUid)
-	if e = row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement); e != nil {
+	if e = row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole); e != nil {
 		if e == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			toInsert := Server{GuildUid: guildUid}
 			var insertId int
-			e = moeDb.QueryRow(serverInsert, toInsert.GuildUid, toInsert.WelcomeMessage, toInsert.RuleAgreement).Scan(&insertId)
+			e = moeDb.QueryRow(serverInsert, toInsert.GuildUid, toInsert.WelcomeMessage, toInsert.RuleAgreement, &s.VeteranRank, &s.VeteranRole).Scan(&insertId)
 			if e != nil {
 				log.Println("Error inserting role to db ", e)
 				return Server{}, e
 			}
 			row := moeDb.QueryRow(serverQuery, insertId)
-			if e = row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement); e != nil {
+			if e = row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole); e != nil {
 				log.Println("Failed to read the newly inserted server row. This should pretty much never happen...", e)
 				return Server{}, e
 			}
