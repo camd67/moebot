@@ -17,7 +17,7 @@ const (
 	)`
 
 	userProfileQueryUid = `SELECT Id, UserUid FROM user_profile WHERE UserUid = $1`
-	userProfileInsert   = `INSERT INTO user_profile(UserUid) VALUES($1)`
+	userProfileInsert   = `INSERT INTO user_profile(UserUid) VALUES($1) RETURNING Id`
 )
 
 func UserQueryOrInsert(userUid string) (u UserProfile, err error) {
@@ -27,7 +27,7 @@ func UserQueryOrInsert(userUid string) (u UserProfile, err error) {
 			var insertId int
 			err = moeDb.QueryRow(userProfileInsert, userUid).Scan(&insertId)
 			if err != nil {
-				log.Println("Error inserting role to db", err)
+				log.Println("Error inserting user to db", err)
 				return
 			}
 			// for now we can just return back that ID since we already have the rest of the user

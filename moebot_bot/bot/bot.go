@@ -118,7 +118,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
-	if util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
+	if !util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
 		handleVeteranMessage(member, guild.ID)
 	}
 
