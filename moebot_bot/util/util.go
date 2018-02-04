@@ -1,7 +1,13 @@
 package util
 
 import (
+	"bytes"
+	"database/sql"
 	"fmt"
+	"io/ioutil"
+	"mime"
+	"net/http"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -80,6 +86,22 @@ func FindRoleByName(roles []*discordgo.Role, toFind string) *discordgo.Role {
 		}
 	}
 	return nil
+}
+
+func GetStringOrDefault(s sql.NullString) string {
+	if s.Valid {
+		return s.String
+	} else {
+		return "unknown"
+	}
+}
+
+func GetInt64OrDefault(i sql.NullInt64) int64 {
+	if i.Valid {
+		return i.Int64
+	} else {
+		return -1
+	}
 }
 
 func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {
@@ -264,4 +286,28 @@ func GetSpoilerContents(messageParams []string) (title string, text string) {
 	}
 	reg := regexp.MustCompile("^(\\[.+?\\])")
 	return strings.Replace(strings.Replace(reg.FindString(strings.Join(messageParams, " ")), "]", "", 1), "[", "", 1), reg.ReplaceAllString(strings.Join(messageParams, " "), "")
+}
+
+func MoveMessage(session *discordgo.Session, message *discordgo.Message, destChannelUid string) {
+	session.ChannelMessageDelete(message.ChannelID, message.ID)
+	files := []*discordgo.File{}
+	for _, a := range message.Attachments {
+		response, err := http.Get(a.URL)
+		if err != nil {
+			continue
+		}
+		defer response.Body.Close()
+		b, _ := ioutil.ReadAll(response.Body)
+		files = append(files, &discordgo.File{
+			Name:        a.Filename,
+			Reader:      bytes.NewReader(b),
+			ContentType: mime.TypeByExtension(filepath.Ext(a.Filename)),
+		})
+	}
+	content := message.Author.Mention() + " posted in <#" + message.ChannelID + ">: " + message.Content
+
+	session.ChannelMessageSendComplex(destChannelUid, &discordgo.MessageSend{
+		Content: content,
+		Files:   files,
+	})
 }
