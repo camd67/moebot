@@ -84,6 +84,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	if message.Author.ID == session.State.User.ID || message.Author.Bot {
 		return
 	}
+
 	channel, err := session.State.Channel(message.ChannelID)
 	if err != nil {
 		// missing channel
@@ -102,6 +103,11 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		log.Println("ERROR! Unable to get member in messageCreate ", err, message)
 		return
 	}
+	// temp ignore IHG
+	if err != nil || guild.ID == "84724034129907712" {
+		// missing guild
+		return
+	}
 	// should change this to store the ID of the starting role
 	var starterRole *discordgo.Role
 	var oldStarterRole *discordgo.Role
@@ -112,24 +118,25 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			oldStarterRole = guildRole
 		}
 	}
-	// temp ignore IHG + Salt
-	if err != nil || guild.ID == "84724034129907712" {
-		// missing guild
-		return
-	}
 
-	if !util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
-		handleVeteranMessage(member, guild.ID)
+	changedUsers, err := handleVeteranMessage(member, guild.ID)
+	if err != nil {
+		session.ChannelMessageSend(Config["debugChannel"], fmt.Sprint("An error occurred when trying to update veteran users ", err))
+	} else {
+		for _, user := range changedUsers {
+			session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
+				ComPrefix+" role veteran` In this channel.")
+		}
 	}
 
 	if strings.HasPrefix(message.Content, ComPrefix) {
 		// should add a check here for command spam
-		if util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
+		if oldStarterRole != nil && util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
 			// bail out to prevent any new users from using bot commands
 			return
 		}
 		RunCommand(session, message.Message, guild, channel, member)
-	} else if util.StrContains(allowedNonComServers, guild.ID, util.CaseSensitive) {
+	} else if util.StrContains(allowedNonComServers, guild.ID, util.CaseSensitive) && oldStarterRole != nil {
 		// message may have other bot related commands, but not with a prefix
 		readRules := "I want to venture into the abyss"
 		sanitizedMessage := util.MakeAlphaOnly(message.Content)

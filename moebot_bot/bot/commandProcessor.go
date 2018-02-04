@@ -33,6 +33,7 @@ var commands = map[string]func(pack *commPackage){
 	"POLL":          commPoll,
 	"TOGGLEMENTION": commToggleMention,
 	"SERVER":        commServer,
+	"PROFILE":       commProfile,
 }
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
@@ -44,22 +45,29 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	command := strings.ToUpper(messageParts[1])
 
 	if commFunc, commPresent := commands[command]; commPresent {
-		var buf bytes.Buffer
 		params := messageParts[2:]
-		buf.WriteString("Processing command: ")
-		buf.WriteString(command)
-		buf.WriteString(" from user: {")
-		buf.WriteString(fmt.Sprintf("%+v", message.Author))
-		buf.WriteString("}| With Params:{")
-		for _, p := range params {
-			buf.WriteString(p)
-			buf.WriteString(",")
-		}
-		buf.WriteString("}")
-		log.Println(buf.String())
+		log.Println("Processing command: " + command + " from user: {" + fmt.Sprintf("%+v", message.Author) + "}| With Params:{" + strings.Join(params, ",") + "}")
 		session.ChannelTyping(message.ChannelID)
 		commFunc(&commPackage{session, message, guild, member, channel, params})
 	}
+}
+
+func commProfile(pack *commPackage) {
+	// technically we'll already have a user + server at this point, but may not have a usr. Still create if necessary
+	_, err := db.ServerQueryOrInsert(pack.guild.ID)
+	_, err = db.UserQueryOrInsert(pack.message.Author.ID)
+	usr, err := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue getting your information!")
+			return
+		}
+		if err == sql.ErrNoRows || usr == nil {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, you don't have a rank yet!")
+			return
+		}
+	}
+	pack.session.ChannelMessageSend(pack.message.ChannelID, util.UserIdToMention(pack.message.Author.ID)+"'s profile:\nRank: "+strconv.Itoa(usr.Rank))
 }
 
 func commServer(pack *commPackage) {
@@ -67,7 +75,7 @@ func commServer(pack *commPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
 	}
-	const possibleConfigMessages = "Possible configs: {VeteranRank -> number}, {VeteranRole -> full role name}"
+	const possibleConfigMessages = "Possible configs: {VeteranRank -> number}, {VeteranRole -> full role name}, {BotChannel -> channel ID}"
 	s, err := db.ServerQueryOrInsert(pack.guild.ID)
 
 	if len(pack.params) <= 1 {
@@ -78,8 +86,9 @@ func commServer(pack *commPackage) {
 		}
 		rule := util.GetStringOrDefault(s.RuleAgreement)
 		welcome := util.GetStringOrDefault(s.WelcomeMessage)
+		botChannel := util.GetStringOrDefault(s.BotChannel)
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "This server's configs: {Rank: "+strconv.Itoa(rank)+"} {Role: "+role+"} {Welcome: "+welcome+
-			"} {Rule Confirm: "+rule+"}")
+			"} {Rule Confirm: "+rule+"} {BotChannel ID: "+botChannel+"}")
 		return
 	}
 	configKey := strings.ToUpper(pack.params[0])
@@ -108,6 +117,16 @@ func commServer(pack *commPackage) {
 		}
 		s.VeteranRole = sql.NullString{
 			String: role.ID,
+			Valid:  true,
+		}
+	} else if configKey == "BOTCHANNEL" {
+		c, err := pack.session.Channel(configValue)
+		if err != nil || c.Type != discordgo.ChannelTypeGuildText {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid text channel ID")
+			return
+		}
+		s.BotChannel = sql.NullString{
+			String: c.ID,
 			Valid:  true,
 		}
 	} else {

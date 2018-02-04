@@ -2,6 +2,7 @@ package bot
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,7 +15,7 @@ const (
 	messagePoints        = 5
 	reactionPoints       = 1
 	reactionCooldown     = time.Second
-	veteranBufferSizeMax = 3
+	veteranBufferSizeMax = 1
 )
 
 var (
@@ -36,6 +37,8 @@ func handleVeteranMessage(m *discordgo.Member, guildUid string) (users []db.User
 }
 
 func handleVeteranReaction(userUid string, guildUid string) (users []db.UserServerRankWrapper, err error) {
+	// NOTE: this means that if you react to something in <1 second in multiple servers you won't get your points.
+	// However, this doesn't seem like something that's necessary to solve
 	reactionCooldownMap.RWMutex.RLock()
 	lastTime, present := reactionCooldownMap.m[userUid]
 	reactionCooldownMap.RUnlock()
@@ -53,45 +56,61 @@ func handleVeteranReaction(userUid string, guildUid string) (users []db.UserServ
 
 func handleVeteranChange(userUid string, guildUid string, points int) (users []db.UserServerRankWrapper, err error) {
 	veteranBuffer.Lock()
-	veteranBuffer.m[userUid] += points
+	veteranBuffer.m[buildVeteranBufferKey(userUid, guildUid)] += points
 	veteranBuffer.buffCooldown--
 	buffCount := veteranBuffer.buffCooldown
 	veteranBuffer.Unlock()
 
 	// only actually go through and process the veterans that have been buffered if we pass our max
 	if buffCount < 0 {
-		// TODO: This only works when the entire map contains only 1 guild. Should store guild information in the map
-		server, err := db.ServerQueryOrInsert(guildUid)
-		if err != nil {
-			log.Println("Error getting server during veteran change", err)
-			return nil, err
-		}
-
+		var idsToUpdate []int
 		// we've got to read and write this one unfortunately
 		veteranBuffer.Lock()
 		defer veteranBuffer.Unlock()
-		for uid, count := range veteranBuffer.m {
+		for key, count := range veteranBuffer.m {
+			uid, gid := splitVeteranBufferKey(key)
+			server, err := db.ServerQueryOrInsert(gid)
+			if err != nil {
+				log.Println("Error getting server during veteran change", err)
+				return nil, err
+			}
 			user, err := db.UserQueryOrInsert(uid)
-			log.Println("PROCESSING {", user.Id, "}", user.UserUid)
 			if err != nil {
 				log.Println("Error getting user during veteran change", err)
 				return nil, err
 			}
-			newPoint, err := db.UserServerRankUpdateOrInsert(user.Id, server.Id, count)
+			id, newPoint, messageSent, err := db.UserServerRankUpdateOrInsert(user.Id, server.Id, count)
 			if err != nil {
 				// we had an error, just don't delete the user and their points
 				continue
 			}
-			// we haven't had an error so the user was updated
-			users = append(users, db.UserServerRankWrapper{
-				UserUid:   uid,
-				ServerUid: guildUid,
-				Rank:      newPoint,
-			})
+			if !messageSent && server.VeteranRank.Valid && server.BotChannel.Valid && int64(newPoint) >= server.VeteranRank.Int64 {
+				// we haven't had an error so the user was updated
+				users = append(users, db.UserServerRankWrapper{
+					UserUid:   uid,
+					ServerUid: gid,
+					Rank:      newPoint,
+					SendTo:    server.BotChannel.String,
+				})
+				idsToUpdate = append(idsToUpdate, id)
+			}
+		}
+		if len(idsToUpdate) > 0 {
+			db.UserServerRankSetMessageSent(idsToUpdate)
 		}
 		// clear the whole map
 		veteranBuffer.m = make(map[string]int)
 		veteranBuffer.buffCooldown = veteranBufferSizeMax
 	}
+	db.FlushServerCache()
 	return users, nil
+}
+
+func buildVeteranBufferKey(u string, g string) string {
+	return u + ":" + g
+}
+
+func splitVeteranBufferKey(key string) (u string, g string) {
+	split := strings.Split(key, ":")
+	return split[0], split[1]
 }
