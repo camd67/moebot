@@ -15,7 +15,7 @@ const (
 	messagePoints        = 5
 	reactionPoints       = 1
 	reactionCooldown     = time.Second
-	veteranBufferSizeMax = 1
+	veteranBufferSizeMax = 25
 )
 
 var (
