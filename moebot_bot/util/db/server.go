@@ -91,7 +91,10 @@ func FlushServerCache() {
 }
 
 func ServerFullUpdate(s Server) (err error) {
-	_, err = moeDb.Exec(serverUpdate, s.Id, s.WelcomeMessage, s.RuleAgreement, s.VeteranRank, s.VeteranRole, s.BotChannel)
+	_, err = moeDb.Exec(serverUpdate, s.Id, s.WelcomeMessage, s.RuleAgreement, s.VeteranRank, s.VeteranRole, s.DefaultPinChannelId, s.BotChannel)
+	if err != nil {
+		log.Println("There was an error updating the server table", err)
+	}
 	return
 }
 
