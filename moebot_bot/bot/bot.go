@@ -169,7 +169,15 @@ func messageReactionAdd(session *discordgo.Session, reactionAdd *discordgo.Messa
 	}
 
 	pollsHandler.checkSingleVote(session, reactionAdd)
-	handleVeteranReaction(reactionAdd.UserID, channel.GuildID)
+	changedUsers, err := handleVeteranReaction(reactionAdd.UserID, channel.GuildID)
+	if err != nil {
+		session.ChannelMessageSend(Config["debugChannel"], fmt.Sprint("An error occurred when trying to update veteran users ", err))
+	} else {
+		for _, user := range changedUsers {
+			session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
+				ComPrefix+" role veteran` In this channel.")
+		}
+	}
 }
 
 func reactionIsOption(options []*db.PollOption, emojiID string) bool {
