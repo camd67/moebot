@@ -7,13 +7,14 @@ import (
 )
 
 type Server struct {
-	Id             int
-	GuildUid       string
-	WelcomeMessage sql.NullString
-	RuleAgreement  sql.NullString
-	VeteranRank    sql.NullInt64
-	VeteranRole    sql.NullString
-	BotChannel     sql.NullString
+	Id                  int
+	GuildUid            string
+	WelcomeMessage      sql.NullString
+	RuleAgreement       sql.NullString
+	VeteranRank         sql.NullInt64
+	VeteranRole         sql.NullString
+	BotChannel          sql.NullString
+	DefaultPinChannelId sql.NullInt64
 }
 
 const (
@@ -24,19 +25,21 @@ const (
 		RuleAgreement VARCHAR(50),
 		VeteranRank INTEGER,
 		VeteranRole VARCHAR(20),
+		DefaultPinChannelId INTEGER NULL REFERENCES channel(Id),
 		BotChannel VARCHAR(20)
 	)`
 
-	serverQuery      = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, BotChannel FROM server WHERE Id = $1`
-	serverQueryGuild = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, BotChannel FROM server WHERE GuildUid = $1`
-	serverInsert     = `INSERT INTO server(GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, BotChannel) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
-	serverUpdate     = `UPDATE server SET WelcomeMessage = $2, RuleAgreement = $3, VeteranRank = $4, VeteranRole = $5, BotChannel = $6 WHERE Id = $1`
+	serverQuery      = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel FROM server WHERE Id = $1`
+	serverQueryGuild = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel FROM server WHERE GuildUid = $1`
+	serverInsert     = `INSERT INTO server(GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	serverUpdate     = `UPDATE server SET WelcomeMessage = $2, RuleAgreement = $3, VeteranRank = $4, VeteranRole = $5, DefaultPinChannelId = $6, BotChannel = $7 WHERE Id = $1`
 )
 
 var (
 	serverUpdateTable = []string{
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS VeteranRank INTEGER`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS VeteranRole VARCHAR(20)`,
+		"ALTER TABLE server ADD COLUMN IF NOT EXISTS DefaultPinChannelId INTEGER NULL REFERENCES channel(Id)",
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS BotChannel VARCHAR(20)`,
 	}
 
@@ -54,7 +57,7 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 	}
 	serverMemoryBuffer.RUnlock()
 	row := moeDb.QueryRow(serverQueryGuild, guildUid)
-	if e = row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.BotChannel); e != nil {
+	if e = row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.DefaultPinChannelId, &s.BotChannel); e != nil {
 		if e == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			toInsert := Server{GuildUid: guildUid}
@@ -104,4 +107,12 @@ func serverCreateTable() {
 			return
 		}
 	}
+}
+
+func ServerSetDefaultPinChannel(serverId int, channelId int) error {
+	_, err := moeDb.Exec(serverSetDefaultPinChannel, channelId, serverId)
+	if err != nil {
+		log.Println("Failed to set pin channel", err)
+	}
+	return err
 }

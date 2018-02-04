@@ -45,8 +45,8 @@ func createTables() {
 	userServerRankCreateTable()
 	// ROLE
 	moeDb.Exec(roleTable)
-	// CHANNEL (removed till needed
-	moeDb.Exec(channelTable)
+	// CHANNEL
+	channelCreateTable()
 	// RAFFLE ENTRY
 	moeDb.Exec(raffleTable)
 	// CUSTOM ROLE
