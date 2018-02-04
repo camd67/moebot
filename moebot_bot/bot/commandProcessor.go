@@ -34,6 +34,8 @@ var commands = map[string]func(pack *commPackage){
 	"SPOILER":       commSpoiler,
 	"POLL":          commPoll,
 	"TOGGLEMENTION": commToggleMention,
+	"SERVER":        commServer,
+	"PROFILE":       commProfile,
 	"PINMOVE":       commPinMove,
 }
 
@@ -46,26 +48,104 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	command := strings.ToUpper(messageParts[1])
 
 	if commFunc, commPresent := commands[command]; commPresent {
-		var buf bytes.Buffer
 		params := messageParts[2:]
-		buf.WriteString("Processing command: ")
-		buf.WriteString(command)
-		buf.WriteString(" from user: {")
-		buf.WriteString(fmt.Sprintf("%+v", message.Author))
-		buf.WriteString("}| With Params:{")
-		for _, p := range params {
-			buf.WriteString(p)
-			buf.WriteString(",")
-		}
-		buf.WriteString("}")
-		log.Println(buf.String())
+		log.Println("Processing command: " + command + " from user: {" + fmt.Sprintf("%+v", message.Author) + "}| With Params:{" + strings.Join(params, ",") + "}")
 		session.ChannelTyping(message.ChannelID)
 		commFunc(&commPackage{session, message, guild, member, channel, params})
 	}
 }
 
+func commProfile(pack *commPackage) {
+	// technically we'll already have a user + server at this point, but may not have a usr. Still create if necessary
+	_, err := db.ServerQueryOrInsert(pack.guild.ID)
+	_, err = db.UserQueryOrInsert(pack.message.Author.ID)
+	usr, err := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue getting your information!")
+			return
+		}
+		if err == sql.ErrNoRows || usr == nil {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, you don't have a rank yet!")
+			return
+		}
+	}
+	pack.session.ChannelMessageSend(pack.message.ChannelID, util.UserIdToMention(pack.message.Author.ID)+"'s profile:\nRank: "+strconv.Itoa(usr.Rank))
+}
+
+func commServer(pack *commPackage) {
+	if m := HasModPerm(pack.message.Author.ID, pack.member.Roles); !m {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
+		return
+	}
+	const possibleConfigMessages = "Possible configs: {VeteranRank -> number}, {VeteranRole -> full role name}, {BotChannel -> channel ID}"
+	s, err := db.ServerQueryOrInsert(pack.guild.ID)
+
+	if len(pack.params) <= 1 {
+		rank := int(util.GetInt64OrDefault(s.VeteranRank))
+		role := util.GetStringOrDefault(s.VeteranRole)
+		if role != "unknown" {
+			role = util.FindRoleById(pack.guild.Roles, role).Name
+		}
+		rule := util.GetStringOrDefault(s.RuleAgreement)
+		welcome := util.GetStringOrDefault(s.WelcomeMessage)
+		botChannel := util.GetStringOrDefault(s.BotChannel)
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "This server's configs: {Rank: "+strconv.Itoa(rank)+"} {Role: "+role+"} {Welcome: "+welcome+
+			"} {Rule Confirm: "+rule+"} {BotChannel ID: "+botChannel+"}")
+		return
+	}
+	configKey := strings.ToUpper(pack.params[0])
+	configValue := strings.Join(pack.params[1:], " ")
+	if err != nil {
+		log.Println("Error trying to get server", err)
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error getting the server")
+		return
+	}
+	if configKey == "VETERANRANK" {
+		rank, err := strconv.Atoi(configValue)
+		if err != nil || rank < 0 {
+			// don't bother logging this one. Someone's just given a non-number
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a positive number for the veteran rank")
+			return
+		}
+		s.VeteranRank = sql.NullInt64{
+			Int64: int64(rank),
+			Valid: true,
+		}
+	} else if configKey == "VETERANROLE" {
+		role := util.FindRoleByName(pack.guild.Roles, configValue)
+		if role == nil {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid role and make sure it's the full role name")
+			return
+		}
+		s.VeteranRole = sql.NullString{
+			String: role.ID,
+			Valid:  true,
+		}
+	} else if configKey == "BOTCHANNEL" {
+		c, err := pack.session.Channel(configValue)
+		if err != nil || c.Type != discordgo.ChannelTypeGuildText {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid text channel ID")
+			return
+		}
+		s.BotChannel = sql.NullString{
+			String: c.ID,
+			Valid:  true,
+		}
+	} else {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, possibleConfigMessages)
+		return
+	}
+	err = db.ServerFullUpdate(s)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the server table. Your change was probably not applied.")
+		return
+	}
+	pack.session.ChannelMessageSend(pack.message.ChannelID, "Updated this server!")
+}
+
 func commPermit(pack *commPackage) {
-	if m := checkValidMasterId(pack); !m {
+	if m := hasValidMasterId(pack); !m {
 		return
 	}
 	// should always have more than 2 params: permission level, role name ... role name
@@ -153,7 +233,7 @@ func commCustom(pack *commPackage) {
 }
 
 func commEcho(pack *commPackage) {
-	if m := checkValidMasterId(pack); !m {
+	if m := hasValidMasterId(pack); !m {
 		return
 	}
 	_, err := strconv.Atoi(pack.params[0])
@@ -172,6 +252,15 @@ func commPing(pack *commPackage) {
 }
 
 func commRole(pack *commPackage) {
+	server, err := db.ServerQueryOrInsert(pack.guild.ID)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error loading server information!")
+		return
+	}
+	var vetRole *discordgo.Role
+	if server.VeteranRole.Valid {
+		vetRole = util.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
+	}
 	if len(pack.params) == 0 {
 		// go find all the triggers for this server
 		triggers, err := db.CustomRoleQueryServer(pack.guild.ID)
@@ -179,26 +268,59 @@ func commRole(pack *commPackage) {
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the server. This is an issue with moebot!")
 			return
 		}
+		if vetRole != nil {
+			// triggers = append(triggers, vetRole.Name)
+			// this should be the name of the role, but role is restricted to one word right now...
+			triggers = append(triggers, "veteran")
+		}
 		// little hackey, but include each command in quotes
 		pack.session.ChannelMessageSend(pack.channel.ID, "Possible role commands for this server: `"+strings.Join(triggers, "`, `")+"`")
 	} else {
-		// load up the trigger to see if it exists
-		roleId, err := db.CustomRoleQuery(pack.params[0], pack.guild.ID)
-		if err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role command. Did you perhaps mean `team` or `rank`?")
-			return
+		var role *discordgo.Role
+		if strings.EqualFold(pack.params[0], "veteran") {
+			// before anything, if the server doesn't have a rank or role bail out
+			if !server.VeteranRank.Valid || !server.VeteranRole.Valid {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this server isn't setup to handle veteran role yet! Contact the server admins.")
+				return
+			}
+			usr, err := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
+			var pointCountMessage string
+			if usr != nil {
+				pointCountMessage = strconv.Itoa(usr.Rank)
+			} else {
+				pointCountMessage = "Unranked"
+			}
+			if err != nil {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! Your current points: "+pointCountMessage+
+					" Points required for veteran: "+strconv.Itoa(int(server.VeteranRank.Int64)))
+				return
+			}
+			if int64(usr.Rank) >= server.VeteranRank.Int64 {
+				role = vetRole
+			} else {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! Your current points: "+pointCountMessage+
+					" Points required for veteran: "+strconv.Itoa(int(server.VeteranRank.Int64)))
+				return
+			}
+		} else {
+			// load up the trigger to see if it exists
+			roleId, err := db.CustomRoleQuery(pack.params[0], pack.guild.ID)
+			if err != nil {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role command. Did you perhaps mean `team`, `rank`, or `NSFW`?")
+				return
+			}
+			role = util.FindRoleById(pack.guild.Roles, roleId)
+			if role == nil {
+				log.Println("Nil role when searching for role id:" + roleId)
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server.")
+				return
+			}
 		}
-		role := util.FindRoleById(pack.guild.Roles, roleId)
-		if role == nil {
-			log.Println("Nil role when searching for role id:" + roleId)
-			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server.")
-			return
-		}
-		if util.StrContains(pack.member.Roles, roleId, util.CaseSensitive) {
-			pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, roleId)
+		if util.StrContains(pack.member.Roles, role.ID, util.CaseSensitive) {
+			pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, role.ID)
 			pack.session.ChannelMessageSend(pack.channel.ID, "Removed role "+role.Name+" for "+pack.message.Author.Mention())
 		} else {
-			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, roleId)
+			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
 			pack.session.ChannelMessageSend(pack.channel.ID, "Added role "+role.Name+" for "+pack.message.Author.Mention())
 		}
 	}

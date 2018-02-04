@@ -40,6 +40,9 @@ func createTables() {
 	// NOTE: varchar(20) for any snowflake ID's, which is the max for UINT64
 	// SERVER
 	serverCreateTable()
+	// USER
+	userCreateTable()
+	userServerRankCreateTable()
 	// ROLE
 	moeDb.Exec(roleTable)
 	// CHANNEL

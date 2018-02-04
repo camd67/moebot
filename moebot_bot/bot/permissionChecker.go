@@ -33,7 +33,7 @@ func isMaster(id string) bool {
 	return id == Config["masterId"]
 }
 
-func checkValidMasterId(pack *commPackage) bool {
+func hasValidMasterId(pack *commPackage) bool {
 	if !isMaster(pack.message.Author.ID) {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, only my master can use this command!")
 		return false
