@@ -14,6 +14,7 @@ func commHelp(pack *commPackage) {
 			"`"+ComPrefix+" pinmove [-sendTo <#destChannel>] [-text] <#channel>` - Enables moving messages from the specified channel to the server's destination channel. The `-sendTo` option sets/changes the default destination channel. The `-text` option enables moving text on pin\n"+
 			"`"+ComPrefix+" role <role name>` - Changes your role to one of the approved roles. `"+ComPrefix+" role` to list all the roles\n"+
 			"`"+ComPrefix+" server <config setting> <value>` - Master/Mod Changes a config setting on the server to a given value. `"+ComPrefix+" server` to list configs.\n"+
+			"`"+ComPrefix+" profile - Displays your server profile"+
 			"`"+ComPrefix+" help` - Displays this message")
 	}
 }
