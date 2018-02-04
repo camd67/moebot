@@ -29,10 +29,11 @@ const (
 		BotChannel VARCHAR(20)
 	)`
 
-	serverQuery      = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel FROM server WHERE Id = $1`
-	serverQueryGuild = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel FROM server WHERE GuildUid = $1`
-	serverInsert     = `INSERT INTO server(GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	serverUpdate     = `UPDATE server SET WelcomeMessage = $2, RuleAgreement = $3, VeteranRank = $4, VeteranRole = $5, DefaultPinChannelId = $6, BotChannel = $7 WHERE Id = $1`
+	serverQuery                = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel FROM server WHERE Id = $1`
+	serverQueryGuild           = `SELECT Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel FROM server WHERE GuildUid = $1`
+	serverInsert               = `INSERT INTO server(GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	serverUpdate               = `UPDATE server SET WelcomeMessage = $2, RuleAgreement = $3, VeteranRank = $4, VeteranRole = $5, DefaultPinChannelId = $6, BotChannel = $7 WHERE Id = $1`
+	serverSetDefaultPinChannel = `UPDATE server SET DefaultPinChannelId = $1 WHERE Id = $2`
 )
 
 var (
@@ -62,13 +63,13 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 			// no row, so insert it add in default values
 			toInsert := Server{GuildUid: guildUid}
 			var insertId int
-			e = moeDb.QueryRow(serverInsert, toInsert.GuildUid, toInsert.WelcomeMessage, toInsert.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.BotChannel).Scan(&insertId)
+			e = moeDb.QueryRow(serverInsert, toInsert.GuildUid, toInsert.WelcomeMessage, toInsert.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.DefaultPinChannelId, &s.BotChannel).Scan(&insertId)
 			if e != nil {
 				log.Println("Error inserting role to db ", e)
 				return Server{}, e
 			}
 			row := moeDb.QueryRow(serverQuery, insertId)
-			if e = row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.BotChannel); e != nil {
+			if e = row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.DefaultPinChannelId, &s.BotChannel); e != nil {
 				log.Println("Failed to read the newly inserted server row. This should pretty much never happen...", e)
 				return Server{}, e
 			}
