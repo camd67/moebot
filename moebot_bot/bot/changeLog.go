@@ -3,6 +3,10 @@ package bot
 const changeLogPrefix = "\n`->` "
 
 // probably want to move this to the DB, but not bad to have it here
+
+////////////////////////////////////////////////////////////////////
+//   Please only edit this in develop before merging to master    //
+////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
 
 	"0.3": changeLogPrefix + "Added veteran role stuff" +
