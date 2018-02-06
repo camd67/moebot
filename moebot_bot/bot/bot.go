@@ -177,13 +177,16 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		}
 	}
 
-	changedUsers, err := handleVeteranMessage(member, guild.ID)
-	if err != nil {
-		session.ChannelMessageSend(Config["debugChannel"], fmt.Sprint("An error occurred when trying to update veteran users ", err))
-	} else {
-		for _, user := range changedUsers {
-			session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
-				ComPrefix+" role veteran` In this channel.")
+	// ignore some common bot prefixes
+	if !(strings.HasPrefix(message.Content, "->") || strings.HasPrefix(message.Content, "~") || strings.HasPrefix(message.Content, ComPrefix)) {
+		changedUsers, err := handleVeteranMessage(member, guild.ID)
+		if err != nil {
+			session.ChannelMessageSend(Config["debugChannel"], fmt.Sprint("An error occurred when trying to update veteran users ", err))
+		} else {
+			for _, user := range changedUsers {
+				session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
+					ComPrefix+" role veteran` In this channel.")
+			}
 		}
 	}
 

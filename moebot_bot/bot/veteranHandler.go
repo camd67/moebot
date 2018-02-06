@@ -14,7 +14,7 @@ import (
 const (
 	messagePoints        = 5
 	reactionPoints       = 1
-	reactionCooldown     = time.Second
+	reactionCooldown     = 30 * time.Second
 	veteranBufferSizeMax = 25
 )
 
