@@ -3,14 +3,13 @@ package bot
 import (
 	"bytes"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/camd67/moebot/moebot_bot/bot/commands"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -18,26 +17,27 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var commands = map[string]func(pack *commPackage){
-	"TEAM":          commTeam,
-	"ROLE":          commRole,
-	"RANK":          commRank,
-	"NSFW":          commNsfw,
-	"HELP":          commHelp,
-	"CHANGELOG":     commChange,
-	"RAFFLE":        commRaffle,
-	"SUBMIT":        commSubmit,
-	"ECHO":          commEcho,
-	"PERMIT":        commPermit,
-	"CUSTOM":        commCustom,
-	"PING":          commPing,
-	"SPOILER":       commSpoiler,
-	"POLL":          commPoll,
-	"TOGGLEMENTION": commToggleMention,
-	"SERVER":        commServer,
-	"PROFILE":       commProfile,
-	"PINMOVE":       commPinMove,
-}
+//Moved to bot.go
+//var commandsMap = map[string]func(pack *commPackage){
+// "TEAM":          commTeam,
+// "ROLE":          commRole,
+// "RANK":          commRank,
+// "NSFW":          commNsfw,
+// "HELP":          commHelp,
+// "CHANGELOG":     commChange,
+// "RAFFLE":        commRaffle,
+// "SUBMIT":        commSubmit,
+// "ECHO":          commEcho,
+// "PERMIT":        commPermit,
+// "CUSTOM":        commCustom,
+// "PING":          commPing,
+// "SPOILER":       commSpoiler,
+// "POLL": 			commPoll,
+// "TOGGLEMENTION": commToggleMention,
+// "SERVER":        commServer,
+// "PROFILE":       commProfile,
+// "PINMOVE":       commPinMove,
+//}
 
 func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
 	messageParts := strings.Split(message.Content, " ")
@@ -47,65 +47,65 @@ func RunCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	}
 	command := strings.ToUpper(messageParts[1])
 
-	if commFunc, commPresent := commands[command]; commPresent {
+	if commFunc, commPresent := commandsMap[command]; commPresent {
 		params := messageParts[2:]
 		log.Println("Processing command: " + command + " from user: {" + fmt.Sprintf("%+v", message.Author) + "}| With Params:{" + strings.Join(params, ",") + "}")
 		session.ChannelTyping(message.ChannelID)
-		commFunc(&commPackage{session, message, guild, member, channel, params})
+		commFunc.Execute(&commands.CommPackage{session, message, guild, member, channel, params})
 	}
 }
 
-func commProfile(pack *commPackage) {
+func commProfile(pack *commands.CommPackage) {
 	// technically we'll already have a user + server at this point, but may not have a usr. Still create if necessary
-	_, err := db.ServerQueryOrInsert(pack.guild.ID)
-	_, err = db.UserQueryOrInsert(pack.message.Author.ID)
-	usr, err := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
+	_, err := db.ServerQueryOrInsert(pack.Guild.ID)
+	_, err = db.UserQueryOrInsert(pack.Message.Author.ID)
+	usr, err := db.UserServerRankQuery(pack.Message.Author.ID, pack.Guild.ID)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue getting your information!")
+			pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Sorry, there was an issue getting your information!")
 			return
 		}
 		if err == sql.ErrNoRows || usr == nil {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, you don't have a rank yet!")
+			pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Sorry, you don't have a rank yet!")
 			return
 		}
 	}
-	pack.session.ChannelMessageSend(pack.message.ChannelID, util.UserIdToMention(pack.message.Author.ID)+"'s profile:\nRank: "+strconv.Itoa(usr.Rank))
+	pack.Session.ChannelMessageSend(pack.Message.ChannelID, util.UserIdToMention(pack.Message.Author.ID)+"'s profile:\nRank: "+strconv.Itoa(usr.Rank))
 }
 
-func commServer(pack *commPackage) {
-	if m := HasModPerm(pack.message.Author.ID, pack.member.Roles); !m {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
+func commServer(pack *commands.CommPackage) {
+	// if m := HasModPerm(pack.Message.Author.ID, pack.Member.Roles); !m {
+	// 	pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, this command has a minimum permission of mod")
+	// 	return
+	// }
 	const possibleConfigMessages = "Possible configs: {VeteranRank -> number}, {VeteranRole -> full role name}, {BotChannel -> channel ID}"
-	s, err := db.ServerQueryOrInsert(pack.guild.ID)
+	s, err := db.ServerQueryOrInsert(pack.Guild.ID)
 
-	if len(pack.params) <= 1 {
+	if len(pack.Params) <= 1 {
 		rank := int(util.GetInt64OrDefault(s.VeteranRank))
 		role := util.GetStringOrDefault(s.VeteranRole)
 		if role != "unknown" {
-			role = util.FindRoleById(pack.guild.Roles, role).Name
+			role = util.FindRoleById(pack.Guild.Roles, role).Name
 		}
 		rule := util.GetStringOrDefault(s.RuleAgreement)
 		welcome := util.GetStringOrDefault(s.WelcomeMessage)
 		botChannel := util.GetStringOrDefault(s.BotChannel)
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "This server's configs: {Rank: "+strconv.Itoa(rank)+"} {Role: "+role+"} {Welcome: "+welcome+
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "This server's configs: {Rank: "+strconv.Itoa(rank)+"} {Role: "+role+"} {Welcome: "+welcome+
 			"} {Rule Confirm: "+rule+"} {BotChannel ID: "+botChannel+"}")
 		return
 	}
-	configKey := strings.ToUpper(pack.params[0])
-	configValue := strings.Join(pack.params[1:], " ")
+	configKey := strings.ToUpper(pack.Params[0])
+	configValue := strings.Join(pack.Params[1:], " ")
 	if err != nil {
 		log.Println("Error trying to get server", err)
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error getting the server")
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Sorry, there was an error getting the server")
 		return
 	}
 	if configKey == "VETERANRANK" {
 		rank, err := strconv.Atoi(configValue)
 		if err != nil || rank < 0 {
 			// don't bother logging this one. Someone's just given a non-number
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a positive number for the veteran rank")
+			pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Please provide a positive number for the veteran rank")
 			return
 		}
 		s.VeteranRank = sql.NullInt64{
@@ -113,9 +113,9 @@ func commServer(pack *commPackage) {
 			Valid: true,
 		}
 	} else if configKey == "VETERANROLE" {
-		role := util.FindRoleByName(pack.guild.Roles, configValue)
+		role := util.FindRoleByName(pack.Guild.Roles, configValue)
 		if role == nil {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid role and make sure it's the full role name")
+			pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Please provide a valid role and make sure it's the full role name")
 			return
 		}
 		s.VeteranRole = sql.NullString{
@@ -123,9 +123,9 @@ func commServer(pack *commPackage) {
 			Valid:  true,
 		}
 	} else if configKey == "BOTCHANNEL" {
-		c, err := pack.session.Channel(configValue)
+		c, err := pack.Session.Channel(configValue)
 		if err != nil || c.Type != discordgo.ChannelTypeGuildText {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid text channel ID")
+			pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Please provide a valid text channel ID")
 			return
 		}
 		s.BotChannel = sql.NullString{
@@ -133,42 +133,42 @@ func commServer(pack *commPackage) {
 			Valid:  true,
 		}
 	} else {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, possibleConfigMessages)
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, possibleConfigMessages)
 		return
 	}
 	err = db.ServerFullUpdate(s)
 	if err != nil {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the server table. Your change was probably not applied.")
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Sorry, there was an error updating the server table. Your change was probably not applied.")
 		return
 	}
-	pack.session.ChannelMessageSend(pack.message.ChannelID, "Updated this server!")
+	pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Updated this server!")
 }
 
-func commPermit(pack *commPackage) {
-	if m := hasValidMasterId(pack); !m {
-		return
-	}
+func commPermit(pack *commands.CommPackage) {
+	// if m := hasValidMasterId(pack); !m {
+	// 	return
+	// }
 	// should always have more than 2 params: permission level, role name ... role name
-	if len(pack.params) < 2 {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a permission level followed by the role name")
+	if len(pack.Params) < 2 {
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Please provide a permission level followed by the role name")
 		return
 	}
-	permLevel := db.GetPermissionFromString(pack.params[0])
+	permLevel := db.GetPermissionFromString(pack.Params[0])
 	if permLevel == -1 {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Invalid permission level")
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Invalid permission level")
 		return
 	}
 	// find the correct role
-	roleName := strings.Join(pack.params[1:], " ")
-	r := util.FindRoleByName(pack.guild.Roles, roleName)
+	roleName := strings.Join(pack.Params[1:], " ")
+	r := util.FindRoleByName(pack.Guild.Roles, roleName)
 	if r == nil {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Unknown role name")
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Unknown role name")
 	}
 	// we've got the role, add it to the db, updating if necessary
 	// but first grab the server (probably want to move this out to include in the commPackage
-	s, err := db.ServerQueryOrInsert(pack.guild.ID)
+	s, err := db.ServerQueryOrInsert(pack.Guild.ID)
 	if err != nil {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Error retrieving server information")
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Error retrieving server information")
 		return
 	}
 	db.RoleInsertOrUpdate(db.Role{
@@ -176,96 +176,96 @@ func commPermit(pack *commPackage) {
 		RoleUid:    r.ID,
 		Permission: permLevel,
 	})
-	pack.session.ChannelMessageSend(pack.channel.ID, "Set permission ("+db.SprintPermission(permLevel)+") level for role "+roleName)
+	pack.Session.ChannelMessageSend(pack.Channel.ID, "Set permission ("+db.SprintPermission(permLevel)+") level for role "+roleName)
 }
 
-func commCustom(pack *commPackage) {
-	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
+func commCustom(pack *commands.CommPackage) {
+	// if !HasModPerm(pack.Message.Author.ID, pack.Member.Roles) {
+	// 	pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, this command has a minimum permission of mod")
+	// 	return
+	// }
 	// should have params: command name - role name or delete - id
-	if len(pack.params) < 2 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Please provide command name followed by the role name")
+	if len(pack.Params) < 2 {
+		pack.Session.ChannelMessageSend(pack.Channel.ID, "Please provide command name followed by the role name")
 		return
 	}
-	if strings.ToUpper(pack.params[0]) == "DELETE" {
-		id, err := strconv.Atoi(pack.params[1])
+	if strings.ToUpper(pack.Params[0]) == "DELETE" {
+		id, err := strconv.Atoi(pack.Params[1])
 		if err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a valid ID to delete")
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Please provide a valid ID to delete")
 			return
 		}
 		count := db.CustomRoleDelete(id)
 		if count == -1 {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue deleting that custom role. Perhaps it doesn't exist?")
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was an issue deleting that custom role. Perhaps it doesn't exist?")
 		} else {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Deleted "+strconv.FormatInt(count, 10)+" custom role commands")
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Deleted "+strconv.FormatInt(count, 10)+" custom role commands")
 		}
 	} else {
 		// get the role and server
-		server, err := db.ServerQueryOrInsert(pack.guild.ID)
+		server, err := db.ServerQueryOrInsert(pack.Guild.ID)
 		if err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Error storing server information")
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Error storing server information")
 			return
 		}
-		roleName := strings.Join(pack.params[1:], " ")
-		r := util.FindRoleByName(pack.guild.Roles, roleName)
+		roleName := strings.Join(pack.Params[1:], " ")
+		r := util.FindRoleByName(pack.Guild.Roles, roleName)
 		if r == nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, it doesn't seem like that role exists on this server.")
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, it doesn't seem like that role exists on this server.")
 			return
 		}
 		role, err := db.RoleQueryOrInsert(db.Role{
 			ServerId: server.Id,
 			RoleUid:  r.ID,
 		})
-		oldId, exists := db.CustomRoleRowExists(pack.params[0], server.GuildUid)
+		oldId, exists := db.CustomRoleRowExists(pack.Params[0], server.GuildUid)
 		if !exists {
-			err = db.CustomRoleAdd(pack.params[0], server.Id, role.Id)
+			err = db.CustomRoleAdd(pack.Params[0], server.Id, role.Id)
 			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Error adding custom role")
+				pack.Session.ChannelMessageSend(pack.Channel.ID, "Error adding custom role")
 				return
 			}
-			pack.session.ChannelMessageSend(pack.channel.ID, "Added custom command `"+pack.params[0]+"` tied to the role: "+roleName)
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Added custom command `"+pack.Params[0]+"` tied to the role: "+roleName)
 		} else {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Custom command already exists. Delete with `"+ComPrefix+" custom delete "+strconv.Itoa(oldId)+"`")
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Custom command already exists. Delete with `"+ComPrefix+" custom delete "+strconv.Itoa(oldId)+"`")
 		}
 	}
 }
 
-func commEcho(pack *commPackage) {
-	if m := hasValidMasterId(pack); !m {
-		return
-	}
-	_, err := strconv.Atoi(pack.params[0])
+func commEcho(pack *commands.CommPackage) {
+	// if m := hasValidMasterId(pack); !m {
+	// 	return
+	// }
+	_, err := strconv.Atoi(pack.Params[0])
 	if err != nil {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, that's an invalid channel ID")
+		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Sorry, that's an invalid channel ID")
 		return
 	}
-	pack.session.ChannelMessageSend(pack.params[0], strings.Join(pack.params[1:], " "))
+	pack.Session.ChannelMessageSend(pack.Params[0], strings.Join(pack.Params[1:], " "))
 }
 
-func commPing(pack *commPackage) {
+func commPing(pack *commands.CommPackage) {
 	// seems this has some time drift when using docker for windows... need to verify if it's accurate on the server
-	messageTime, _ := pack.message.Timestamp.Parse()
+	messageTime, _ := pack.Message.Timestamp.Parse()
 	pingTime := time.Duration(time.Now().UnixNano() - messageTime.UnixNano())
-	pack.session.ChannelMessageSend(pack.channel.ID, "Latency to server: "+pingTime.String())
+	pack.Session.ChannelMessageSend(pack.Channel.ID, "Latency to server: "+pingTime.String())
 }
 
-func commRole(pack *commPackage) {
-	server, err := db.ServerQueryOrInsert(pack.guild.ID)
+func commRole(pack *commands.CommPackage) {
+	server, err := db.ServerQueryOrInsert(pack.Guild.ID)
 	if err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error loading server information!")
+		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was an error loading server information!")
 		return
 	}
 	var vetRole *discordgo.Role
 	if server.VeteranRole.Valid {
-		vetRole = util.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
+		vetRole = util.FindRoleById(pack.Guild.Roles, server.VeteranRole.String)
 	}
-	if len(pack.params) == 0 {
+	if len(pack.Params) == 0 {
 		// go find all the triggers for this server
-		triggers, err := db.CustomRoleQueryServer(pack.guild.ID)
+		triggers, err := db.CustomRoleQueryServer(pack.Guild.ID)
 		if err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the server. This is an issue with moebot!")
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was an issue fetching the server. This is an issue with moebot!")
 			return
 		}
 		if vetRole != nil {
@@ -274,16 +274,16 @@ func commRole(pack *commPackage) {
 			triggers = append(triggers, "veteran")
 		}
 		// little hackey, but include each command in quotes
-		pack.session.ChannelMessageSend(pack.channel.ID, "Possible role commands for this server: `"+strings.Join(triggers, "`, `")+"`")
+		pack.Session.ChannelMessageSend(pack.Channel.ID, "Possible role commands for this server: `"+strings.Join(triggers, "`, `")+"`")
 	} else {
 		var role *discordgo.Role
-		if strings.EqualFold(pack.params[0], "veteran") {
+		if strings.EqualFold(pack.Params[0], "veteran") {
 			// before anything, if the server doesn't have a rank or role bail out
 			if !server.VeteranRank.Valid || !server.VeteranRole.Valid {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this server isn't setup to handle veteran role yet! Contact the server admins.")
+				pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, this server isn't setup to handle veteran role yet! Contact the server admins.")
 				return
 			}
-			usr, err := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
+			usr, err := db.UserServerRankQuery(pack.Message.Author.ID, pack.Guild.ID)
 			var pointCountMessage string
 			if usr != nil {
 				pointCountMessage = strconv.Itoa(usr.Rank)
@@ -291,70 +291,67 @@ func commRole(pack *commPackage) {
 				pointCountMessage = "Unranked"
 			}
 			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! Your current points: "+pointCountMessage+
+				pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, you don't have enough veteran points yet! Your current points: "+pointCountMessage+
 					" Points required for veteran: "+strconv.Itoa(int(server.VeteranRank.Int64)))
 				return
 			}
 			if int64(usr.Rank) >= server.VeteranRank.Int64 {
 				role = vetRole
 			} else {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! Your current points: "+pointCountMessage+
+				pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, you don't have enough veteran points yet! Your current points: "+pointCountMessage+
 					" Points required for veteran: "+strconv.Itoa(int(server.VeteranRank.Int64)))
 				return
 			}
 		} else {
 			// load up the trigger to see if it exists
-			roleId, err := db.CustomRoleQuery(pack.params[0], pack.guild.ID)
+			roleId, err := db.CustomRoleQuery(pack.Params[0], pack.Guild.ID)
 			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role command. Did you perhaps mean `team`, `rank`, or `NSFW`?")
+				pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role command. Did you perhaps mean `team`, `rank`, or `NSFW`?")
 				return
 			}
-			role = util.FindRoleById(pack.guild.Roles, roleId)
+			role = util.FindRoleById(pack.Guild.Roles, roleId)
 			if role == nil {
 				log.Println("Nil role when searching for role id:" + roleId)
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server.")
+				pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was an issue finding that role in this server.")
 				return
 			}
 		}
-		if util.StrContains(pack.member.Roles, role.ID, util.CaseSensitive) {
-			pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, role.ID)
-			pack.session.ChannelMessageSend(pack.channel.ID, "Removed role "+role.Name+" for "+pack.message.Author.Mention())
+		if util.StrContains(pack.Member.Roles, role.ID, util.CaseSensitive) {
+			pack.Session.GuildMemberRoleRemove(pack.Guild.ID, pack.Message.Author.ID, role.ID)
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Removed role "+role.Name+" for "+pack.Message.Author.Mention())
 		} else {
-			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
-			pack.session.ChannelMessageSend(pack.channel.ID, "Added role "+role.Name+" for "+pack.message.Author.Mention())
+			pack.Session.GuildMemberRoleAdd(pack.Guild.ID, pack.Message.Author.ID, role.ID)
+			pack.Session.ChannelMessageSend(pack.Channel.ID, "Added role "+role.Name+" for "+pack.Message.Author.Mention())
 		}
 	}
 }
 
-func commTeam(pack *commPackage) {
-	processGuildRole([]string{"Nanachi", "Ozen", "Bondrewd", "Reg", "Riko", "Maruruk"}, pack.session, pack.params, pack.channel, pack.guild, pack.message, false)
+func commTeam(pack *commands.CommPackage) {
+
 }
 
-func commRank(pack *commPackage) {
-	processGuildRole([]string{"Red", "Blue"}, pack.session, pack.params, pack.channel, pack.guild, pack.message, true)
+func commRank(pack *commands.CommPackage) {
 }
 
-func commNsfw(pack *commPackage) {
-	// force NSFW comm param so we can reuse guild role
-	processGuildRole([]string{"NSFW"}, pack.session, []string{"NSFW"}, pack.channel, pack.guild, pack.message, false)
+func commNsfw(pack *commands.CommPackage) {
 }
 
-func commSpoiler(pack *commPackage) {
-	content := pack.message.Author.Mention() + " sent a spoiler"
+func commSpoiler(pack *commands.CommPackage) {
+	content := pack.Message.Author.Mention() + " sent a spoiler"
 	for i := 0; i < 2; i++ {
-		err := pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
+		err := pack.Session.ChannelMessageDelete(pack.Channel.ID, pack.Message.ID)
 		if err == nil {
 			break
 		}
 		log.Println("Error while deleting message", err)
 	}
 
-	spoilerTitle, spoilerText := util.GetSpoilerContents(pack.params)
+	spoilerTitle, spoilerText := util.GetSpoilerContents(pack.Params)
 	if spoilerTitle != "" {
 		content += ": **" + spoilerTitle + "**"
 	}
 	spoilerGif := util.MakeGif(spoilerText)
-	pack.session.ChannelMessageSendComplex(pack.channel.ID, &discordgo.MessageSend{
+	pack.Session.ChannelMessageSendComplex(pack.Channel.ID, &discordgo.MessageSend{
 		Content: content,
 		File: &discordgo.File{
 			Name:        "Spoiler.gif",
@@ -364,29 +361,17 @@ func commSpoiler(pack *commPackage) {
 	})
 }
 
-func commPoll(pack *commPackage) {
-	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
-	if pack.params[0] == "-close" {
-		pollsHandler.closePoll(pack)
-		return
-	}
-	pollsHandler.openPoll(pack)
-}
-
-func commToggleMention(pack *commPackage) {
-	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
-	roleName := strings.Join(pack.params, " ")
-	for _, role := range pack.guild.Roles {
+func commToggleMention(pack *commands.CommPackage) {
+	// if !HasModPerm(pack.Message.Author.ID, pack.Member.Roles) {
+	// 	pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, this command has a minimum permission of mod")
+	// 	return
+	// }
+	roleName := strings.Join(pack.Params, " ")
+	for _, role := range pack.Guild.Roles {
 		if role.Name == roleName {
-			editedRole, err := pack.session.GuildRoleEdit(pack.guild.ID, role.ID, role.Name, role.Color, role.Hoist, role.Permissions, !role.Mentionable)
+			editedRole, err := pack.Session.GuildRoleEdit(pack.Guild.ID, role.ID, role.Name, role.Color, role.Hoist, role.Permissions, !role.Mentionable)
 			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem editing the role, try again later")
+				pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem editing the role, try again later")
 				return
 			}
 			go restoreMention(pack, editedRole)
@@ -396,18 +381,18 @@ func commToggleMention(pack *commPackage) {
 			} else {
 				message += "not mentionable"
 			}
-			pack.session.ChannelMessageSend(pack.channel.ID, message)
+			pack.Session.ChannelMessageSend(pack.Channel.ID, message)
 			return
 		}
 	}
-	pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, could not find role "+roleName+". Please check the role name and try again.")
+	pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, could not find role "+roleName+". Please check the role name and try again.")
 }
 
-func restoreMention(pack *commPackage, role *discordgo.Role) {
+func restoreMention(pack *commands.CommPackage, role *discordgo.Role) {
 	<-time.After(5 * time.Minute)
-	editedRole, err := pack.session.GuildRoleEdit(pack.guild.ID, role.ID, role.Name, role.Color, role.Hoist, role.Permissions, !role.Mentionable)
+	editedRole, err := pack.Session.GuildRoleEdit(pack.Guild.ID, role.ID, role.Name, role.Color, role.Hoist, role.Permissions, !role.Mentionable)
 	if err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem editing the role, try again later")
+		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem editing the role, try again later")
 		return
 	}
 	message := "Restored role " + editedRole.Name + " to "
@@ -416,168 +401,5 @@ func restoreMention(pack *commPackage, role *discordgo.Role) {
 	} else {
 		message += "not mentionable"
 	}
-	pack.session.ChannelMessageSend(pack.channel.ID, message)
-}
-
-func commPinMove(pack *commPackage) {
-	if !HasModPerm(pack.message.Author.ID, pack.member.Roles) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
-	if len(pack.params) == 0 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to specify at least a valid channel.")
-		return
-	}
-	var err error
-	var pinChannel string
-	regNumbers := regexp.MustCompile("\\d+")
-	enableText := false
-	for i := 0; i < len(pack.params)-1; i++ {
-		if pack.params[i] == "-sendTo" {
-			pinChannel = regNumbers.FindString(pack.params[i+1])
-		}
-		if pack.params[i] == "-text" {
-			enableText = true
-		}
-	}
-	server, err := db.ServerQueryOrInsert(pack.guild.ID)
-	if pinChannel == "" && (!server.DefaultPinChannelId.Valid || server.DefaultPinChannelId.Int64 == 0) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there is no default destination channel set. You need to specify at least a valid destination channel.")
-		return
-	}
-	sourceChannelUid := regNumbers.FindString(pack.params[len(pack.params)-1])
-	if pinChannel != "" {
-		if err = newPinChannel(pinChannel, server, pack); err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
-			return
-		}
-	}
-	var pinEnabled bool
-	if pinEnabled, err = togglePin(sourceChannelUid, enableText, server, pack); err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
-		return
-	}
-	message := "Message move on pin has been "
-	if pinEnabled {
-		message += "enabled"
-	} else {
-		message += "disabled"
-	}
-	message += " on channel <#" + sourceChannelUid + ">"
-	pack.session.ChannelMessageSend(pack.channel.ID, message)
-}
-
-func newPinChannel(newPinChannelUid string, server db.Server, pack *commPackage) error {
-	var newPinChannel *discordgo.Channel
-	var err error
-	for _, c := range pack.guild.Channels {
-		if c.ID == newPinChannelUid {
-			newPinChannel = c
-			break
-		}
-	}
-	if newPinChannel == nil {
-		return errors.New("Sorry, you need to specify a valid destination channel")
-	}
-	var currentPinChannel *db.Channel
-	if server.DefaultPinChannelId.Valid && server.DefaultPinChannelId.Int64 > 0 {
-		currentPinChannel, err = db.ChannelQueryById(int(server.DefaultPinChannelId.Int64))
-		if err != nil && err != sql.ErrNoRows {
-			return errors.New("Sorry, there was a problem retrieving the current pin channel")
-		}
-	}
-	if currentPinChannel == nil || currentPinChannel.ChannelUid != newPinChannel.ID {
-		dbNewPinChannel, err := db.ChannelQueryOrInsert(newPinChannel.ID, &server)
-		if err != nil {
-			return errors.New("Sorry, there was a problem retrieving the new pin channel")
-		}
-		err = db.ServerSetDefaultPinChannel(server.Id, dbNewPinChannel.Id)
-		if err != nil {
-			return errors.New("Sorry, there was a problem setting the new pin channel")
-		}
-		server.DefaultPinChannelId.Scan(dbNewPinChannel.Id)
-	}
-	return nil
-}
-
-func togglePin(sourceChannelUid string, enableTextPins bool, server db.Server, pack *commPackage) (bool, error) {
-	var sourceChannel *discordgo.Channel
-	for _, c := range pack.guild.Channels {
-		if c.ID == sourceChannelUid {
-			sourceChannel = c
-			break
-		}
-	}
-	if sourceChannel == nil {
-		return false, errors.New("Sorry, you need to specify a valid source channel")
-	}
-	dbSourceChannel, err := db.ChannelQueryOrInsert(sourceChannel.ID, &server)
-	if err != nil {
-		return false, errors.New("Sorry, there was a problem retrieving the source channel")
-	}
-	err = db.ChannelSetPin(dbSourceChannel.Id, !dbSourceChannel.MovePins, enableTextPins)
-	if err != nil {
-		return false, errors.New("Sorry, there was a problem setting the pin status")
-	}
-	return !dbSourceChannel.MovePins, nil
-}
-
-/*
-Processes a guild role based on a list of allowed role names, and a requested role.
-If StrictRole is true then the first role in the list of allowed roles is used if all roles are removed.
-*/
-func processGuildRole(allowedRoles []string, session *discordgo.Session, params []string, channel *discordgo.Channel, guild *discordgo.Guild, message *discordgo.Message, strictRole bool) {
-	if len(params) == 0 || !util.StrContains(allowedRoles, params[0], util.CaseInsensitive) {
-		session.ChannelMessageSend(channel.ID, message.Author.Mention()+" please provide one of the approved roles: "+strings.Join(allowedRoles, ", ")+". Did you perhaps mean `team` or `rank`?")
-		return
-	}
-
-	// get the list of roles and find the one that matches the text
-	var roleToAdd *discordgo.Role
-	var allRolesToChange []string
-	requestedRole := strings.ToUpper(params[0])
-	for _, role := range guild.Roles {
-		for _, roleToCheck := range allowedRoles {
-			if strings.HasPrefix(strings.ToUpper(role.Name), strings.ToUpper(roleToCheck)) {
-				allRolesToChange = append(allRolesToChange, role.ID)
-			}
-		}
-		if strings.HasPrefix(strings.ToUpper(role.Name), requestedRole) {
-			roleToAdd = role
-		}
-	}
-	if roleToAdd == nil {
-		log.Println("Unable to find role", message)
-		session.ChannelMessageSend(channel.ID, "Sorry "+message.Author.Mention()+" I don't recognize that role...")
-		return
-	}
-	guildMember, err := session.GuildMember(guild.ID, message.Author.ID)
-	if err != nil {
-		log.Println("Unable to find guild member", err)
-		return
-	}
-	memberRoles := guildMember.Roles
-	if strictRole && util.StrContains(memberRoles, roleToAdd.ID, util.CaseSensitive) && strings.HasPrefix(strings.ToUpper(roleToAdd.Name), requestedRole) {
-		// we're in strict mode, and got a removal for the first role. prevent that
-		session.ChannelMessageSend(channel.ID, "You've already got that role! You can change roles but can't remove them with this command.")
-		return
-	}
-	removeAllRoles(session, guildMember, allRolesToChange, guild)
-	if util.StrContains(memberRoles, roleToAdd.ID, util.CaseSensitive) {
-		session.GuildMemberRoleRemove(guild.ID, message.Author.ID, roleToAdd.ID)
-		session.ChannelMessageSend(channel.ID, "Removed role: "+roleToAdd.Name+" for "+message.Author.Mention())
-		log.Println("Removed role " + roleToAdd.Name + " to user: " + message.Author.Username)
-	} else {
-		session.GuildMemberRoleAdd(guild.ID, message.Author.ID, roleToAdd.ID)
-		session.ChannelMessageSend(channel.ID, "Added role: "+roleToAdd.Name+" for "+message.Author.Mention())
-		log.Println("Added role " + roleToAdd.Name + " to user: " + message.Author.Username)
-	}
-}
-
-func removeAllRoles(session *discordgo.Session, member *discordgo.Member, rolesToRemove []string, guild *discordgo.Guild) {
-	for _, roleToCheck := range rolesToRemove {
-		if util.StrContains(member.Roles, roleToCheck, util.CaseSensitive) {
-			session.GuildMemberRoleRemove(guild.ID, member.User.ID, roleToCheck)
-		}
-	}
+	pack.Session.ChannelMessageSend(pack.Channel.ID, message)
 }

@@ -1,5 +1,9 @@
 package bot
 
+import (
+	"github.com/camd67/moebot/moebot_bot/bot/commands"
+)
+
 const changeLogPrefix = "\n`->` "
 
 // probably want to move this to the DB, but not bad to have it here
@@ -36,12 +40,12 @@ var changeLog = map[string]string{
 		changeLogPrefix + "For future reference, previous versions included help, team, rank, and NSFW commands as well as a welcome message to the server.",
 }
 
-func commChange(pack *commPackage) {
-	if len(pack.params) == 0 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot update log `(ver "+version+")`: \n"+changeLog[version])
-	} else if log, present := changeLog[pack.params[0]]; present {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot update log `(ver "+pack.params[0]+")`: \n"+log)
+func commChange(pack *commands.CommPackage) {
+	if len(pack.Params) == 0 {
+		pack.Session.ChannelMessageSend(pack.Channel.ID, "Moebot update log `(ver "+version+")`: \n"+changeLog[version])
+	} else if log, present := changeLog[pack.Params[0]]; present {
+		pack.Session.ChannelMessageSend(pack.Channel.ID, "Moebot update log `(ver "+pack.Params[0]+")`: \n"+log)
 	} else {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Unknown version number. Latest log:\nMoebot update log `(ver "+version+")`: \n"+changeLog[version])
+		pack.Session.ChannelMessageSend(pack.Channel.ID, "Unknown version number. Latest log:\nMoebot update log `(ver "+version+")`: \n"+changeLog[version])
 	}
 }

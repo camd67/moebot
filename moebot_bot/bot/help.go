@@ -1,8 +1,10 @@
 package bot
 
-func commHelp(pack *commPackage) {
-	if len(pack.params) == 0 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot has the following commands:\n"+
+import "github.com/camd67/moebot/moebot_bot/bot/commands"
+
+func commHelp(pack *commands.CommPackage) {
+	if len(pack.Params) == 0 {
+		pack.Session.ChannelMessageSend(pack.Channel.ID, "Moebot has the following commands:\n"+
 			"`"+ComPrefix+" team <team name>` - Changes your team to one of the approved teams. `"+ComPrefix+" team` to list all teams\n"+
 			"`"+ComPrefix+" rank <rank name>` - Changes your rank to one of the approved ranks. `"+ComPrefix+" rank` to list all the ranks\n"+
 			"`"+ComPrefix+" changelog` - Displays the changelog for moebot\n"+
