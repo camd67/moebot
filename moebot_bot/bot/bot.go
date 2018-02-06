@@ -30,13 +30,17 @@ var (
 
 func SetupMoebot(session *discordgo.Session) {
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
-	setupCommands()
+	setupCommands(session)
 	addHandlers(session)
 }
 
-func setupCommands() {
+func setupCommands(session *discordgo.Session) {
 	commandsMap["POLL"] = commands.PollCommand{Checker: &commands.PermissionChecker{MasterId: Config["masterId"]}, PollsHandler: commands.NewPollsHandler()}
 	commandsMap["PINMOVE"] = commands.PinMoveCommand{Checker: &commands.PermissionChecker{MasterId: Config["masterId"]}}
+
+	for _, com := range commandsMap {
+		com.Setup(session)
+	}
 }
 
 func addHandlers(discord *discordgo.Session) {
