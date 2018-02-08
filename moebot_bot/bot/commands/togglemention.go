@@ -8,10 +8,10 @@ import (
 )
 
 type MentionCommand struct {
-	Checker PermissionChecker
+	Checker *PermissionChecker
 }
 
-func (mc MentionCommand) Execute(pack *CommPackage) {
+func (mc *MentionCommand) Execute(pack *CommPackage) {
 	if !mc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
@@ -38,9 +38,9 @@ func (mc MentionCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, could not find role "+roleName+". Please check the role name and try again.")
 }
 
-func (mc MentionCommand) Setup(session *discordgo.Session) {}
+func (mc *MentionCommand) Setup(session *discordgo.Session) {}
 
-func (mc MentionCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (mc *MentionCommand) EventHandlers() []interface{} { return []interface{}{} }
 
 func restoreMention(pack *CommPackage, role *discordgo.Role) {
 	<-time.After(5 * time.Minute)

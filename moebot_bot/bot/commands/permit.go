@@ -9,10 +9,10 @@ import (
 )
 
 type PermitCommand struct {
-	Checker PermissionChecker
+	Checker *PermissionChecker
 }
 
-func (pc PermitCommand) Execute(pack *CommPackage) {
+func (pc *PermitCommand) Execute(pack *CommPackage) {
 	if m := pc.Checker.hasValidMasterId(pack); !m {
 		return
 	}
@@ -47,5 +47,5 @@ func (pc PermitCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, "Set permission ("+db.SprintPermission(permLevel)+") level for role "+roleName)
 }
 
-func (pc PermitCommand) Setup(session *discordgo.Session) {}
-func (pc PermitCommand) EventHandlers() []interface{}     { return []interface{}{} }
+func (pc *PermitCommand) Setup(session *discordgo.Session) {}
+func (pc *PermitCommand) EventHandlers() []interface{}     { return []interface{}{} }

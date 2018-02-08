@@ -6,7 +6,7 @@ type HelpCommand struct {
 	ComPrefix string
 }
 
-func (hc HelpCommand) Execute(pack *CommPackage) {
+func (hc *HelpCommand) Execute(pack *CommPackage) {
 	if len(pack.params) == 0 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot has the following commands:\n"+
 			"`"+hc.ComPrefix+" team <team name>` - Changes your team to one of the approved teams. `"+hc.ComPrefix+" team` to list all teams\n"+
@@ -25,6 +25,6 @@ func (hc HelpCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (hc HelpCommand) Setup(session *discordgo.Session) {}
+func (hc *HelpCommand) Setup(session *discordgo.Session) {}
 
-func (hc HelpCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (hc *HelpCommand) EventHandlers() []interface{} { return []interface{}{} }

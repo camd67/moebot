@@ -16,18 +16,18 @@ type PollsHandler struct {
 	pollsList []*db.Poll
 }
 
-func NewPollsHandler() PollsHandler {
-	h := PollsHandler{}
+func NewPollsHandler() *PollsHandler {
+	h := &PollsHandler{}
 	h.loadFromDb()
 	return h
 }
 
-func (handler PollsHandler) loadFromDb() {
+func (handler *PollsHandler) loadFromDb() {
 	polls, _ := db.PollsOpenQuery()
 	handler.pollsList = polls
 }
 
-func (handler PollsHandler) openPoll(pack *CommPackage) {
+func (handler *PollsHandler) openPoll(pack *CommPackage) {
 	var options []string
 	var title string
 	for i := 0; i < len(pack.params); i++ {
@@ -106,7 +106,7 @@ func parseTitle(params []string) string {
 	return strings.Join(params, " ")
 }
 
-func (handler PollsHandler) closePoll(pack *CommPackage) {
+func (handler *PollsHandler) closePoll(pack *CommPackage) {
 	if len(pack.params) < 2 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you have to specify a valid ID for the poll")
 		return
@@ -156,7 +156,7 @@ func (handler PollsHandler) closePoll(pack *CommPackage) {
 	poll.Open = false
 }
 
-func (handler PollsHandler) pollFromId(id int) *db.Poll {
+func (handler *PollsHandler) pollFromId(id int) *db.Poll {
 	for _, p := range handler.pollsList {
 		if p.Id == id {
 			return p
@@ -165,7 +165,7 @@ func (handler PollsHandler) pollFromId(id int) *db.Poll {
 	return nil
 }
 
-func (handler PollsHandler) checkSingleVote(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
+func (handler *PollsHandler) checkSingleVote(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
 	var err error
 	for _, p := range handler.pollsList {
 		if p.MessageUid == reactionAdd.MessageID {
@@ -181,7 +181,7 @@ func (handler PollsHandler) checkSingleVote(session *discordgo.Session, reaction
 	}
 }
 
-func (handler PollsHandler) handleSingleVote(session *discordgo.Session, poll *db.Poll, reactionAdd *discordgo.MessageReactionAdd) {
+func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *db.Poll, reactionAdd *discordgo.MessageReactionAdd) {
 	channel, err := db.ChannelQueryById(poll.ChannelId)
 	if err != nil {
 		log.Println("Cannot retrieve poll channel informations", err)

@@ -12,10 +12,10 @@ import (
 )
 
 type ServerCommand struct {
-	Checker PermissionChecker
+	Checker *PermissionChecker
 }
 
-func (sc ServerCommand) Execute(pack *CommPackage) {
+func (sc *ServerCommand) Execute(pack *CommPackage) {
 	if m := sc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles); !m {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
@@ -86,6 +86,6 @@ func (sc ServerCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.message.ChannelID, "Updated this server!")
 }
 
-func (sc ServerCommand) Setup(session *discordgo.Session) {}
+func (sc *ServerCommand) Setup(session *discordgo.Session) {}
 
-func (sc ServerCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (sc *ServerCommand) EventHandlers() []interface{} { return []interface{}{} }

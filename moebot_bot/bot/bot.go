@@ -32,25 +32,25 @@ func SetupMoebot(session *discordgo.Session) {
 }
 
 func setupCommands(session *discordgo.Session) {
-	checker := commands.PermissionChecker{MasterId: Config["masterId"]}
-	commandsMap["TEAM"] = commands.TeamCommand{}
-	commandsMap["ROLE"] = commands.RoleCommand{}
-	commandsMap["RANK"] = commands.RankCommand{}
-	commandsMap["NSFW"] = commands.NsfwCommand{}
-	commandsMap["HELP"] = commands.HelpCommand{ComPrefix: ComPrefix}
-	commandsMap["CHANGELOG"] = commands.ChangelogCommand{Version: version}
-	commandsMap["RAFFLE"] = commands.RaffleCommand{MasterId: Config["masterId"], DebugChannel: Config["debugChannel"]}
-	commandsMap["SUBMIT"] = commands.SubmitCommand{ComPrefix: ComPrefix}
-	commandsMap["ECHO"] = commands.EchoCommand{Checker: checker}
-	commandsMap["PERMIT"] = commands.PermitCommand{Checker: checker}
-	commandsMap["CUSTOM"] = commands.CustomCommand{Checker: checker, ComPrefix: ComPrefix}
-	commandsMap["PING"] = commands.PingCommand{}
-	commandsMap["SPOILER"] = commands.SpoilerCommand{}
-	commandsMap["POLL"] = commands.PollCommand{Checker: checker, PollsHandler: commands.NewPollsHandler()}
-	commandsMap["TOGGLEMENTION"] = commands.MentionCommand{Checker: checker}
-	commandsMap["SERVER"] = commands.ServerCommand{Checker: checker}
-	commandsMap["PROFILE"] = commands.ProfileCommand{}
-	commandsMap["PINMOVE"] = commands.PinMoveCommand{Checker: checker}
+	checker := &commands.PermissionChecker{MasterId: Config["masterId"]}
+	commandsMap["TEAM"] = &commands.TeamCommand{}
+	commandsMap["ROLE"] = &commands.RoleCommand{}
+	commandsMap["RANK"] = &commands.RankCommand{}
+	commandsMap["NSFW"] = &commands.NsfwCommand{}
+	commandsMap["HELP"] = &commands.HelpCommand{ComPrefix: ComPrefix}
+	commandsMap["CHANGELOG"] = &commands.ChangelogCommand{Version: version}
+	commandsMap["RAFFLE"] = &commands.RaffleCommand{MasterId: Config["masterId"], DebugChannel: Config["debugChannel"]}
+	commandsMap["SUBMIT"] = &commands.SubmitCommand{ComPrefix: ComPrefix}
+	commandsMap["ECHO"] = &commands.EchoCommand{Checker: checker}
+	commandsMap["PERMIT"] = &commands.PermitCommand{Checker: checker}
+	commandsMap["CUSTOM"] = &commands.CustomCommand{Checker: checker, ComPrefix: ComPrefix}
+	commandsMap["PING"] = &commands.PingCommand{}
+	commandsMap["SPOILER"] = &commands.SpoilerCommand{}
+	commandsMap["POLL"] = &commands.PollCommand{Checker: checker, PollsHandler: commands.NewPollsHandler()}
+	commandsMap["TOGGLEMENTION"] = &commands.MentionCommand{Checker: checker}
+	commandsMap["SERVER"] = &commands.ServerCommand{Checker: checker}
+	commandsMap["PROFILE"] = &commands.ProfileCommand{}
+	commandsMap["PINMOVE"] = &commands.PinMoveCommand{Checker: checker}
 
 	for _, com := range commandsMap {
 		com.Setup(session)

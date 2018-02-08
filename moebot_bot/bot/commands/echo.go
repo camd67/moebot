@@ -8,10 +8,10 @@ import (
 )
 
 type EchoCommand struct {
-	Checker PermissionChecker
+	Checker *PermissionChecker
 }
 
-func (ec EchoCommand) Execute(pack *CommPackage) {
+func (ec *EchoCommand) Execute(pack *CommPackage) {
 	if m := ec.Checker.hasValidMasterId(pack); !m {
 		return
 	}
@@ -23,6 +23,6 @@ func (ec EchoCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.params[0], strings.Join(pack.params[1:], " "))
 }
 
-func (ec EchoCommand) Setup(session *discordgo.Session) {}
+func (ec *EchoCommand) Setup(session *discordgo.Session) {}
 
-func (ec EchoCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (ec *EchoCommand) EventHandlers() []interface{} { return []interface{}{} }

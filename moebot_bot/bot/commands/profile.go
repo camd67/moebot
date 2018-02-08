@@ -11,7 +11,7 @@ import (
 
 type ProfileCommand struct{}
 
-func (p ProfileCommand) Execute(pack *CommPackage) {
+func (p *ProfileCommand) Execute(pack *CommPackage) {
 	// technically we'll already have a user + server at this point, but may not have a usr. Still create if necessary
 	_, err := db.ServerQueryOrInsert(pack.guild.ID)
 	_, err = db.UserQueryOrInsert(pack.message.Author.ID)
@@ -29,6 +29,6 @@ func (p ProfileCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.message.ChannelID, util.UserIdToMention(pack.message.Author.ID)+"'s profile:\nRank: "+strconv.Itoa(usr.Rank))
 }
 
-func (p ProfileCommand) Setup(session *discordgo.Session) {}
+func (p *ProfileCommand) Setup(session *discordgo.Session) {}
 
-func (p ProfileCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (p *ProfileCommand) EventHandlers() []interface{} { return []interface{}{} }

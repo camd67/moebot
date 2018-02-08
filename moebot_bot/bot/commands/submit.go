@@ -12,7 +12,7 @@ type SubmitCommand struct {
 	ComPrefix string
 }
 
-func (sc SubmitCommand) Execute(pack *CommPackage) {
+func (sc *SubmitCommand) Execute(pack *CommPackage) {
 	// Previous servers
 	if pack.guild.ID == "378336255030722570" {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, submissions are closed!")
@@ -69,6 +69,6 @@ func (sc SubmitCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessagePin(pack.channel.ID, pack.message.ID)
 }
 
-func (sc SubmitCommand) Setup(session *discordgo.Session) {}
+func (sc *SubmitCommand) Setup(session *discordgo.Session) {}
 
-func (sc SubmitCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (sc *SubmitCommand) EventHandlers() []interface{} { return []interface{}{} }

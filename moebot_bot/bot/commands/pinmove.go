@@ -16,11 +16,11 @@ import (
 )
 
 type PinMoveCommand struct {
-	Checker        PermissionChecker
+	Checker        *PermissionChecker
 	pinnedMessages map[string][]string
 }
 
-func (pc PinMoveCommand) Execute(pack *CommPackage) {
+func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	if !pc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
@@ -68,7 +68,7 @@ func (pc PinMoveCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, message)
 }
 
-func (pc PinMoveCommand) Setup(session *discordgo.Session) {
+func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
 	pc.pinnedMessages = make(map[string][]string)
 	guilds, err := session.UserGuilds(100, "", "")
 	if err != nil {
@@ -81,11 +81,11 @@ func (pc PinMoveCommand) Setup(session *discordgo.Session) {
 	}
 }
 
-func (pc PinMoveCommand) EventHandlers() []interface{} {
+func (pc *PinMoveCommand) EventHandlers() []interface{} {
 	return []interface{}{pc.channelMovePinsUpdate}
 }
 
-func (pc PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.UserGuild) {
+func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.UserGuild) {
 	server, err := db.ServerQueryOrInsert(guild.ID)
 	if err != nil {
 		log.Println("Error creating/retrieving server during loading", err)
@@ -103,7 +103,7 @@ func (pc PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.
 	}
 }
 
-func (pc PinMoveCommand) loadChannel(session *discordgo.Session, server *db.Server, channel *discordgo.Channel) {
+func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *db.Server, channel *discordgo.Channel) {
 	log.Println("Loading channel: " + channel.Name + " (" + channel.ID + ")")
 
 	_, err := db.ChannelQueryOrInsert(channel.ID, server)
@@ -114,7 +114,7 @@ func (pc PinMoveCommand) loadChannel(session *discordgo.Session, server *db.Serv
 	pc.loadPinnedMessages(session, channel)
 }
 
-func (pc PinMoveCommand) loadPinnedMessages(session *discordgo.Session, channel *discordgo.Channel) {
+func (pc *PinMoveCommand) loadPinnedMessages(session *discordgo.Session, channel *discordgo.Channel) {
 	pc.pinnedMessages[channel.ID] = []string{}
 	messages, err := session.ChannelMessagesPinned(channel.ID)
 	if err != nil {
@@ -126,7 +126,7 @@ func (pc PinMoveCommand) loadPinnedMessages(session *discordgo.Session, channel 
 	}
 }
 
-func (pc PinMoveCommand) newPinChannel(newPinChannelUid string, server db.Server, pack *CommPackage) error {
+func (pc *PinMoveCommand) newPinChannel(newPinChannelUid string, server db.Server, pack *CommPackage) error {
 	var newPinChannel *discordgo.Channel
 	var err error
 	for _, c := range pack.guild.Channels {
@@ -181,7 +181,7 @@ func togglePin(sourceChannelUid string, enableTextPins bool, server db.Server, p
 	return !dbSourceChannel.MovePins, nil
 }
 
-func (pc PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.ChannelPinsUpdate) {
+func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.ChannelPinsUpdate) {
 	channel, err := session.Channel(pinsUpdate.ChannelID)
 	if err != nil {
 		log.Println("Error while retrieving channel by UID", err)
@@ -238,7 +238,7 @@ func (pc PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pinsU
 	}
 }
 
-func (pc PinMoveCommand) getUpdatePinnedMessages(session *discordgo.Session, channelId string) ([]*discordgo.Message, error) {
+func (pc *PinMoveCommand) getUpdatePinnedMessages(session *discordgo.Session, channelId string) ([]*discordgo.Message, error) {
 	result := []*discordgo.Message{}
 	currentPinnedMessages, err := session.ChannelMessagesPinned(channelId)
 	messagesId := []string{}
@@ -255,7 +255,7 @@ func (pc PinMoveCommand) getUpdatePinnedMessages(session *discordgo.Session, cha
 	return result, nil
 }
 
-func (pc PinMoveCommand) pinnedMessageAlreadyLoaded(messageId string, channelId string) bool {
+func (pc *PinMoveCommand) pinnedMessageAlreadyLoaded(messageId string, channelId string) bool {
 	for _, m := range pc.pinnedMessages[channelId] {
 		if messageId == m {
 			return true

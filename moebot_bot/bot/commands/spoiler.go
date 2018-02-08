@@ -10,7 +10,7 @@ import (
 
 type SpoilerCommand struct{}
 
-func (sc SpoilerCommand) Execute(pack *CommPackage) {
+func (sc *SpoilerCommand) Execute(pack *CommPackage) {
 	content := pack.message.Author.Mention() + " sent a spoiler"
 	for i := 0; i < 2; i++ {
 		err := pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
@@ -35,6 +35,6 @@ func (sc SpoilerCommand) Execute(pack *CommPackage) {
 	})
 }
 
-func (sc SpoilerCommand) Setup(session *discordgo.Session) {}
+func (sc *SpoilerCommand) Setup(session *discordgo.Session) {}
 
-func (sc SpoilerCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (sc *SpoilerCommand) EventHandlers() []interface{} { return []interface{}{} }

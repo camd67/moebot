@@ -42,7 +42,7 @@ var changeLog = map[string]string{
 		changeLogPrefix + "For future reference, previous versions included help, team, rank, and NSFW commands as well as a welcome message to the server.",
 }
 
-func (cc ChangelogCommand) Execute(pack *CommPackage) {
+func (cc *ChangelogCommand) Execute(pack *CommPackage) {
 	if len(pack.params) == 0 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot update log `(ver "+cc.Version+")`: \n"+changeLog[cc.Version])
 	} else if log, present := changeLog[pack.params[0]]; present {
@@ -52,6 +52,6 @@ func (cc ChangelogCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (cc ChangelogCommand) Setup(session *discordgo.Session) {}
+func (cc *ChangelogCommand) Setup(session *discordgo.Session) {}
 
-func (cc ChangelogCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (cc *ChangelogCommand) EventHandlers() []interface{} { return []interface{}{} }

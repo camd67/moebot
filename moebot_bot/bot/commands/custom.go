@@ -10,11 +10,11 @@ import (
 )
 
 type CustomCommand struct {
-	Checker   PermissionChecker
+	Checker   *PermissionChecker
 	ComPrefix string
 }
 
-func (cc CustomCommand) Execute(pack *CommPackage) {
+func (cc *CustomCommand) Execute(pack *CommPackage) {
 	if !cc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
@@ -66,5 +66,5 @@ func (cc CustomCommand) Execute(pack *CommPackage) {
 		}
 	}
 }
-func (cc CustomCommand) Setup(session *discordgo.Session) {}
-func (cc CustomCommand) EventHandlers() []interface{}     { return []interface{}{} }
+func (cc *CustomCommand) Setup(session *discordgo.Session) {}
+func (cc *CustomCommand) EventHandlers() []interface{}     { return []interface{}{} }

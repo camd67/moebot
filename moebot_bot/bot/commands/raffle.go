@@ -20,7 +20,7 @@ type RaffleCommand struct {
 
 const ticketCooldown = int64(time.Hour * 24)
 
-func (rc RaffleCommand) Execute(pack *CommPackage) {
+func (rc *RaffleCommand) Execute(pack *CommPackage) {
 	// Previous servers
 	if pack.guild.ID == "378336255030722570" {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, the raffle has ended!")
@@ -204,15 +204,15 @@ func (rc RaffleCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (rc RaffleCommand) Setup(session *discordgo.Session) {}
+func (rc *RaffleCommand) Setup(session *discordgo.Session) {}
 
-func (rc RaffleCommand) EventHandlers() []interface{} {
+func (rc *RaffleCommand) EventHandlers() []interface{} {
 	// distribute tickets
 	// temporarily disable ticket distribution
 	return []interface{}{ /*rc.distributeTickets*/ }
 }
 
-func (rc RaffleCommand) distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {
+func (rc *RaffleCommand) distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {
 	if false {
 		const maxChance = 100
 		const ticketChance = 5

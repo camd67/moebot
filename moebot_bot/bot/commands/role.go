@@ -12,7 +12,7 @@ import (
 
 type RoleCommand struct{}
 
-func (rc RoleCommand) Execute(pack *CommPackage) {
+func (rc *RoleCommand) Execute(pack *CommPackage) {
 	server, err := db.ServerQueryOrInsert(pack.guild.ID)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error loading server information!")
@@ -87,6 +87,6 @@ func (rc RoleCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (rc RoleCommand) Setup(session *discordgo.Session) {}
+func (rc *RoleCommand) Setup(session *discordgo.Session) {}
 
-func (rc RoleCommand) EventHandlers() []interface{} { return []interface{}{} }
+func (rc *RoleCommand) EventHandlers() []interface{} { return []interface{}{} }

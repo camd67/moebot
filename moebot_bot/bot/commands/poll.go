@@ -5,11 +5,11 @@ import (
 )
 
 type PollCommand struct {
-	Checker      PermissionChecker
-	PollsHandler PollsHandler
+	Checker      *PermissionChecker
+	PollsHandler *PollsHandler
 }
 
-func (pc PollCommand) Execute(pack *CommPackage) {
+func (pc *PollCommand) Execute(pack *CommPackage) {
 	if !pc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
@@ -21,14 +21,14 @@ func (pc PollCommand) Execute(pack *CommPackage) {
 	pc.PollsHandler.openPoll(pack)
 }
 
-func (pc PollCommand) Setup(session *discordgo.Session) {
+func (pc *PollCommand) Setup(session *discordgo.Session) {
 
 }
 
-func (pc PollCommand) EventHandlers() []interface{} {
+func (pc *PollCommand) EventHandlers() []interface{} {
 	return []interface{}{pc.pollReactionsAdd}
 }
 
-func (pc PollCommand) pollReactionsAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
+func (pc *PollCommand) pollReactionsAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
 	pc.PollsHandler.checkSingleVote(session, reactionAdd)
 }
