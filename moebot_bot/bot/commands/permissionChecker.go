@@ -38,8 +38,8 @@ func (p PermissionChecker) isMaster(id string) bool {
 }
 
 func (p PermissionChecker) hasValidMasterId(pack *CommPackage) bool {
-	if !p.isMaster(pack.Message.Author.ID) {
-		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Sorry, only my master can use this command!")
+	if !p.isMaster(pack.message.Author.ID) {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, only my master can use this command!")
 		return false
 	}
 	return true

@@ -5,16 +5,16 @@ import (
 )
 
 type PollCommand struct {
-	Checker      *PermissionChecker
-	PollsHandler *PollsHandler
+	Checker      PermissionChecker
+	PollsHandler PollsHandler
 }
 
 func (pc PollCommand) Execute(pack *CommPackage) {
-	if !pc.Checker.HasModPerm(pack.Message.Author.ID, pack.Member.Roles) {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, this command has a minimum permission of mod")
+	if !pc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
 	}
-	if pack.Params[0] == "-close" {
+	if pack.params[0] == "-close" {
 		pc.PollsHandler.closePoll(pack)
 		return
 	}

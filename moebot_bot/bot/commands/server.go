@@ -12,42 +12,42 @@ import (
 )
 
 type ServerCommand struct {
-	checker PermissionChecker
+	Checker PermissionChecker
 }
 
 func (sc ServerCommand) Execute(pack *CommPackage) {
-	if m := sc.checker.HasModPerm(pack.Message.Author.ID, pack.Member.Roles); !m {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, this command has a minimum permission of mod")
+	if m := sc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles); !m {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
 	}
 	const possibleConfigMessages = "Possible configs: {VeteranRank -> number}, {VeteranRole -> full role name}, {BotChannel -> channel ID}"
-	s, err := db.ServerQueryOrInsert(pack.Guild.ID)
+	s, err := db.ServerQueryOrInsert(pack.guild.ID)
 
-	if len(pack.Params) <= 1 {
+	if len(pack.params) <= 1 {
 		rank := int(util.GetInt64OrDefault(s.VeteranRank))
 		role := util.GetStringOrDefault(s.VeteranRole)
 		if role != "unknown" {
-			role = util.FindRoleById(pack.Guild.Roles, role).Name
+			role = util.FindRoleById(pack.guild.Roles, role).Name
 		}
 		rule := util.GetStringOrDefault(s.RuleAgreement)
 		welcome := util.GetStringOrDefault(s.WelcomeMessage)
 		botChannel := util.GetStringOrDefault(s.BotChannel)
-		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "This server's configs: {Rank: "+strconv.Itoa(rank)+"} {Role: "+role+"} {Welcome: "+welcome+
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "This server's configs: {Rank: "+strconv.Itoa(rank)+"} {Role: "+role+"} {Welcome: "+welcome+
 			"} {Rule Confirm: "+rule+"} {BotChannel ID: "+botChannel+"}")
 		return
 	}
-	configKey := strings.ToUpper(pack.Params[0])
-	configValue := strings.Join(pack.Params[1:], " ")
+	configKey := strings.ToUpper(pack.params[0])
+	configValue := strings.Join(pack.params[1:], " ")
 	if err != nil {
 		log.Println("Error trying to get server", err)
-		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Sorry, there was an error getting the server")
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error getting the server")
 		return
 	}
 	if configKey == "VETERANRANK" {
 		rank, err := strconv.Atoi(configValue)
 		if err != nil || rank < 0 {
 			// don't bother logging this one. Someone's just given a non-number
-			pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Please provide a positive number for the veteran rank")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a positive number for the veteran rank")
 			return
 		}
 		s.VeteranRank = sql.NullInt64{
@@ -55,9 +55,9 @@ func (sc ServerCommand) Execute(pack *CommPackage) {
 			Valid: true,
 		}
 	} else if configKey == "VETERANROLE" {
-		role := util.FindRoleByName(pack.Guild.Roles, configValue)
+		role := util.FindRoleByName(pack.guild.Roles, configValue)
 		if role == nil {
-			pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Please provide a valid role and make sure it's the full role name")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid role and make sure it's the full role name")
 			return
 		}
 		s.VeteranRole = sql.NullString{
@@ -65,9 +65,9 @@ func (sc ServerCommand) Execute(pack *CommPackage) {
 			Valid:  true,
 		}
 	} else if configKey == "BOTCHANNEL" {
-		c, err := pack.Session.Channel(configValue)
+		c, err := pack.session.Channel(configValue)
 		if err != nil || c.Type != discordgo.ChannelTypeGuildText {
-			pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Please provide a valid text channel ID")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid text channel ID")
 			return
 		}
 		s.BotChannel = sql.NullString{
@@ -75,15 +75,17 @@ func (sc ServerCommand) Execute(pack *CommPackage) {
 			Valid:  true,
 		}
 	} else {
-		pack.Session.ChannelMessageSend(pack.Message.ChannelID, possibleConfigMessages)
+		pack.session.ChannelMessageSend(pack.message.ChannelID, possibleConfigMessages)
 		return
 	}
 	err = db.ServerFullUpdate(s)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Sorry, there was an error updating the server table. Your change was probably not applied.")
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the server table. Your change was probably not applied.")
 		return
 	}
-	pack.Session.ChannelMessageSend(pack.Message.ChannelID, "Updated this server!")
+	pack.session.ChannelMessageSend(pack.message.ChannelID, "Updated this server!")
 }
 
-func (sc ServerCommand) Setup() {}
+func (sc ServerCommand) Setup(session *discordgo.Session) {}
+
+func (sc ServerCommand) EventHandlers() []interface{} { return []interface{}{} }

@@ -16,46 +16,46 @@ import (
 )
 
 type PinMoveCommand struct {
-	Checker        *PermissionChecker
+	Checker        PermissionChecker
 	pinnedMessages map[string][]string
 }
 
 func (pc PinMoveCommand) Execute(pack *CommPackage) {
-	if !pc.Checker.HasModPerm(pack.Message.Author.ID, pack.Member.Roles) {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, this command has a minimum permission of mod")
+	if !pc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
 		return
 	}
-	if len(pack.Params) == 0 {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, you need to specify at least a valid channel.")
+	if len(pack.params) == 0 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to specify at least a valid channel.")
 		return
 	}
 	var err error
 	var pinChannel string
 	regNumbers := regexp.MustCompile("\\d+")
 	enableText := false
-	for i := 0; i < len(pack.Params)-1; i++ {
-		if pack.Params[i] == "-sendTo" {
-			pinChannel = regNumbers.FindString(pack.Params[i+1])
+	for i := 0; i < len(pack.params)-1; i++ {
+		if pack.params[i] == "-sendTo" {
+			pinChannel = regNumbers.FindString(pack.params[i+1])
 		}
-		if pack.Params[i] == "-text" {
+		if pack.params[i] == "-text" {
 			enableText = true
 		}
 	}
-	server, err := db.ServerQueryOrInsert(pack.Guild.ID)
+	server, err := db.ServerQueryOrInsert(pack.guild.ID)
 	if pinChannel == "" && (!server.DefaultPinChannelId.Valid || server.DefaultPinChannelId.Int64 == 0) {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there is no default destination channel set. You need to specify at least a valid destination channel.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there is no default destination channel set. You need to specify at least a valid destination channel.")
 		return
 	}
-	sourceChannelUid := regNumbers.FindString(pack.Params[len(pack.Params)-1])
+	sourceChannelUid := regNumbers.FindString(pack.params[len(pack.params)-1])
 	if pinChannel != "" {
 		if err = pc.newPinChannel(pinChannel, server, pack); err != nil {
-			pack.Session.ChannelMessageSend(pack.Channel.ID, err.Error())
+			pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
 			return
 		}
 	}
 	var pinEnabled bool
 	if pinEnabled, err = togglePin(sourceChannelUid, enableText, server, pack); err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, err.Error())
+		pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
 		return
 	}
 	message := "Message move on pin has been "
@@ -65,7 +65,7 @@ func (pc PinMoveCommand) Execute(pack *CommPackage) {
 		message += "disabled"
 	}
 	message += " on channel <#" + sourceChannelUid + ">"
-	pack.Session.ChannelMessageSend(pack.Channel.ID, message)
+	pack.session.ChannelMessageSend(pack.channel.ID, message)
 }
 
 func (pc PinMoveCommand) Setup(session *discordgo.Session) {
@@ -129,7 +129,7 @@ func (pc PinMoveCommand) loadPinnedMessages(session *discordgo.Session, channel 
 func (pc PinMoveCommand) newPinChannel(newPinChannelUid string, server db.Server, pack *CommPackage) error {
 	var newPinChannel *discordgo.Channel
 	var err error
-	for _, c := range pack.Guild.Channels {
+	for _, c := range pack.guild.Channels {
 		if c.ID == newPinChannelUid {
 			newPinChannel = c
 			break
@@ -161,7 +161,7 @@ func (pc PinMoveCommand) newPinChannel(newPinChannelUid string, server db.Server
 
 func togglePin(sourceChannelUid string, enableTextPins bool, server db.Server, pack *CommPackage) (bool, error) {
 	var sourceChannel *discordgo.Channel
-	for _, c := range pack.Guild.Channels {
+	for _, c := range pack.guild.Channels {
 		if c.ID == sourceChannelUid {
 			sourceChannel = c
 			break

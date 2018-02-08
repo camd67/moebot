@@ -16,66 +16,66 @@ type PollsHandler struct {
 	pollsList []*db.Poll
 }
 
-func NewPollsHandler() *PollsHandler {
-	h := new(PollsHandler)
+func NewPollsHandler() PollsHandler {
+	h := PollsHandler{}
 	h.loadFromDb()
 	return h
 }
 
-func (handler *PollsHandler) loadFromDb() {
+func (handler PollsHandler) loadFromDb() {
 	polls, _ := db.PollsOpenQuery()
 	handler.pollsList = polls
 }
 
-func (handler *PollsHandler) openPoll(pack *CommPackage) {
+func (handler PollsHandler) openPoll(pack *CommPackage) {
 	var options []string
 	var title string
-	for i := 0; i < len(pack.Params); i++ {
-		if pack.Params[i] == "-options" {
-			options = parseOptions(pack.Params[i+1:])
+	for i := 0; i < len(pack.params); i++ {
+		if pack.params[i] == "-options" {
+			options = parseOptions(pack.params[i+1:])
 		}
-		if pack.Params[i] == "-title" {
-			title = parseTitle(pack.Params[i+1:])
+		if pack.params[i] == "-title" {
+			title = parseTitle(pack.params[i+1:])
 		}
 	}
 	if len(options) <= 1 {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, you must specify at least two options to create a poll.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must specify at least two options to create a poll.")
 		return
 	}
 	if len(options) > 25 {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there can only be a maximum of 25 options per poll.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there can only be a maximum of 25 options per poll.")
 		return
 	}
-	server, err := db.ServerQueryOrInsert(pack.Guild.ID)
+	server, err := db.ServerQueryOrInsert(pack.guild.ID)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return
 	}
-	channel, err := db.ChannelQueryOrInsert(pack.Channel.ID, &server)
+	channel, err := db.ChannelQueryOrInsert(pack.channel.ID, &server)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return
 	}
 	poll := &db.Poll{
 		Title:     title,
-		UserUid:   pack.Message.Author.ID,
+		UserUid:   pack.message.Author.ID,
 		ChannelId: channel.Id,
 		Open:      true,
 		Options:   util.CreatePollOptions(options),
 	}
 	err = db.PollAdd(poll)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return
 	}
 	db.PollOptionAdd(poll)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return
 	}
-	message, _ := pack.Session.ChannelMessageSend(pack.Channel.ID, util.OpenPollMessage(poll, pack.Message.Author))
+	message, _ := pack.session.ChannelMessageSend(pack.channel.ID, util.OpenPollMessage(poll, pack.message.Author))
 	for _, o := range poll.Options {
-		err = pack.Session.MessageReactionAdd(pack.Channel.ID, message.ID, o.ReactionId)
+		err = pack.session.MessageReactionAdd(pack.channel.ID, message.ID, o.ReactionId)
 		if err != nil {
 			log.Println("Cannot add reaction to poll message", err)
 		}
@@ -83,7 +83,7 @@ func (handler *PollsHandler) openPoll(pack *CommPackage) {
 	poll.MessageUid = message.ID
 	err = db.PollSetMessageId(poll)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem updating the poll. Please delete and create it again.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem updating the poll. Please delete and create it again.")
 	}
 	handler.pollsList = append(handler.pollsList, poll)
 }
@@ -106,57 +106,57 @@ func parseTitle(params []string) string {
 	return strings.Join(params, " ")
 }
 
-func (handler *PollsHandler) closePoll(pack *CommPackage) {
-	if len(pack.Params) < 2 {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, you have to specify a valid ID for the poll")
+func (handler PollsHandler) closePoll(pack *CommPackage) {
+	if len(pack.params) < 2 {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you have to specify a valid ID for the poll")
 		return
 	}
-	id, err := strconv.Atoi(pack.Params[1])
+	id, err := strconv.Atoi(pack.params[1])
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem parsing the poll ID, please check if it's a valid ID")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem parsing the poll ID, please check if it's a valid ID")
 		return
 	}
 	poll := handler.pollFromId(id)
 	if poll == nil {
 		poll, err = db.PollQuery(id)
 		if err == sql.ErrNoRows {
-			pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there is no valid poll with the given ID")
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there is no valid poll with the given ID")
 			return
 		} else if err != nil {
-			pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem retreiving the poll with the given ID")
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem retreiving the poll with the given ID")
 			return
 		}
 		handler.pollsList = append(handler.pollsList, poll)
 	}
 	channel, err := db.ChannelQueryById(poll.ChannelId)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem retrieving poll data")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem retrieving poll data")
 		return
 	}
-	if channel.ChannelUid != pack.Channel.ID {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, you can't close a poll opened in another channel")
+	if channel.ChannelUid != pack.channel.ID {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you can't close a poll opened in another channel")
 		return
 	}
 	if !poll.Open {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, util.ClosePollMessage(poll, pack.Message.Author))
+		pack.session.ChannelMessageSend(pack.channel.ID, util.ClosePollMessage(poll, pack.message.Author))
 		return
 	}
-	err = util.UpdatePollVotes(poll, pack.Session)
+	err = util.UpdatePollVotes(poll, pack.session)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem retrieving the votes count for the given Poll")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem retrieving the votes count for the given Poll")
 		return
 	}
 	db.PollOptionUpdateVotes(poll)
 	err = db.PollClose(id)
 	if err != nil {
-		pack.Session.ChannelMessageSend(pack.Channel.ID, "Sorry, there was a problem closing the poll.")
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem closing the poll.")
 		return
 	}
-	pack.Session.ChannelMessageSend(pack.Channel.ID, util.ClosePollMessage(poll, pack.Message.Author))
+	pack.session.ChannelMessageSend(pack.channel.ID, util.ClosePollMessage(poll, pack.message.Author))
 	poll.Open = false
 }
 
-func (handler *PollsHandler) pollFromId(id int) *db.Poll {
+func (handler PollsHandler) pollFromId(id int) *db.Poll {
 	for _, p := range handler.pollsList {
 		if p.Id == id {
 			return p
@@ -165,7 +165,7 @@ func (handler *PollsHandler) pollFromId(id int) *db.Poll {
 	return nil
 }
 
-func (handler *PollsHandler) checkSingleVote(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
+func (handler PollsHandler) checkSingleVote(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
 	var err error
 	for _, p := range handler.pollsList {
 		if p.MessageUid == reactionAdd.MessageID {
@@ -181,7 +181,7 @@ func (handler *PollsHandler) checkSingleVote(session *discordgo.Session, reactio
 	}
 }
 
-func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *db.Poll, reactionAdd *discordgo.MessageReactionAdd) {
+func (handler PollsHandler) handleSingleVote(session *discordgo.Session, poll *db.Poll, reactionAdd *discordgo.MessageReactionAdd) {
 	channel, err := db.ChannelQueryById(poll.ChannelId)
 	if err != nil {
 		log.Println("Cannot retrieve poll channel informations", err)

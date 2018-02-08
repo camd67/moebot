@@ -3,10 +3,7 @@ package bot
 import (
 	"fmt"
 	"log"
-	"math/rand"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/camd67/moebot/moebot_bot/bot/commands"
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -35,8 +32,25 @@ func SetupMoebot(session *discordgo.Session) {
 }
 
 func setupCommands(session *discordgo.Session) {
-	commandsMap["POLL"] = commands.PollCommand{Checker: &commands.PermissionChecker{MasterId: Config["masterId"]}, PollsHandler: commands.NewPollsHandler()}
-	commandsMap["PINMOVE"] = commands.PinMoveCommand{Checker: &commands.PermissionChecker{MasterId: Config["masterId"]}}
+	checker := commands.PermissionChecker{MasterId: Config["masterId"]}
+	commandsMap["TEAM"] = commands.TeamCommand{}
+	commandsMap["ROLE"] = commands.RoleCommand{}
+	commandsMap["RANK"] = commands.RankCommand{}
+	commandsMap["NSFW"] = commands.NsfwCommand{}
+	commandsMap["HELP"] = commands.HelpCommand{ComPrefix: ComPrefix}
+	commandsMap["CHANGELOG"] = commands.ChangelogCommand{Version: version}
+	commandsMap["RAFFLE"] = commands.RaffleCommand{MasterId: Config["masterId"], DebugChannel: Config["debugChannel"]}
+	commandsMap["SUBMIT"] = commands.SubmitCommand{ComPrefix: ComPrefix}
+	commandsMap["ECHO"] = commands.EchoCommand{Checker: checker}
+	commandsMap["PERMIT"] = commands.PermitCommand{Checker: checker}
+	commandsMap["CUSTOM"] = commands.CustomCommand{Checker: checker, ComPrefix: ComPrefix}
+	commandsMap["PING"] = commands.PingCommand{}
+	commandsMap["SPOILER"] = commands.SpoilerCommand{}
+	commandsMap["POLL"] = commands.PollCommand{Checker: checker, PollsHandler: commands.NewPollsHandler()}
+	commandsMap["TOGGLEMENTION"] = commands.MentionCommand{Checker: checker}
+	commandsMap["SERVER"] = commands.ServerCommand{Checker: checker}
+	commandsMap["PROFILE"] = commands.ProfileCommand{}
+	commandsMap["PINMOVE"] = commands.PinMoveCommand{Checker: checker}
 
 	for _, com := range commandsMap {
 		com.Setup(session)
@@ -145,7 +159,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			// bail out to prevent any new users from using bot commands
 			return
 		}
-		RunCommand(session, message.Message, guild, channel, member)
+		runCommand(session, message.Message, guild, channel, member)
 	} else if util.StrContains(allowedNonComServers, guild.ID, util.CaseSensitive) && oldStarterRole != nil {
 		// message may have other bot related commands, but not with a prefix
 		readRules := "I want to venture into the abyss"
@@ -165,9 +179,6 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			log.Println("Updated user <" + member.User.Username + "> after reading the rules")
 		}
 	}
-	// distribute tickets
-	// temporarily disable ticket distribution
-	//distributeTickets(guild, message, session, messageTime)
 }
 
 func messageReactionAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
@@ -189,36 +200,6 @@ func messageReactionAdd(session *discordgo.Session, reactionAdd *discordgo.Messa
 	}
 }
 
-func distributeTickets(guild *discordgo.Guild, message *discordgo.MessageCreate, session *discordgo.Session, messageTime time.Time) {
-	if false {
-		const maxChance = 100
-		const ticketChance = 5
-		if rand.Int()%maxChance <= ticketChance {
-			raffles, err := db.RaffleEntryQuery(message.Author.ID, guild.ID)
-			if err != nil {
-				session.ChannelMessageSend(Config["debugChannel"], "Error loading raffle information during ticket distribution"+fmt.Sprintf("%+v | %+v", guild, message))
-				return
-			}
-
-			if len(raffles) != 1 {
-				// if they're not in the raffle, bail out
-				return
-			}
-			r := raffles[0]
-			// check to see if their last ticket time is more than the cooldown
-			if r.LastTicketUpdate+ticketCooldown > messageTime.UnixNano() {
-				// they haven't waited enough, bail
-				return
-			}
-			// they've won a ticket and passed the timestamp check, let them know and update db
-			r.LastTicketUpdate = messageTime.UnixNano()
-			db.RaffleEntryUpdate(r, 1)
-			currTickets := r.TicketCount + 1
-			session.ChannelMessageSend("378680855339728918", message.Author.Mention()+", congrats! You just earned another ticket! Your current tickets are: "+strconv.Itoa(currTickets))
-		}
-	}
-}
-
 func ready(session *discordgo.Session, event *discordgo.Ready) {
 	status := ComPrefix + " help"
 	err := session.UpdateStatus(0, status)
@@ -226,4 +207,21 @@ func ready(session *discordgo.Session, event *discordgo.Ready) {
 		log.Println("Error setting moebot status", err)
 	}
 	log.Println("Set moebot's status to", status)
+}
+
+func runCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
+	messageParts := strings.Split(message.Content, " ")
+	if len(messageParts) <= 1 {
+		// bad command, missing command after prefix
+		return
+	}
+	command := strings.ToUpper(messageParts[1])
+
+	if commFunc, commPresent := commandsMap[command]; commPresent {
+		params := messageParts[2:]
+		log.Println("Processing command: " + command + " from user: {" + fmt.Sprintf("%+v", message.Author) + "}| With Params:{" + strings.Join(params, ",") + "}")
+		session.ChannelTyping(message.ChannelID)
+		pack := commands.NewCommPackage(session, message, guild, member, channel, params)
+		commFunc.Execute(&pack)
+	}
 }
