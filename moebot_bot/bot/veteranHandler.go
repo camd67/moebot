@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camd67/moebot/moebot_bot/util"
+
 	"github.com/camd67/moebot/moebot_bot/util/db"
 
 	"github.com/bwmarrin/discordgo"
@@ -15,15 +17,21 @@ const (
 	messagePoints        = 5
 	reactionPoints       = 1
 	reactionCooldown     = 30 * time.Second
-	veteranBufferSizeMax = 25
+	messageCooldown      = 1 * time.Second
+	veteranBufferSizeMax = 1
 )
 
 var (
 	// each of our reactions/messages are done in goroutines so we need to sync these
-	reactionCooldownMap = struct {
-		sync.RWMutex
-		m map[string]int64
-	}{m: make(map[string]int64)}
+	reactionCooldownMap = util.SyncCooldownMap{
+		sync.RWMutex{},
+		make(map[string]int64),
+	}
+
+	messageCooldownMap = util.SyncCooldownMap{
+		sync.RWMutex{},
+		make(map[string]int64),
+	}
 
 	veteranBuffer = struct {
 		sync.RWMutex
@@ -33,24 +41,18 @@ var (
 )
 
 func handleVeteranMessage(m *discordgo.Member, guildUid string) (users []db.UserServerRankWrapper, err error) {
-	return handleVeteranChange(m.User.ID, guildUid, messagePoints)
+	key := buildVeteranBufferKey(m.User.ID, guildUid)
+	if isCooldownReached(key, messageCooldown, messageCooldownMap) {
+		return handleVeteranChange(m.User.ID, guildUid, messagePoints)
+	}
+	return
 }
 
 func handleVeteranReaction(userUid string, guildUid string) (users []db.UserServerRankWrapper, err error) {
-	// NOTE: this means that if you react to something in <1 second in multiple servers you won't get your points.
-	// However, this doesn't seem like something that's necessary to solve
-	reactionCooldownMap.RWMutex.RLock()
-	lastTime, present := reactionCooldownMap.m[userUid]
-	reactionCooldownMap.RUnlock()
-	if present {
-		if lastTime+reactionCooldown.Nanoseconds() > time.Now().UnixNano() {
-			return
-		}
+	key := buildVeteranBufferKey(userUid, guildUid)
+	if isCooldownReached(key, reactionCooldown, reactionCooldownMap) {
+		return handleVeteranChange(userUid, guildUid, messagePoints)
 	}
-	// if they don't have a time yet, or the cooldown was passed, give them a new time
-	reactionCooldownMap.Lock()
-	reactionCooldownMap.m[userUid] = time.Now().UnixNano()
-	reactionCooldownMap.Unlock()
 	return handleVeteranChange(userUid, guildUid, reactionPoints)
 }
 
@@ -104,6 +106,24 @@ func handleVeteranChange(userUid string, guildUid string, points int) (users []d
 	}
 	db.FlushServerCache()
 	return users, nil
+}
+
+/**
+Returns true if the given key in the syncCooldownMap has passed the given cooldown duration, false otherwise
+*/
+func isCooldownReached(key string, cooldown time.Duration, cooldownMap util.SyncCooldownMap) bool {
+	cooldownMap.RWMutex.RLock()
+	lastTime, present := cooldownMap.M[key]
+	cooldownMap.RUnlock()
+	if present {
+		if lastTime+cooldown.Nanoseconds() > time.Now().UnixNano() {
+			return false
+		}
+	}
+	cooldownMap.Lock()
+	cooldownMap.M[key] = time.Now().UnixNano()
+	cooldownMap.Unlock()
+	return true
 }
 
 func buildVeteranBufferKey(u string, g string) string {

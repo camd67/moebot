@@ -1,8 +1,8 @@
 package commands
 
 import (
+	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -47,20 +47,18 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 			usr, err := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
 			var pointCountMessage string
 			if usr != nil {
-				pointCountMessage = strconv.Itoa(usr.Rank)
+				pointCountMessage = fmt.Sprintf("%.2f%% of the way to veteran", float64(usr.Rank)/float64(server.VeteranRank.Int64)*100)
 			} else {
 				pointCountMessage = "Unranked"
 			}
 			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! Your current points: "+pointCountMessage+
-					" Points required for veteran: "+strconv.Itoa(int(server.VeteranRank.Int64)))
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! You're currently: "+pointCountMessage)
 				return
 			}
 			if int64(usr.Rank) >= server.VeteranRank.Int64 {
 				role = vetRole
 			} else {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! Your current points: "+pointCountMessage+
-					" Points required for veteran: "+strconv.Itoa(int(server.VeteranRank.Int64)))
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! You're currently: "+pointCountMessage)
 				return
 			}
 		} else {

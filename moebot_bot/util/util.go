@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -20,6 +21,11 @@ const (
 	CaseInsensitive = iota
 	CaseSensitive
 )
+
+type SyncCooldownMap struct {
+	sync.RWMutex
+	M map[string]int64
+}
 
 func IntContains(s []int, e int) bool {
 	for _, a := range s {
