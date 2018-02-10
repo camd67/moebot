@@ -12,14 +12,9 @@ import (
 )
 
 type ServerCommand struct {
-	Checker *PermissionChecker
 }
 
 func (sc *ServerCommand) Execute(pack *CommPackage) {
-	if m := sc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles); !m {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
 	const possibleConfigMessages = "Possible configs: {VeteranRank -> number}, {VeteranRole -> full role name}, {BotChannel -> channel ID}"
 	s, err := db.ServerQueryOrInsert(pack.guild.ID)
 
@@ -89,3 +84,7 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 func (sc *ServerCommand) Setup(session *discordgo.Session) {}
 
 func (sc *ServerCommand) EventHandlers() []interface{} { return []interface{}{} }
+
+func (sc *ServerCommand) GetPermLevel() db.Permission {
+	return db.PermMod
+}

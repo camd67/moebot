@@ -23,16 +23,17 @@ var (
 	Config               = make(map[string]string)
 	pinnedMessages       = make(map[string][]string)
 	commandsMap          = make(map[string]commands.Command)
+	checker              commands.PermissionChecker
 )
 
 func SetupMoebot(session *discordgo.Session) {
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
 	setupCommands(session)
 	addHandlers(session)
+	checker = commands.PermissionChecker{MasterId: Config["masterId"]}
 }
 
 func setupCommands(session *discordgo.Session) {
-	checker := &commands.PermissionChecker{MasterId: Config["masterId"]}
 	commandsMap["TEAM"] = &commands.TeamCommand{}
 	commandsMap["ROLE"] = &commands.RoleCommand{}
 	commandsMap["RANK"] = &commands.RankCommand{}
@@ -41,16 +42,16 @@ func setupCommands(session *discordgo.Session) {
 	commandsMap["CHANGELOG"] = &commands.ChangelogCommand{Version: version}
 	commandsMap["RAFFLE"] = &commands.RaffleCommand{MasterId: Config["masterId"], DebugChannel: Config["debugChannel"]}
 	commandsMap["SUBMIT"] = &commands.SubmitCommand{ComPrefix: ComPrefix}
-	commandsMap["ECHO"] = &commands.EchoCommand{Checker: checker}
-	commandsMap["PERMIT"] = &commands.PermitCommand{Checker: checker}
-	commandsMap["CUSTOM"] = &commands.CustomCommand{Checker: checker, ComPrefix: ComPrefix}
+	commandsMap["ECHO"] = &commands.EchoCommand{}
+	commandsMap["PERMIT"] = &commands.PermitCommand{}
+	commandsMap["CUSTOM"] = &commands.CustomCommand{ComPrefix: ComPrefix}
 	commandsMap["PING"] = &commands.PingCommand{}
 	commandsMap["SPOILER"] = &commands.SpoilerCommand{}
-	commandsMap["POLL"] = &commands.PollCommand{Checker: checker, PollsHandler: commands.NewPollsHandler()}
-	commandsMap["TOGGLEMENTION"] = &commands.MentionCommand{Checker: checker}
-	commandsMap["SERVER"] = &commands.ServerCommand{Checker: checker}
+	commandsMap["POLL"] = &commands.PollCommand{PollsHandler: commands.NewPollsHandler()}
+	commandsMap["TOGGLEMENTION"] = &commands.MentionCommand{}
+	commandsMap["SERVER"] = &commands.ServerCommand{}
 	commandsMap["PROFILE"] = &commands.ProfileCommand{}
-	commandsMap["PINMOVE"] = &commands.PinMoveCommand{Checker: checker}
+	commandsMap["PINMOVE"] = &commands.PinMoveCommand{}
 
 	for _, com := range commandsMap {
 		com.Setup(session)
@@ -215,13 +216,16 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 		// bad command, missing command after prefix
 		return
 	}
-	command := strings.ToUpper(messageParts[1])
+	commandKey := strings.ToUpper(messageParts[1])
 
-	if commFunc, commPresent := commandsMap[command]; commPresent {
+	if command, commPresent := commandsMap[commandKey]; commPresent {
+		if !checker.HasPermission(message.Author.ID, member.Roles, command.GetPermLevel()) {
+			session.ChannelMessageSend(channel.ID, "Sorry, this command has a minimum permission of "+db.SprintPermission(command.GetPermLevel()))
+			return
+		}
 		params := messageParts[2:]
-		log.Println("Processing command: " + command + " from user: {" + fmt.Sprintf("%+v", message.Author) + "}| With Params:{" + strings.Join(params, ",") + "}")
+		log.Println("Processing command: " + commandKey + " from user: {" + fmt.Sprintf("%+v", message.Author) + "}| With Params:{" + strings.Join(params, ",") + "}")
 		session.ChannelTyping(message.ChannelID)
-		pack := commands.NewCommPackage(session, message, guild, member, channel, params)
-		commFunc.Execute(&pack)
+		command.Execute(&commands.CommPackage{session, message, guild, member, channel, params})
 	}
 }

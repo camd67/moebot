@@ -241,3 +241,7 @@ func (rc *RaffleCommand) distributeTickets(guild *discordgo.Guild, message *disc
 		}
 	}
 }
+
+func (rc *RaffleCommand) GetPermLevel() db.Permission {
+	return db.PermNone
+}

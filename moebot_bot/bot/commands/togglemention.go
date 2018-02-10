@@ -4,18 +4,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/camd67/moebot/moebot_bot/util/db"
+
 	"github.com/bwmarrin/discordgo"
 )
 
 type MentionCommand struct {
-	Checker *PermissionChecker
 }
 
 func (mc *MentionCommand) Execute(pack *CommPackage) {
-	if !mc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
 	roleName := strings.Join(pack.params, " ")
 	for _, role := range pack.guild.Roles {
 		if role.Name == roleName {
@@ -56,4 +53,8 @@ func restoreMention(pack *CommPackage, role *discordgo.Role) {
 		message += "not mentionable"
 	}
 	pack.session.ChannelMessageSend(pack.channel.ID, message)
+}
+
+func (mc *MentionCommand) GetPermLevel() db.Permission {
+	return db.PermMod
 }

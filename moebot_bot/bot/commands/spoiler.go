@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"log"
 
+	"github.com/camd67/moebot/moebot_bot/util/db"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 )
@@ -38,3 +40,7 @@ func (sc *SpoilerCommand) Execute(pack *CommPackage) {
 func (sc *SpoilerCommand) Setup(session *discordgo.Session) {}
 
 func (sc *SpoilerCommand) EventHandlers() []interface{} { return []interface{}{} }
+
+func (sc *SpoilerCommand) GetPermLevel() db.Permission {
+	return db.PermAll
+}

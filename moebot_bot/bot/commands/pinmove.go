@@ -16,15 +16,10 @@ import (
 )
 
 type PinMoveCommand struct {
-	Checker        *PermissionChecker
 	pinnedMessages map[string][]string
 }
 
 func (pc *PinMoveCommand) Execute(pack *CommPackage) {
-	if !pc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
 	if len(pack.params) == 0 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to specify at least a valid channel.")
 		return
@@ -262,4 +257,8 @@ func (pc *PinMoveCommand) pinnedMessageAlreadyLoaded(messageId string, channelId
 		}
 	}
 	return false
+}
+
+func (pc *PinMoveCommand) GetPermLevel() db.Permission {
+	return db.PermMod
 }

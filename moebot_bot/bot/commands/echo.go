@@ -4,17 +4,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/camd67/moebot/moebot_bot/util/db"
+
 	"github.com/bwmarrin/discordgo"
 )
 
 type EchoCommand struct {
-	Checker *PermissionChecker
 }
 
 func (ec *EchoCommand) Execute(pack *CommPackage) {
-	if m := ec.Checker.hasValidMasterId(pack); !m {
-		return
-	}
 	_, err := strconv.Atoi(pack.params[0])
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, that's an invalid channel ID")
@@ -26,3 +24,7 @@ func (ec *EchoCommand) Execute(pack *CommPackage) {
 func (ec *EchoCommand) Setup(session *discordgo.Session) {}
 
 func (ec *EchoCommand) EventHandlers() []interface{} { return []interface{}{} }
+
+func (ec *EchoCommand) GetPermLevel() db.Permission {
+	return db.PermMaster
+}

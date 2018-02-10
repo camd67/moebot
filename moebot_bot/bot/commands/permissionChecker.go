@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"log"
-
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -11,21 +9,28 @@ type PermissionChecker struct {
 }
 
 func (p *PermissionChecker) HasAllPerm(userId string, roles []string) bool {
-	return p.hasPermission(userId, roles, db.PermAll)
+	return p.HasPermission(userId, roles, db.PermAll)
 }
 
 func (p *PermissionChecker) HasModPerm(userId string, roles []string) bool {
-	return p.hasPermission(userId, roles, db.PermMod)
+	return p.HasPermission(userId, roles, db.PermMod)
 }
 
-func (p *PermissionChecker) hasPermission(userId string, roles []string, pToCheck db.Permission) bool {
-	// masters are allowed to do anything
-	if p.isMaster(userId) {
+func (p *PermissionChecker) HasPermission(userId string, roles []string, pToCheck db.Permission) bool {
+	if pToCheck == db.PermAll {
+		// if everyone can use this command, just allow it
 		return true
+	} else if p.isMaster(userId) {
+		// masters are allowed to do anything
+		return true
+	} else if pToCheck == db.PermNone {
+		// if no one can use this command, never do it
+		// make sure this is the last thing to check before
+		return false
 	}
+	// if any of the previous checks fails, then go ahead and check the database for their permission
 	perms := db.RoleQueryPermission(roles)
 	for _, p := range perms {
-		log.Println(p)
 		if p <= pToCheck {
 			return true
 		}

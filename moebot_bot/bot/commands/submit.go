@@ -72,3 +72,7 @@ func (sc *SubmitCommand) Execute(pack *CommPackage) {
 func (sc *SubmitCommand) Setup(session *discordgo.Session) {}
 
 func (sc *SubmitCommand) EventHandlers() []interface{} { return []interface{}{} }
+
+func (sc *SubmitCommand) GetPermLevel() db.Permission {
+	return db.PermNone
+}

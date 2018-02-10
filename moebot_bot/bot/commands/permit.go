@@ -9,13 +9,9 @@ import (
 )
 
 type PermitCommand struct {
-	Checker *PermissionChecker
 }
 
 func (pc *PermitCommand) Execute(pack *CommPackage) {
-	if m := pc.Checker.hasValidMasterId(pack); !m {
-		return
-	}
 	// should always have more than 2 params: permission level, role name ... role name
 	if len(pack.params) < 2 {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a permission level followed by the role name")
@@ -49,3 +45,7 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 
 func (pc *PermitCommand) Setup(session *discordgo.Session) {}
 func (pc *PermitCommand) EventHandlers() []interface{}     { return []interface{}{} }
+
+func (pc *PermitCommand) GetPermLevel() db.Permission {
+	return db.PermMaster
+}

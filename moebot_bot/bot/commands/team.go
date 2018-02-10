@@ -1,6 +1,9 @@
 package commands
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util/db"
+)
 
 type TeamCommand struct{}
 
@@ -11,3 +14,7 @@ func (tc *TeamCommand) Execute(pack *CommPackage) {
 func (tc *TeamCommand) Setup(session *discordgo.Session) {}
 
 func (tc *TeamCommand) EventHandlers() []interface{} { return []interface{}{} }
+
+func (tc *TeamCommand) GetPermLevel() db.Permission {
+	return db.PermAll
+}

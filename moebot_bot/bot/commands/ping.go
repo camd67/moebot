@@ -3,6 +3,8 @@ package commands
 import (
 	"time"
 
+	"github.com/camd67/moebot/moebot_bot/util/db"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -19,3 +21,7 @@ func (pc *PingCommand) Execute(pack *CommPackage) {
 func (pc *PingCommand) Setup(session *discordgo.Session) {}
 
 func (pc *PingCommand) EventHandlers() []interface{} { return []interface{}{} }
+
+func (pc *PingCommand) GetPermLevel() db.Permission {
+	return db.PermAll
+}

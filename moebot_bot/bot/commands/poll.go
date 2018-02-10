@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
 type PollCommand struct {
@@ -10,10 +11,6 @@ type PollCommand struct {
 }
 
 func (pc *PollCommand) Execute(pack *CommPackage) {
-	if !pc.Checker.HasModPerm(pack.message.Author.ID, pack.member.Roles) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this command has a minimum permission of mod")
-		return
-	}
 	if pack.params[0] == "-close" {
 		pc.PollsHandler.closePoll(pack)
 		return
@@ -31,4 +28,8 @@ func (pc *PollCommand) EventHandlers() []interface{} {
 
 func (pc *PollCommand) pollReactionsAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
 	pc.PollsHandler.checkSingleVote(session, reactionAdd)
+}
+
+func (pc *PollCommand) GetPermLevel() db.Permission {
+	return db.PermMod
 }
