@@ -20,3 +20,14 @@ type Command interface {
 	EventHandlers() []interface{}
 	GetPermLevel() db.Permission
 }
+
+func NewCommPackage(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, member *discordgo.Member, channel *discordgo.Channel, params []string) CommPackage {
+	return CommPackage{
+		session: session,
+		message: message,
+		guild:   guild,
+		member:  member,
+		channel: channel,
+		params:  params,
+	}
+}

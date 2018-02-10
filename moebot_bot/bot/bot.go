@@ -226,6 +226,7 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 		params := messageParts[2:]
 		log.Println("Processing command: " + commandKey + " from user: {" + fmt.Sprintf("%+v", message.Author) + "}| With Params:{" + strings.Join(params, ",") + "}")
 		session.ChannelTyping(message.ChannelID)
-		command.Execute(&commands.CommPackage{session, message, guild, member, channel, params})
+		pack := commands.NewCommPackage(session, message, guild, member, channel, params)
+		command.Execute(&pack)
 	}
 }
