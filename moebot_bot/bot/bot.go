@@ -51,7 +51,7 @@ func setupCommands(session *discordgo.Session) {
 	commandsMap["TOGGLEMENTION"] = &commands.MentionCommand{}
 	commandsMap["SERVER"] = &commands.ServerCommand{}
 	commandsMap["PROFILE"] = &commands.ProfileCommand{}
-	commandsMap["PINMOVE"] = &commands.PinMoveCommand{}
+	commandsMap["PINMOVE"] = &commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"}
 
 	for _, com := range commandsMap {
 		com.Setup(session)
@@ -219,12 +219,13 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	commandKey := strings.ToUpper(messageParts[1])
 
 	if command, commPresent := commandsMap[commandKey]; commPresent {
+		params := messageParts[2:]
 		if !checker.HasPermission(message.Author.ID, member.Roles, command.GetPermLevel()) {
 			session.ChannelMessageSend(channel.ID, "Sorry, this command has a minimum permission of "+db.SprintPermission(command.GetPermLevel()))
+			log.Println("!!PERMISSION VIOLATION!! Processing command: " + commandKey + " from user: {" + message.Author.String() + "}| With Params:{" + strings.Join(params, ",") + "}")
 			return
 		}
-		params := messageParts[2:]
-		log.Println("Processing command: " + commandKey + " from user: {" + fmt.Sprintf("%+v", message.Author) + "}| With Params:{" + strings.Join(params, ",") + "}")
+		log.Println("Processing command: " + commandKey + " from user: {" + message.Author.String() + "}| With Params:{" + strings.Join(params, ",") + "}")
 		session.ChannelTyping(message.ChannelID)
 		pack := commands.NewCommPackage(session, message, guild, member, channel, params)
 		command.Execute(&pack)

@@ -16,6 +16,7 @@ import (
 )
 
 type PinMoveCommand struct {
+	ShouldLoadPins bool
 	pinnedMessages map[string][]string
 }
 
@@ -64,15 +65,19 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 }
 
 func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
-	pc.pinnedMessages = make(map[string][]string)
-	guilds, err := session.UserGuilds(100, "", "")
-	if err != nil {
-		log.Println("Error loading guilds, some functions may not work correctly.", err)
-		return
-	}
-	log.Println("Number of guilds: " + strconv.Itoa(len(guilds)))
-	for _, guild := range guilds {
-		pc.loadGuild(session, guild)
+	if pc.ShouldLoadPins {
+		pc.pinnedMessages = make(map[string][]string)
+		guilds, err := session.UserGuilds(100, "", "")
+		if err != nil {
+			log.Println("Error loading guilds, some functions may not work correctly.", err)
+			return
+		}
+		log.Println("Number of guilds: " + strconv.Itoa(len(guilds)))
+		for _, guild := range guilds {
+			pc.loadGuild(session, guild)
+		}
+	} else {
+		log.Println("Skipping loading pins. NOTE: this will break the ability to use the pin move command")
 	}
 }
 

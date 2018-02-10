@@ -6,7 +6,6 @@ import (
 )
 
 type PollCommand struct {
-	Checker      *PermissionChecker
 	PollsHandler *PollsHandler
 }
 
