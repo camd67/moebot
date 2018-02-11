@@ -1,4 +1,4 @@
-package commands
+package bot
 
 import (
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -40,12 +40,4 @@ func (p *PermissionChecker) HasPermission(userId string, roles []string, pToChec
 
 func (p *PermissionChecker) isMaster(id string) bool {
 	return id == p.MasterId
-}
-
-func (p *PermissionChecker) hasValidMasterId(pack *CommPackage) bool {
-	if !p.isMaster(pack.message.Author.ID) {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, only my master can use this command!")
-		return false
-	}
-	return true
 }

@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -26,7 +25,7 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 			return
 		}
 	}
-	pack.session.ChannelMessageSend(pack.message.ChannelID, util.UserIdToMention(pack.message.Author.ID)+"'s profile:\nRank: "+convertRankToString(usr.Rank,
+	pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+"'s profile:\nRank: "+convertRankToString(usr.Rank,
 		server.VeteranRank))
 }
 

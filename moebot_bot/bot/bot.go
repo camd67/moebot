@@ -21,16 +21,17 @@ var (
 	allowedNonComServers = []string{"378336255030722570", "93799773856862208"}
 	ComPrefix            string
 	Config               = make(map[string]string)
-	pinnedMessages       = make(map[string][]string)
 	commandsMap          = make(map[string]commands.Command)
-	checker              commands.PermissionChecker
+	checker              PermissionChecker
+	masterId             string
 )
 
 func SetupMoebot(session *discordgo.Session) {
+	masterId = Config["masterId"]
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
 	setupCommands(session)
 	addHandlers(session)
-	checker = commands.PermissionChecker{MasterId: Config["masterId"]}
+	checker = PermissionChecker{MasterId: masterId}
 }
 
 func setupCommands(session *discordgo.Session) {
@@ -40,7 +41,7 @@ func setupCommands(session *discordgo.Session) {
 	commandsMap["NSFW"] = &commands.NsfwCommand{}
 	commandsMap["HELP"] = &commands.HelpCommand{ComPrefix: ComPrefix}
 	commandsMap["CHANGELOG"] = &commands.ChangelogCommand{Version: version}
-	commandsMap["RAFFLE"] = &commands.RaffleCommand{MasterId: Config["masterId"], DebugChannel: Config["debugChannel"]}
+	commandsMap["RAFFLE"] = &commands.RaffleCommand{MasterId: masterId, DebugChannel: Config["debugChannel"]}
 	commandsMap["SUBMIT"] = &commands.SubmitCommand{ComPrefix: ComPrefix}
 	commandsMap["ECHO"] = &commands.EchoCommand{}
 	commandsMap["PERMIT"] = &commands.PermitCommand{}
