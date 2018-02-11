@@ -16,9 +16,9 @@ import (
 const (
 	messagePoints        = 5
 	reactionPoints       = 1
-	reactionCooldown     = 30 * time.Second
-	messageCooldown      = 1 * time.Second
-	veteranBufferSizeMax = 1
+	reactionCooldown     = 45 * time.Second
+	messageCooldown      = 30 * time.Second
+	veteranBufferSizeMax = 30
 )
 
 var (
