@@ -1,27 +1,36 @@
 package bot
 
 import (
-	"log"
-
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
-func HasAllPerm(userId string, roles []string) bool {
-	return hasPermission(userId, roles, db.PermAll)
+type PermissionChecker struct {
+	MasterId string
 }
 
-func HasModPerm(userId string, roles []string) bool {
-	return hasPermission(userId, roles, db.PermMod)
+func (p *PermissionChecker) HasAllPerm(userId string, roles []string) bool {
+	return p.HasPermission(userId, roles, db.PermAll)
 }
 
-func hasPermission(userId string, roles []string, pToCheck db.Permission) bool {
-	// masters are allowed to do anything
-	if isMaster(userId) {
+func (p *PermissionChecker) HasModPerm(userId string, roles []string) bool {
+	return p.HasPermission(userId, roles, db.PermMod)
+}
+
+func (p *PermissionChecker) HasPermission(userId string, roles []string, pToCheck db.Permission) bool {
+	if pToCheck == db.PermAll {
+		// if everyone can use this command, just allow it
 		return true
+	} else if p.isMaster(userId) {
+		// masters are allowed to do anything
+		return true
+	} else if pToCheck == db.PermNone {
+		// if no one can use this command, never do it
+		// make sure this is the last thing to check before
+		return false
 	}
+	// if any of the previous checks fails, then go ahead and check the database for their permission
 	perms := db.RoleQueryPermission(roles)
 	for _, p := range perms {
-		log.Println(p)
 		if p <= pToCheck {
 			return true
 		}
@@ -29,14 +38,6 @@ func hasPermission(userId string, roles []string, pToCheck db.Permission) bool {
 	return false
 }
 
-func isMaster(id string) bool {
-	return id == Config["masterId"]
-}
-
-func hasValidMasterId(pack *commPackage) bool {
-	if !isMaster(pack.message.Author.ID) {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, only my master can use this command!")
-		return false
-	}
-	return true
+func (p *PermissionChecker) isMaster(id string) bool {
+	return id == p.MasterId
 }

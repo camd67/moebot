@@ -11,9 +11,14 @@ import (
 type Permission int
 
 const (
-	PermAll  Permission = 2
-	PermMod  Permission = 50
+	// Default permission level, no permissions regarding what can or can't be done
+	PermAll Permission = 2
+	// Mod level permission, allowed to do some server changing commands
+	PermMod Permission = 50
+	// Used to disable something, no one can have this permission level
 	PermNone Permission = 100
+	// Master level permission, can't ever be ignored or disabled
+	PermMaster Permission = 101
 )
 
 // RoleType enum
@@ -141,6 +146,8 @@ func GetPermissionFromString(s string) Permission {
 		return PermMod
 	} else if toCheck == "NONE" {
 		return PermNone
+	} else if toCheck == "MASTER" {
+		return PermMaster
 	} else {
 		return -1
 	}
@@ -154,6 +161,8 @@ func SprintPermission(p Permission) string {
 		return "All"
 	case PermNone:
 		return "None"
+	case PermMaster:
+		return "Master"
 	default:
 		return "Unknown"
 	}

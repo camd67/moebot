@@ -1,4 +1,13 @@
-package bot
+package commands
+
+import (
+	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util/db"
+)
+
+type ChangelogCommand struct {
+	Version string
+}
 
 const changeLogPrefix = "\n`->` "
 
@@ -8,6 +17,9 @@ const changeLogPrefix = "\n`->` "
 //   Please only edit this in develop before merging to master    //
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
+
+	"0.3.1": changeLogPrefix + "Code cleanup/refactor" +
+		changeLogPrefix + "Updated veteran rank handling",
 
 	"0.3": changeLogPrefix + "Added veteran role stuff" +
 		changeLogPrefix + "Added pinmove command (credit: Shadran)" +
@@ -36,12 +48,20 @@ var changeLog = map[string]string{
 		changeLogPrefix + "For future reference, previous versions included help, team, rank, and NSFW commands as well as a welcome message to the server.",
 }
 
-func commChange(pack *commPackage) {
+func (cc *ChangelogCommand) Execute(pack *CommPackage) {
 	if len(pack.params) == 0 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot update log `(ver "+version+")`: \n"+changeLog[version])
+		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot update log `(ver "+cc.Version+")`: \n"+changeLog[cc.Version])
 	} else if log, present := changeLog[pack.params[0]]; present {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Moebot update log `(ver "+pack.params[0]+")`: \n"+log)
 	} else {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Unknown version number. Latest log:\nMoebot update log `(ver "+version+")`: \n"+changeLog[version])
+		pack.session.ChannelMessageSend(pack.channel.ID, "Unknown version number. Latest log:\nMoebot update log `(ver "+cc.Version+")`: \n"+changeLog[cc.Version])
 	}
+}
+
+func (cc *ChangelogCommand) Setup(session *discordgo.Session) {}
+
+func (cc *ChangelogCommand) EventHandlers() []interface{} { return []interface{}{} }
+
+func (cc *ChangelogCommand) GetPermLevel() db.Permission {
+	return db.PermAll
 }

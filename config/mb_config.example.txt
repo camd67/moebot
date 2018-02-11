@@ -4,3 +4,4 @@ dbPass~
 moeDataPass~
 masterId~
 debugChannel~
+loadPins~

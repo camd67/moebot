@@ -1,4 +1,4 @@
-package bot
+package commands
 
 import (
 	"database/sql"
@@ -16,12 +16,18 @@ type PollsHandler struct {
 	pollsList []*db.Poll
 }
 
+func NewPollsHandler() *PollsHandler {
+	h := &PollsHandler{}
+	h.loadFromDb()
+	return h
+}
+
 func (handler *PollsHandler) loadFromDb() {
 	polls, _ := db.PollsOpenQuery()
 	handler.pollsList = polls
 }
 
-func (handler *PollsHandler) openPoll(pack *commPackage) {
+func (handler *PollsHandler) openPoll(pack *CommPackage) {
 	var options []string
 	var title string
 	for i := 0; i < len(pack.params); i++ {
@@ -100,7 +106,7 @@ func parseTitle(params []string) string {
 	return strings.Join(params, " ")
 }
 
-func (handler *PollsHandler) closePoll(pack *commPackage) {
+func (handler *PollsHandler) closePoll(pack *CommPackage) {
 	if len(pack.params) < 2 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you have to specify a valid ID for the poll")
 		return
@@ -207,4 +213,13 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 			}
 		}
 	}
+}
+
+func reactionIsOption(options []*db.PollOption, emojiID string) bool {
+	for _, o := range options {
+		if o.ReactionId == emojiID {
+			return true
+		}
+	}
+	return false
 }
