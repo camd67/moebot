@@ -4,7 +4,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -69,10 +68,10 @@ func (sc *SubmitCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessagePin(pack.channel.ID, pack.message.ID)
 }
 
-func (sc *SubmitCommand) Setup(session *discordgo.Session) {}
-
-func (sc *SubmitCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func (sc *SubmitCommand) GetPermLevel() db.Permission {
 	return db.PermNone
+}
+
+func (sc *SubmitCommand) GetCommandKeys() []string {
+	return []string{"SUBMIT"}
 }

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"strconv"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -61,10 +60,10 @@ func convertRankToString(rank int, serverMax sql.NullInt64) (rankString string) 
 	return rankPrefix
 }
 
-func (pc *ProfileCommand) Setup(session *discordgo.Session) {}
-
-func (pc *ProfileCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func (pc *ProfileCommand) GetPermLevel() db.Permission {
 	return db.PermAll
+}
+
+func (pc *ProfileCommand) GetCommandKeys() []string {
+	return []string{"PROFILE"}
 }

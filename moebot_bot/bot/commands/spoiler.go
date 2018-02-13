@@ -37,10 +37,10 @@ func (sc *SpoilerCommand) Execute(pack *CommPackage) {
 	})
 }
 
-func (sc *SpoilerCommand) Setup(session *discordgo.Session) {}
-
-func (sc *SpoilerCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func (sc *SpoilerCommand) GetPermLevel() db.Permission {
 	return db.PermAll
+}
+
+func (sc *SpoilerCommand) GetCommandKeys() []string {
+	return []string{"SPOILER"}
 }

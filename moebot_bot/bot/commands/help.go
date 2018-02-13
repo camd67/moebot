@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -28,10 +27,10 @@ func (hc *HelpCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (hc *HelpCommand) Setup(session *discordgo.Session) {}
-
-func (hc *HelpCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func (hc *HelpCommand) GetPermLevel() db.Permission {
 	return db.PermAll
+}
+
+func (hc *HelpCommand) GetCommandKeys() []string {
+	return []string{"HELP"}
 }

@@ -267,3 +267,7 @@ func (pc *PinMoveCommand) pinnedMessageAlreadyLoaded(messageId string, channelId
 func (pc *PinMoveCommand) GetPermLevel() db.Permission {
 	return db.PermMod
 }
+
+func (pc *PinMoveCommand) GetCommandKeys() []string {
+	return []string{"PINMOVE"}
+}
