@@ -204,8 +204,6 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (rc *RaffleCommand) Setup(session *discordgo.Session) {}
-
 func (rc *RaffleCommand) EventHandlers() []interface{} {
 	// distribute tickets
 	// temporarily disable ticket distribution
@@ -244,4 +242,8 @@ func (rc *RaffleCommand) distributeTickets(guild *discordgo.Guild, message *disc
 
 func (rc *RaffleCommand) GetPermLevel() db.Permission {
 	return db.PermNone
+}
+
+func (rc *RaffleCommand) GetCommandKeys() []string {
+	return []string{"RAFFLE"}
 }

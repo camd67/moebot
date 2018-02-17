@@ -4,8 +4,6 @@ import (
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
-
-	"github.com/bwmarrin/discordgo"
 )
 
 type PingCommand struct {
@@ -18,10 +16,10 @@ func (pc *PingCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, "Latency to server: "+pingTime.String())
 }
 
-func (pc *PingCommand) Setup(session *discordgo.Session) {}
-
-func (pc *PingCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func (pc *PingCommand) GetPermLevel() db.Permission {
 	return db.PermAll
+}
+
+func (pc *PingCommand) GetCommandKeys() []string {
+	return []string{"PING"}
 }

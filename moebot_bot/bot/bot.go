@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
@@ -21,6 +20,7 @@ var (
 	allowedNonComServers = []string{"378336255030722570", "93799773856862208"}
 	ComPrefix            string
 	Config               = make(map[string]string)
+	operations           []interface{}
 	commandsMap          = make(map[string]commands.Command)
 	checker              PermissionChecker
 	masterId             string
@@ -29,46 +29,71 @@ var (
 func SetupMoebot(session *discordgo.Session) {
 	masterId = Config["masterId"]
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
-	setupCommands(session)
-	addHandlers(session)
+	addGlobalHandlers(session)
+	setupOperations(session)
 	checker = PermissionChecker{MasterId: masterId}
 }
 
-func setupCommands(session *discordgo.Session) {
-	commandsMap["TEAM"] = &commands.TeamCommand{}
-	commandsMap["ROLE"] = &commands.RoleCommand{}
-	commandsMap["RANK"] = &commands.RankCommand{}
-	commandsMap["NSFW"] = &commands.NsfwCommand{}
-	commandsMap["HELP"] = &commands.HelpCommand{ComPrefix: ComPrefix}
-	commandsMap["CHANGELOG"] = &commands.ChangelogCommand{Version: version}
-	commandsMap["RAFFLE"] = &commands.RaffleCommand{MasterId: masterId, DebugChannel: Config["debugChannel"]}
-	commandsMap["SUBMIT"] = &commands.SubmitCommand{ComPrefix: ComPrefix}
-	commandsMap["ECHO"] = &commands.EchoCommand{}
-	commandsMap["PERMIT"] = &commands.PermitCommand{}
-	commandsMap["CUSTOM"] = &commands.CustomCommand{ComPrefix: ComPrefix}
-	commandsMap["PING"] = &commands.PingCommand{}
-	commandsMap["SPOILER"] = &commands.SpoilerCommand{}
-	commandsMap["POLL"] = &commands.PollCommand{PollsHandler: commands.NewPollsHandler()}
-	commandsMap["TOGGLEMENTION"] = &commands.MentionCommand{}
-	commandsMap["SERVER"] = &commands.ServerCommand{}
-	commandsMap["PROFILE"] = &commands.ProfileCommand{}
-	commandsMap["PINMOVE"] = &commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"}
+func setupOperations(session *discordgo.Session) {
+	operations = []interface{}{
+		&commands.TeamCommand{},
+		&commands.RoleCommand{},
+		&commands.RankCommand{},
+		&commands.NsfwCommand{},
+		&commands.HelpCommand{ComPrefix: ComPrefix},
+		&commands.ChangelogCommand{Version: version},
+		&commands.RaffleCommand{MasterId: masterId, DebugChannel: Config["debugChannel"]},
+		&commands.SubmitCommand{ComPrefix: ComPrefix},
+		&commands.EchoCommand{},
+		&commands.PermitCommand{},
+		&commands.CustomCommand{ComPrefix: ComPrefix},
+		&commands.PingCommand{},
+		&commands.SpoilerCommand{},
+		&commands.PollCommand{PollsHandler: commands.NewPollsHandler()},
+		&commands.MentionCommand{},
+		&commands.ServerCommand{},
+		&commands.ProfileCommand{},
+		&commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"},
+		commands.NewVeteranHandler(ComPrefix, Config["debugChannel"]),
+	}
 
-	for _, com := range commandsMap {
-		com.Setup(session)
+	setupCommands()
+	setupHandlers(session)
+	setupEvents(session)
+}
+
+func setupCommands() {
+	for _, o := range operations {
+		if command, ok := o.(commands.Command); ok {
+			for _, key := range command.GetCommandKeys() {
+				commandsMap[key] = command
+			}
+		}
 	}
 }
 
-func addHandlers(discord *discordgo.Session) {
+func setupHandlers(session *discordgo.Session) {
+	for _, o := range operations {
+		if setup, ok := o.(commands.SetupHandler); ok {
+			setup.Setup(session)
+		}
+	}
+}
+
+func setupEvents(session *discordgo.Session) {
+	for _, o := range operations {
+		if handler, ok := o.(commands.EventHandler); ok {
+			for _, h := range handler.EventHandlers() {
+				session.AddHandler(h)
+			}
+		}
+	}
+}
+
+func addGlobalHandlers(discord *discordgo.Session) {
 	discord.AddHandler(ready)
 	discord.AddHandler(messageCreate)
 	discord.AddHandler(guildMemberAdd)
-	discord.AddHandler(messageReactionAdd)
-	for _, com := range commandsMap {
-		for _, h := range com.EventHandlers() {
-			discord.AddHandler(h)
-		}
-	}
 }
 
 func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
@@ -142,19 +167,6 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		}
 	}
 
-	// ignore some common bot prefixes
-	if !(strings.HasPrefix(message.Content, "->") || strings.HasPrefix(message.Content, "~") || strings.HasPrefix(message.Content, ComPrefix)) {
-		changedUsers, err := handleVeteranMessage(member, guild.ID)
-		if err != nil {
-			session.ChannelMessageSend(Config["debugChannel"], fmt.Sprint("An error occurred when trying to update veteran users ", err))
-		} else {
-			for _, user := range changedUsers {
-				session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
-					ComPrefix+" role veteran` In this channel.")
-			}
-		}
-	}
-
 	if strings.HasPrefix(message.Content, ComPrefix) {
 		// should add a check here for command spam
 		if oldStarterRole != nil && util.StrContains(member.Roles, oldStarterRole.ID, util.CaseSensitive) {
@@ -179,25 +191,6 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.GuildMemberRoleAdd(guild.ID, member.User.ID, starterRole.ID)
 			session.GuildMemberRoleRemove(guild.ID, member.User.ID, oldStarterRole.ID)
 			log.Println("Updated user <" + member.User.Username + "> after reading the rules")
-		}
-	}
-}
-
-func messageReactionAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
-	// should make some local caches for channels and guilds...
-	channel, err := session.Channel(reactionAdd.ChannelID)
-	if err != nil {
-		log.Println("Error trying to get channel", err)
-		return
-	}
-
-	changedUsers, err := handleVeteranReaction(reactionAdd.UserID, channel.GuildID)
-	if err != nil {
-		session.ChannelMessageSend(Config["debugChannel"], fmt.Sprint("An error occurred when trying to update veteran users ", err))
-	} else {
-		for _, user := range changedUsers {
-			session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
-				ComPrefix+" role veteran` In this channel.")
 		}
 	}
 }

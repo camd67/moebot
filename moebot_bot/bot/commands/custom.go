@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
@@ -61,9 +60,11 @@ func (cc *CustomCommand) Execute(pack *CommPackage) {
 		}
 	}
 }
-func (cc *CustomCommand) Setup(session *discordgo.Session) {}
-func (cc *CustomCommand) EventHandlers() []interface{}     { return []interface{}{} }
 
 func (cc *CustomCommand) GetPermLevel() db.Permission {
 	return db.PermMod
+}
+
+func (cc *CustomCommand) GetCommandKeys() []string {
+	return []string{"CUSTOM"}
 }

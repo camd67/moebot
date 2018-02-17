@@ -3,7 +3,6 @@ package commands
 import (
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
@@ -43,9 +42,10 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, "Set permission ("+db.SprintPermission(permLevel)+") level for role "+roleName)
 }
 
-func (pc *PermitCommand) Setup(session *discordgo.Session) {}
-func (pc *PermitCommand) EventHandlers() []interface{}     { return []interface{}{} }
-
 func (pc *PermitCommand) GetPermLevel() db.Permission {
 	return db.PermMaster
+}
+
+func (pc *PermitCommand) GetCommandKeys() []string {
+	return []string{"PERMIT"}
 }

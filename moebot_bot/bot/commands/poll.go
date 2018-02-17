@@ -17,10 +17,6 @@ func (pc *PollCommand) Execute(pack *CommPackage) {
 	pc.PollsHandler.openPoll(pack)
 }
 
-func (pc *PollCommand) Setup(session *discordgo.Session) {
-
-}
-
 func (pc *PollCommand) EventHandlers() []interface{} {
 	return []interface{}{pc.pollReactionsAdd}
 }
@@ -31,4 +27,8 @@ func (pc *PollCommand) pollReactionsAdd(session *discordgo.Session, reactionAdd 
 
 func (pc *PollCommand) GetPermLevel() db.Permission {
 	return db.PermMod
+}
+
+func (pc *PollCommand) GetCommandKeys() []string {
+	return []string{"POLL"}
 }

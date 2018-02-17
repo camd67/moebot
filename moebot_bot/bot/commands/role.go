@@ -85,10 +85,11 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (rc *RoleCommand) Setup(session *discordgo.Session) {}
-
-func (rc *RoleCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func (rc *RoleCommand) GetPermLevel() db.Permission {
 	return db.PermAll
 }
+
+func (rc *RoleCommand) GetCommandKeys() []string {
+	return []string{"ROLE"}
+}
+

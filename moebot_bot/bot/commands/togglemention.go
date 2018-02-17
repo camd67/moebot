@@ -35,10 +35,6 @@ func (mc *MentionCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, could not find role "+roleName+". Please check the role name and try again.")
 }
 
-func (mc *MentionCommand) Setup(session *discordgo.Session) {}
-
-func (mc *MentionCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func restoreMention(pack *CommPackage, role *discordgo.Role) {
 	<-time.After(5 * time.Minute)
 	editedRole, err := pack.session.GuildRoleEdit(pack.guild.ID, role.ID, role.Name, role.Color, role.Hoist, role.Permissions, !role.Mentionable)
@@ -57,4 +53,8 @@ func restoreMention(pack *CommPackage, role *discordgo.Role) {
 
 func (mc *MentionCommand) GetPermLevel() db.Permission {
 	return db.PermMod
+}
+
+func (mc *MentionCommand) GetCommandKeys() []string {
+	return []string{"TOGGLEMENTION"}
 }

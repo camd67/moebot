@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -58,10 +57,10 @@ func (cc *ChangelogCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (cc *ChangelogCommand) Setup(session *discordgo.Session) {}
-
-func (cc *ChangelogCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func (cc *ChangelogCommand) GetPermLevel() db.Permission {
 	return db.PermAll
+}
+
+func (cc *ChangelogCommand) GetCommandKeys() []string {
+	return []string{"CHANGELOG"}
 }

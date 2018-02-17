@@ -81,10 +81,10 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.message.ChannelID, "Updated this server!")
 }
 
-func (sc *ServerCommand) Setup(session *discordgo.Session) {}
-
-func (sc *ServerCommand) EventHandlers() []interface{} { return []interface{}{} }
-
 func (sc *ServerCommand) GetPermLevel() db.Permission {
 	return db.PermMod
+}
+
+func (sc *ServerCommand) GetCommandKeys() []string {
+	return []string{"SERVER"}
 }

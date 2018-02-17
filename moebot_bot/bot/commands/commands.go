@@ -16,9 +16,16 @@ type CommPackage struct {
 
 type Command interface {
 	Execute(pack *CommPackage)
-	Setup(session *discordgo.Session)
-	EventHandlers() []interface{}
 	GetPermLevel() db.Permission
+	GetCommandKeys() []string
+}
+
+type EventHandler interface {
+	EventHandlers() []interface{}
+}
+
+type SetupHandler interface {
+	Setup(session *discordgo.Session)
 }
 
 func NewCommPackage(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, member *discordgo.Member, channel *discordgo.Channel, params []string) CommPackage {
