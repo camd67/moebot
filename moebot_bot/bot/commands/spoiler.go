@@ -38,7 +38,7 @@ func (sc *SpoilerCommand) Execute(pack *CommPackage) {
 }
 
 func (sc *SpoilerCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+	return db.PermNone
 }
 
 func (sc *SpoilerCommand) GetCommandKeys() []string {
