@@ -77,7 +77,7 @@ func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
 			pc.loadGuild(session, guild)
 		}
 	} else {
-		log.Println("Skipping loading pins. NOTE: this will break the ability to use the pin move command")
+		log.Println("!!! WARNING !!! Skipping loading pins. NOTE: this will break the ability to use the pin move command")
 	}
 }
 

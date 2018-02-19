@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"strconv"
 
+	"github.com/camd67/moebot/moebot_bot/util"
+
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -35,29 +37,43 @@ func convertRankToString(rank int, serverMax sql.NullInt64) (rankString string) 
 	}
 	// naming strategy: every 1% till 10%, then every 2% until 30%, then every 3% until 60% then every 4% until 100%, then every 100% forever
 	rankPrefixes := []string{"Newcomer", "Apprentice", "Rookie", "Regular", "Veteran"}
+	rankSeparator := " --> "
 	percent := float64(rank) / float64(serverMax.Int64) * 100.0
-	var rankPrefix string
+	var rankPrefixIndex int
 	var rankSuffix int
 	if percent < 10 {
 		rankSuffix = int(percent / 2.0)
-		rankPrefix = rankPrefixes[0]
+		rankPrefixIndex = 0
 	} else if percent < 30 {
 		rankSuffix = int((percent - 10) / 4.0)
-		rankPrefix = rankPrefixes[1]
+		rankPrefixIndex = 1
 	} else if percent < 60 {
 		rankSuffix = int((percent - 30) / 6.0)
-		rankPrefix = rankPrefixes[2]
+		rankPrefixIndex = 2
 	} else if percent < 100 {
 		rankSuffix = int((percent - 60) / 8.0)
-		rankPrefix = rankPrefixes[3]
+		rankPrefixIndex = 3
 	} else {
 		rankSuffix = int((percent - 100) / 100)
-		rankPrefix = rankPrefixes[4]
+		rankPrefixIndex = 4
 	}
 	if rankSuffix != 0 {
-		return rankPrefix + " " + strconv.Itoa(rankSuffix)
+		rankPrefixes[rankPrefixIndex] = util.MakeStringBold(rankPrefixes[rankPrefixIndex] + " " + strconv.Itoa(rankSuffix))
+	} else {
+		rankPrefixes[rankPrefixIndex] = util.MakeStringBold(rankPrefixes[rankPrefixIndex])
 	}
-	return rankPrefix
+	var s string
+	for index, rankString := range rankPrefixes {
+		if index < rankPrefixIndex {
+			s += util.MakeStringStrikethrough(rankString)
+		} else {
+			s += rankString
+		}
+		if index < len(rankPrefixes)-1 {
+			s += rankSeparator
+		}
+	}
+	return s
 }
 
 func (pc *ProfileCommand) GetPermLevel() db.Permission {

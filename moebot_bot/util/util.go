@@ -84,6 +84,18 @@ func UserIdToMention(userId string) string {
 	return fmt.Sprintf("<@%s>", userId)
 }
 
+func MakeStringBold(s string) string {
+	return "**" + s + "**"
+}
+
+func MakeStringItalic(s string) string {
+	return "_" + s + "_"
+}
+
+func MakeStringStrikethrough(s string) string {
+	return "~~" + s + "~~"
+}
+
 func FindRoleByName(roles []*discordgo.Role, toFind string) *discordgo.Role {
 	toFind = strings.ToUpper(toFind)
 	for _, r := range roles {
