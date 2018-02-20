@@ -82,9 +82,9 @@ func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
 		var wg sync.WaitGroup
 		for _, guild := range guilds {
 			wg.Add(1)
-			go pc.loadGuild(session, guild, wg)
+			go pc.loadGuild(session, guild, &wg)
 		}
-		go pc.waitLoading(wg)
+		go pc.waitLoading(&wg)
 	} else {
 		log.Println("!!! WARNING !!! Skipping loading pins. NOTE: this will break the ability to use the pin move command")
 	}
@@ -94,12 +94,12 @@ func (pc *PinMoveCommand) EventHandlers() []interface{} {
 	return []interface{}{pc.channelMovePinsUpdate}
 }
 
-func (pc *PinMoveCommand) waitLoading(wg sync.WaitGroup) {
+func (pc *PinMoveCommand) waitLoading(wg *sync.WaitGroup) {
 	wg.Wait()
 	pc.ready = true
 }
 
-func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.UserGuild, wg sync.WaitGroup) {
+func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.UserGuild, wg *sync.WaitGroup) {
 	defer wg.Done()
 	server, err := db.ServerQueryOrInsert(guild.ID)
 	if err != nil {
