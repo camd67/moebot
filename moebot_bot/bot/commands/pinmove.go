@@ -198,6 +198,7 @@ func togglePin(sourceChannelUid string, enableTextPins bool, server db.Server, p
 
 func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.ChannelPinsUpdate) {
 	if !pc.ready {
+		log.Println("Pinmove is still loading, exiting pin handler")
 		return
 	}
 	channel, err := session.Channel(pinsUpdate.ChannelID)
