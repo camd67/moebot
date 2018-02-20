@@ -18,7 +18,7 @@ import (
 
 type PinMoveCommand struct {
 	ShouldLoadPins bool
-	pinnedMessages map[string][]string
+	pinnedMessages util.SyncSlicesMap
 	ready          bool
 }
 
@@ -72,7 +72,10 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 
 func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
 	if pc.ShouldLoadPins {
-		pc.pinnedMessages = make(map[string][]string)
+		pc.pinnedMessages = util.SyncSlicesMap{
+			RWMutex: sync.RWMutex{},
+			M:       make(map[string][]string),
+		}
 		guilds, err := session.UserGuilds(100, "", "")
 		if err != nil {
 			log.Println("Error loading guilds, some functions may not work correctly.", err)
@@ -130,15 +133,18 @@ func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *db.Ser
 }
 
 func (pc *PinMoveCommand) loadPinnedMessages(session *discordgo.Session, channel *discordgo.Channel) {
-	pc.pinnedMessages[channel.ID] = []string{}
+	pinnedMessages := []string{}
 	messages, err := session.ChannelMessagesPinned(channel.ID)
 	if err != nil {
 		log.Println("Error retrieving pinned channel messages", err)
 	}
 	log.Println("Loading pinned messages > " + strconv.Itoa(len(messages)))
 	for _, message := range messages {
-		pc.pinnedMessages[channel.ID] = append(pc.pinnedMessages[channel.ID], message.ID)
+		pinnedMessages = append(pinnedMessages, message.ID)
 	}
+	pc.pinnedMessages.Lock()
+	pc.pinnedMessages.M[channel.ID] = pinnedMessages
+	pc.pinnedMessages.Unlock()
 }
 
 func (pc *PinMoveCommand) newPinChannel(newPinChannelUid string, server db.Server, pack *CommPackage) error {
@@ -270,12 +276,16 @@ func (pc *PinMoveCommand) getUpdatePinnedMessages(session *discordgo.Session, ch
 		}
 		messagesId = append(messagesId, m.ID)
 	}
-	pc.pinnedMessages[channelId] = messagesId //refreshes pinned messages in case of messages removed from pins
+	pc.pinnedMessages.Lock()
+	pc.pinnedMessages.M[channelId] = messagesId //refreshes pinned messages in case of messages removed from pins
+	pc.pinnedMessages.Unlock()
 	return result, nil
 }
 
 func (pc *PinMoveCommand) pinnedMessageAlreadyLoaded(messageId string, channelId string) bool {
-	for _, m := range pc.pinnedMessages[channelId] {
+	defer pc.pinnedMessages.RUnlock()
+	pc.pinnedMessages.RLock()
+	for _, m := range pc.pinnedMessages.M[channelId] {
 		if messageId == m {
 			return true
 		}

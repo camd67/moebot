@@ -22,6 +22,11 @@ const (
 	CaseSensitive
 )
 
+type SyncSlicesMap struct {
+	sync.RWMutex
+	M map[string][]string
+}
+
 type SyncCooldownMap struct {
 	sync.RWMutex
 	M map[string]int64
