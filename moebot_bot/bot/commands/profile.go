@@ -17,6 +17,7 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 	// special stuff for master rank
 	if pc.MasterId == pack.message.Author.ID {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+"'s profile:\nMy master! ❤️")
+		return
 	}
 
 	// technically we'll already have a user + server at this point, but may not have a usr. Still create if necessary
