@@ -52,9 +52,9 @@ func setupOperations(session *discordgo.Session) {
 		&commands.PollCommand{PollsHandler: commands.NewPollsHandler()},
 		&commands.MentionCommand{},
 		&commands.ServerCommand{},
-		&commands.ProfileCommand{},
+		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"},
-		commands.NewVeteranHandler(ComPrefix, Config["debugChannel"]),
+		commands.NewVeteranHandler(ComPrefix, Config["debugChannel"], masterId),
 	}
 
 	setupCommands()

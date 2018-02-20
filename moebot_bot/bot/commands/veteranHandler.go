@@ -34,9 +34,10 @@ type VeteranHandler struct {
 	vBuffer             veteranBuffer
 	comPrefix           string
 	debugChannel        string
+	masterId            string
 }
 
-func NewVeteranHandler(comPrefix string, debugChannel string) *VeteranHandler {
+func NewVeteranHandler(comPrefix string, debugChannel string, masterId string) *VeteranHandler {
 	result := &VeteranHandler{}
 	result.reactionCooldownMap = util.SyncCooldownMap{
 		sync.RWMutex{},
@@ -52,6 +53,7 @@ func NewVeteranHandler(comPrefix string, debugChannel string) *VeteranHandler {
 	}
 	result.comPrefix = comPrefix
 	result.debugChannel = debugChannel
+	result.masterId = masterId
 	return result
 }
 
@@ -73,8 +75,11 @@ func (vh *VeteranHandler) veteranMessageCreate(session *discordgo.Session, messa
 			session.ChannelMessageSend(vh.debugChannel, fmt.Sprint("An error occurred when trying to update veteran users ", err))
 		} else {
 			for _, user := range changedUsers {
-				session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
-					vh.comPrefix+" role veteran` In this channel.")
+				// ignore the master from any rank related stuff. Could ignore them earlier, but this is the main "public" facing point
+				if user.UserUid != vh.masterId {
+					session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
+						vh.comPrefix+" role veteran` In this channel.")
+				}
 			}
 		}
 	}
