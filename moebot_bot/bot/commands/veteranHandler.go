@@ -106,8 +106,10 @@ func (vh *VeteranHandler) veteranReactionAdd(session *discordgo.Session, reactio
 		session.ChannelMessageSend(vh.debugChannel, fmt.Sprint("An error occurred when trying to update veteran users ", err))
 	} else {
 		for _, user := range changedUsers {
-			session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
-				vh.comPrefix+" role veteran` In this channel.")
+			if user.UserUid != vh.masterId {
+				session.ChannelMessageSend(user.SendTo, "Congrats "+util.UserIdToMention(user.UserUid)+" you can become a server veteran! Type `"+
+					vh.comPrefix+" role veteran` In this channel.")
+			}
 		}
 	}
 }
