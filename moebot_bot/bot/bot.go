@@ -35,6 +35,7 @@ func SetupMoebot(session *discordgo.Session) {
 }
 
 func setupOperations(session *discordgo.Session) {
+	pollsHandler := commands.NewPollsHandler()
 	operations = []interface{}{
 		&commands.TeamCommand{},
 		&commands.RoleCommand{},
@@ -49,12 +50,14 @@ func setupOperations(session *discordgo.Session) {
 		&commands.CustomCommand{ComPrefix: ComPrefix},
 		&commands.PingCommand{},
 		&commands.SpoilerCommand{},
-		&commands.PollCommand{PollsHandler: commands.NewPollsHandler()},
+		&commands.PollCommand{PollsHandler: pollsHandler},
 		&commands.MentionCommand{},
 		&commands.ServerCommand{},
 		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"},
 		commands.NewVeteranHandler(ComPrefix, Config["debugChannel"], masterId),
+		&commands.NominationsCommand{PollsHandler: pollsHandler},
+		pollsHandler,
 	}
 
 	setupCommands()

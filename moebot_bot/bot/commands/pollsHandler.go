@@ -22,22 +22,16 @@ func NewPollsHandler() *PollsHandler {
 	return h
 }
 
+func (p *PollsHandler) EventHandlers() []interface{} {
+	return []interface{}{p.checkSingleVote}
+}
+
 func (handler *PollsHandler) loadFromDb() {
 	polls, _ := db.PollsOpenQuery()
 	handler.pollsList = polls
 }
 
-func (handler *PollsHandler) openPoll(pack *CommPackage) {
-	var options []string
-	var title string
-	for i := 0; i < len(pack.params); i++ {
-		if pack.params[i] == "-options" {
-			options = parseOptions(pack.params[i+1:])
-		}
-		if pack.params[i] == "-title" {
-			title = parseTitle(pack.params[i+1:])
-		}
-	}
+func (handler *PollsHandler) openPoll(pack *CommPackage, options []string, title string) {
 	if len(options) <= 1 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must specify at least two options to create a poll.")
 		return
@@ -86,24 +80,6 @@ func (handler *PollsHandler) openPoll(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem updating the poll. Please delete and create it again.")
 	}
 	handler.pollsList = append(handler.pollsList, poll)
-}
-
-func parseOptions(params []string) []string {
-	for i := 0; i < len(params); i++ {
-		if params[i][0] == '-' {
-			return strings.Split(strings.Join(params[:i], " "), ",")
-		}
-	}
-	return strings.Split(strings.Join(params, " "), ",")
-}
-
-func parseTitle(params []string) string {
-	for i := 0; i < len(params); i++ {
-		if params[i][0] == '-' {
-			return strings.Join(params[:i], " ")
-		}
-	}
-	return strings.Join(params, " ")
 }
 
 func (handler *PollsHandler) closePoll(pack *CommPackage) {
@@ -213,6 +189,24 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 			}
 		}
 	}
+}
+
+func parseOptions(params []string) []string {
+	for i := 0; i < len(params); i++ {
+		if params[i][0] == '-' {
+			return strings.Split(strings.Join(params[:i], " "), ",")
+		}
+	}
+	return strings.Split(strings.Join(params, " "), ",")
+}
+
+func parseTitle(params []string) string {
+	for i := 0; i < len(params); i++ {
+		if params[i][0] == '-' {
+			return strings.Join(params[:i], " ")
+		}
+	}
+	return strings.Join(params, " ")
 }
 
 func reactionIsOption(options []*db.PollOption, emojiID string) bool {

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -14,15 +13,17 @@ func (pc *PollCommand) Execute(pack *CommPackage) {
 		pc.PollsHandler.closePoll(pack)
 		return
 	}
-	pc.PollsHandler.openPoll(pack)
-}
-
-func (pc *PollCommand) EventHandlers() []interface{} {
-	return []interface{}{pc.pollReactionsAdd}
-}
-
-func (pc *PollCommand) pollReactionsAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
-	pc.PollsHandler.checkSingleVote(session, reactionAdd)
+	var options []string
+	var title string
+	for i := 0; i < len(pack.params); i++ {
+		if pack.params[i] == "-options" {
+			options = parseOptions(pack.params[i+1:])
+		}
+		if pack.params[i] == "-title" {
+			title = parseTitle(pack.params[i+1:])
+		}
+	}
+	pc.PollsHandler.openPoll(pack, options, title)
 }
 
 func (pc *PollCommand) GetPermLevel() db.Permission {
