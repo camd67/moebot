@@ -18,7 +18,7 @@ import (
 
 type PinMoveCommand struct {
 	ShouldLoadPins bool
-	pinnedMessages util.SyncSlicesMap
+	pinnedMessages util.SyncUIDByChannelMap
 	ready          bool
 }
 
@@ -72,7 +72,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 
 func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
 	if pc.ShouldLoadPins {
-		pc.pinnedMessages = util.SyncSlicesMap{
+		pc.pinnedMessages = util.SyncUIDByChannelMap{
 			RWMutex: sync.RWMutex{},
 			M:       make(map[string][]string),
 		}

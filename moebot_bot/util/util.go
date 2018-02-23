@@ -22,7 +22,7 @@ const (
 	CaseSensitive
 )
 
-type SyncSlicesMap struct {
+type SyncUIDByChannelMap struct {
 	sync.RWMutex
 	M map[string][]string
 }
