@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -17,12 +18,17 @@ import (
 
 type PinMoveCommand struct {
 	ShouldLoadPins bool
-	pinnedMessages map[string][]string
+	pinnedMessages util.SyncUIDByChannelMap
+	ready          bool
 }
 
 func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	if len(pack.params) == 0 {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to specify at least a valid channel.")
+		return
+	}
+	if !pc.ready {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, the pin move feature is still loading.")
 		return
 	}
 	var err error
@@ -66,16 +72,22 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 
 func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
 	if pc.ShouldLoadPins {
-		pc.pinnedMessages = make(map[string][]string)
+		pc.pinnedMessages = util.SyncUIDByChannelMap{
+			RWMutex: sync.RWMutex{},
+			M:       make(map[string][]string),
+		}
 		guilds, err := session.UserGuilds(100, "", "")
 		if err != nil {
 			log.Println("Error loading guilds, some functions may not work correctly.", err)
 			return
 		}
 		log.Println("Number of guilds: " + strconv.Itoa(len(guilds)))
+		var wg sync.WaitGroup
 		for _, guild := range guilds {
-			pc.loadGuild(session, guild)
+			wg.Add(1)
+			go pc.loadGuild(session, guild, &wg)
 		}
+		go pc.waitLoading(&wg)
 	} else {
 		log.Println("!!! WARNING !!! Skipping loading pins. NOTE: this will break the ability to use the pin move command")
 	}
@@ -85,7 +97,13 @@ func (pc *PinMoveCommand) EventHandlers() []interface{} {
 	return []interface{}{pc.channelMovePinsUpdate}
 }
 
-func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.UserGuild) {
+func (pc *PinMoveCommand) waitLoading(wg *sync.WaitGroup) {
+	wg.Wait()
+	pc.ready = true
+}
+
+func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.UserGuild, wg *sync.WaitGroup) {
+	defer wg.Done()
 	server, err := db.ServerQueryOrInsert(guild.ID)
 	if err != nil {
 		log.Println("Error creating/retrieving server during loading", err)
@@ -115,15 +133,18 @@ func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *db.Ser
 }
 
 func (pc *PinMoveCommand) loadPinnedMessages(session *discordgo.Session, channel *discordgo.Channel) {
-	pc.pinnedMessages[channel.ID] = []string{}
+	pinnedMessages := []string{}
 	messages, err := session.ChannelMessagesPinned(channel.ID)
 	if err != nil {
 		log.Println("Error retrieving pinned channel messages", err)
 	}
 	log.Println("Loading pinned messages > " + strconv.Itoa(len(messages)))
 	for _, message := range messages {
-		pc.pinnedMessages[channel.ID] = append(pc.pinnedMessages[channel.ID], message.ID)
+		pinnedMessages = append(pinnedMessages, message.ID)
 	}
+	pc.pinnedMessages.Lock()
+	pc.pinnedMessages.M[channel.ID] = pinnedMessages
+	pc.pinnedMessages.Unlock()
 }
 
 func (pc *PinMoveCommand) newPinChannel(newPinChannelUid string, server db.Server, pack *CommPackage) error {
@@ -182,6 +203,10 @@ func togglePin(sourceChannelUid string, enableTextPins bool, server db.Server, p
 }
 
 func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.ChannelPinsUpdate) {
+	if !pc.ready {
+		log.Println("Pinmove is still loading, exiting pin handler")
+		return
+	}
 	channel, err := session.Channel(pinsUpdate.ChannelID)
 	if err != nil {
 		log.Println("Error while retrieving channel by UID", err)
@@ -251,12 +276,16 @@ func (pc *PinMoveCommand) getUpdatePinnedMessages(session *discordgo.Session, ch
 		}
 		messagesId = append(messagesId, m.ID)
 	}
-	pc.pinnedMessages[channelId] = messagesId //refreshes pinned messages in case of messages removed from pins
+	pc.pinnedMessages.Lock()
+	pc.pinnedMessages.M[channelId] = messagesId //refreshes pinned messages in case of messages removed from pins
+	pc.pinnedMessages.Unlock()
 	return result, nil
 }
 
 func (pc *PinMoveCommand) pinnedMessageAlreadyLoaded(messageId string, channelId string) bool {
-	for _, m := range pc.pinnedMessages[channelId] {
+	defer pc.pinnedMessages.RUnlock()
+	pc.pinnedMessages.RLock()
+	for _, m := range pc.pinnedMessages.M[channelId] {
 		if messageId == m {
 			return true
 		}
