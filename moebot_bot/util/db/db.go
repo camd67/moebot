@@ -44,7 +44,7 @@ func createTables() {
 	userCreateTable()
 	userServerRankCreateTable()
 	// ROLE
-	moeDb.Exec(roleTable)
+	roleCreateTable()
 	// CHANNEL
 	channelCreateTable()
 	// RAFFLE ENTRY

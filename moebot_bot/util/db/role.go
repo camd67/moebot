@@ -37,11 +37,13 @@ const (
 )
 
 type Role struct {
-	Id         int
-	ServerId   int
-	RoleUid    string
-	Permission Permission
-	RoleType   RoleType
+	Id                         int
+	ServerId                   int
+	RoleUid                    string
+	Permission                 Permission
+	RoleType                   RoleType
+	ConfirmationMessage        string
+	ConfirmationSecurityAnswer string
 }
 
 const (
@@ -50,20 +52,29 @@ const (
 		ServerId INTEGER REFERENCES server(Id) ON DELETE CASCADE,
 		RoleUid VARCHAR(20) NOT NULL UNIQUE,
 		Permission SMALLINT NOT NULL,
-		RoleType SMALLINT NOT NULL
+		RoleType SMALLINT NOT NULL,
+		ConfirmationMessage VARCHAR,
+		ConfirmationSecurityAnswer VARCHAR
 	)`
 
-	roleQueryServerRole  = `SELECT Id, ServerId, RoleUid, Permission, RoleType FROM role WHERE ServerId = $1 AND RoleUid = $2`
-	roleQuery            = `SELECT Id, ServerId, RoleUid, Permission, RoleType FROM role WHERE Id = $1`
+	roleQueryServerRole  = `SELECT Id, ServerId, RoleUid, Permission, RoleType, ConfirmationMessage, ConfirmationSecurityAnswer FROM role WHERE ServerId = $1 AND RoleUid = $2`
+	roleQuery            = `SELECT Id, ServerId, RoleUid, Permission, RoleType, ConfirmationMessage, ConfirmationSecurityAnswer FROM role WHERE Id = $1`
 	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
 	roleUpdate           = `UPDATE role SET Permission = $1, RoleType = $2 WHERE Id = $3`
 	roleInsert           = `INSERT INTO role(ServerId, RoleUid, Permission, RoleType) VALUES($1, $2, $3, $4) RETURNING id`
 )
 
+var (
+	roleUpdateTable = []string{
+		`ALTER TABLE role ADD COLUMN IF NOT EXISTS ConfirmationMessage VARCHAR`,
+		`ALTER TABLE role ADD COLUMN IF NOT EXISTS ConfirmationSecurityAnswer VARCHAR`,
+	}
+)
+
 func RoleInsertOrUpdate(role Role) error {
 	row := moeDb.QueryRow(roleQueryServerRole, role.ServerId, role.RoleUid)
 	var r Role
-	if err := row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.RoleType); err != nil {
+	if err := row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.RoleType, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer); err != nil {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			if role.Permission == -1 {
@@ -97,7 +108,7 @@ func RoleInsertOrUpdate(role Role) error {
 
 func RoleQueryOrInsert(role Role) (r Role, err error) {
 	row := moeDb.QueryRow(roleQueryServerRole, role.ServerId, role.RoleUid)
-	if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.RoleType); err != nil {
+	if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.RoleType, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer); err != nil {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			if role.Permission == -1 {
@@ -165,5 +176,20 @@ func SprintPermission(p Permission) string {
 		return "Master"
 	default:
 		return "Unknown"
+	}
+}
+
+func roleCreateTable() {
+	_, err := moeDb.Exec(roleTable)
+	if err != nil {
+		log.Println("Error creating server table", err)
+		return
+	}
+	for _, alter := range roleUpdateTable {
+		_, err = moeDb.Exec(alter)
+		if err != nil {
+			log.Println("Error alterting server table", err)
+			return
+		}
 	}
 }

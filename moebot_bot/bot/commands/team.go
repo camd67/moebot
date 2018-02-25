@@ -4,10 +4,12 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
-type TeamCommand struct{}
+type TeamCommand struct {
+	Handler *RoleHandler
+}
 
 func (tc *TeamCommand) Execute(pack *CommPackage) {
-	processGuildRole([]string{"Nanachi", "Ozen", "Bondrewd", "Reg", "Riko", "Maruruk"}, pack.session, pack.params, pack.channel, pack.guild, pack.message, false)
+	tc.Handler.processGuildRole([]string{"Nanachi", "Ozen", "Bondrewd", "Reg", "Riko", "Maruruk"}, pack.session, pack.params, pack.channel, pack.guild, pack.message, false, "team")
 }
 
 func (tc *TeamCommand) GetPermLevel() db.Permission {

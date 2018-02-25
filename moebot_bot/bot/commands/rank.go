@@ -4,10 +4,11 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
-type RankCommand struct{}
-
+type RankCommand struct{
+	Handler *RoleHandler
+}
 func (rc *RankCommand) Execute(pack *CommPackage) {
-	processGuildRole([]string{"Red", "Blue"}, pack.session, pack.params, pack.channel, pack.guild, pack.message, true)
+	rc.Handler.processGuildRole([]string{"Red", "Blue"}, pack.session, pack.params, pack.channel, pack.guild, pack.message, true, "rank")
 }
 
 func (rc *RankCommand) GetPermLevel() db.Permission {

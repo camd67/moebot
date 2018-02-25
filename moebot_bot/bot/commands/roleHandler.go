@@ -1,18 +1,25 @@
 package commands
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"log"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
+	"github.com/camd67/moebot/moebot_bot/util/db"
 )
+
+type RoleHandler struct {
+	ComPrefix string
+}
 
 /*
 Processes a guild role based on a list of allowed role names, and a requested role.
 If StrictRole is true then the first role in the list of allowed roles is used if all roles are removed.
 */
-func processGuildRole(allowedRoles []string, session *discordgo.Session, params []string, channel *discordgo.Channel, guild *discordgo.Guild, message *discordgo.Message, strictRole bool) {
+func (r *RoleHandler) processGuildRole(allowedRoles []string, session *discordgo.Session, params []string, channel *discordgo.Channel, guild *discordgo.Guild, message *discordgo.Message, strictRole bool, sourceCommand string) {
 	if len(params) == 0 || !util.StrContains(allowedRoles, params[0], util.CaseInsensitive) {
 		session.ChannelMessageSend(channel.ID, message.Author.Mention()+" please provide one of the approved roles: "+strings.Join(allowedRoles, ", ")+". Did you perhaps mean `team` or `rank`?")
 		return
@@ -48,7 +55,33 @@ func processGuildRole(allowedRoles []string, session *discordgo.Session, params 
 		session.ChannelMessageSend(channel.ID, "You've already got that role! You can change roles but can't remove them with this command.")
 		return
 	}
-	removeAllRoles(session, guildMember, allRolesToChange, guild)
+	dbServer, err := db.ServerQueryOrInsert(guild.ID)
+	if err != nil {
+		log.Println("There was a problem querying or inserting the server", err)
+		session.ChannelMessageSend(channel.ID, "Sorry, there was a problem retrieving server details, please try again.")
+		return
+	}
+	dbRole, err := db.RoleQueryOrInsert(db.Role{
+		ServerId: dbServer.Id,
+		RoleUid:  roleToAdd.ID,
+	})
+
+	if dbRole.ConfirmationMessage != "" && !util.StrContains(memberRoles, roleToAdd.ID, util.CaseSensitive) {
+		if len(params) == 1 {
+			r.sendConfirmationMessage(session, channel, dbRole, message.Author)
+			return
+		}
+		if len(params) != 3 {
+			session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role. Use `"+r.ComPrefix+" "+sourceCommand+"` to receive a DM containing detailed instructions.")
+			return
+		}
+		if params[1] != dbRole.ConfirmationSecurityAnswer || params[2] != r.getRoleCode(roleToAdd.ID, message.Author.ID) {
+			session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role.")
+			return
+		}
+	}
+
+	r.removeAllRoles(session, guildMember, allRolesToChange, guild)
 	if util.StrContains(memberRoles, roleToAdd.ID, util.CaseSensitive) {
 		session.GuildMemberRoleRemove(guild.ID, message.Author.ID, roleToAdd.ID)
 		session.ChannelMessageSend(channel.ID, "Removed role: "+roleToAdd.Name+" for "+message.Author.Mention())
@@ -60,10 +93,24 @@ func processGuildRole(allowedRoles []string, session *discordgo.Session, params 
 	}
 }
 
-func removeAllRoles(session *discordgo.Session, member *discordgo.Member, rolesToRemove []string, guild *discordgo.Guild) {
+func (r *RoleHandler) removeAllRoles(session *discordgo.Session, member *discordgo.Member, rolesToRemove []string, guild *discordgo.Guild) {
 	for _, roleToCheck := range rolesToRemove {
 		if util.StrContains(member.Roles, roleToCheck, util.CaseSensitive) {
 			session.GuildMemberRoleRemove(guild.ID, member.User.ID, roleToCheck)
 		}
 	}
+}
+
+func (r *RoleHandler) sendConfirmationMessage(session *discordgo.Session, channel *discordgo.Channel, role db.Role, user *discordgo.User) {
+	userChannel, err := session.UserChannelCreate(user.ID)
+	if err != nil {
+		session.ChannelMessageSend(channel.ID, "Sorry, could not create a private message session. Please check your settings to allow direct messages from users on this server.")
+	}
+	session.ChannelMessageSend(userChannel.ID, fmt.Sprintf(role.ConfirmationMessage, r.getRoleCode(role.RoleUid, user.ID)))
+}
+
+func (r *RoleHandler) getRoleCode(roleUID, userUID string) string {
+	hash := sha256.New()
+	hash.Write([]byte(roleUID + userUID))
+	return string(fmt.Sprintf("%x", hash.Sum(nil))[0:6])
 }
