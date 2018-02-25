@@ -69,6 +69,7 @@ func (r *RoleHandler) processGuildRole(allowedRoles []string, session *discordgo
 	if dbRole.ConfirmationMessage != "" && !util.StrContains(memberRoles, roleToAdd.ID, util.CaseSensitive) {
 		if len(params) == 1 {
 			r.sendConfirmationMessage(session, channel, dbRole, message.Author)
+			session.ChannelMessageSend(channel.ID, message.Author.Mention()+" check your DM's for further instructions!")
 			return
 		}
 		if len(params) != 3 {
