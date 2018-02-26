@@ -70,15 +70,23 @@ func convertRankToString(rank int, serverMax sql.NullInt64) (rankString string) 
 	} else {
 		rankPrefixes[rankPrefixIndex] = util.MakeStringBold(rankPrefixes[rankPrefixIndex])
 	}
+	return convertToEmphasizedRankString(rankPrefixes, rankPrefixIndex, rankSeparator)
+}
+
+/**
+Converts an array of strings to an emphasized string, currently used only for ranks. Looks like:
+~element1~,**element2**, element3, element4
+*/
+func convertToEmphasizedRankString(ranks []string, indexToApply int, sep string) string {
 	var s string
-	for index, rankString := range rankPrefixes {
-		if index < rankPrefixIndex {
+	for index, rankString := range ranks {
+		if index < indexToApply {
 			s += util.MakeStringStrikethrough(rankString)
 		} else {
 			s += rankString
 		}
-		if index < len(rankPrefixes)-1 {
-			s += rankSeparator
+		if index < len(ranks)-1 {
+			s += sep
 		}
 	}
 	return s
