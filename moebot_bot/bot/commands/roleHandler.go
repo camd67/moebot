@@ -68,12 +68,17 @@ func (r *RoleHandler) processGuildRole(allowedRoles []string, session *discordgo
 
 	if dbRole.ConfirmationMessage != "" && !util.StrContains(memberRoles, roleToAdd.ID, util.CaseSensitive) {
 		if len(params) == 1 {
-			r.sendConfirmationMessage(session, channel, dbRole, message.Author)
-			session.ChannelMessageSend(channel.ID, message.Author.Mention()+" check your DM's for further instructions!")
+			err = r.sendConfirmationMessage(session, channel, dbRole, message.Author)
+			if err != nil {
+				session.ChannelMessageSend(channel.ID, message.Author.Mention()+" check your PM's for further instructions!")
+			} else {
+				session.ChannelMessageSend(channel.ID, "Sorry, I couldn't send you a PM! Please check your settings to allow direct messages from users on this server.")
+			}
 			return
 		}
 		if len(params) != 3 {
-			session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role. Use `"+r.ComPrefix+" "+sourceCommand+"` to receive a DM containing detailed instructions.")
+			session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role. Use `"+r.ComPrefix+" "+
+				sourceCommand+"` to receive a DM containing detailed instructions.")
 			return
 		}
 		if params[1] != dbRole.ConfirmationSecurityAnswer || params[2] != r.getRoleCode(roleToAdd.ID, message.Author.ID) {
@@ -102,12 +107,14 @@ func (r *RoleHandler) removeAllRoles(session *discordgo.Session, member *discord
 	}
 }
 
-func (r *RoleHandler) sendConfirmationMessage(session *discordgo.Session, channel *discordgo.Channel, role db.Role, user *discordgo.User) {
+func (r *RoleHandler) sendConfirmationMessage(session *discordgo.Session, channel *discordgo.Channel, role db.Role, user *discordgo.User) error {
 	userChannel, err := session.UserChannelCreate(user.ID)
 	if err != nil {
-		session.ChannelMessageSend(channel.ID, "Sorry, could not create a private message session. Please check your settings to allow direct messages from users on this server.")
+		// could log error creating user channel, but seems like it'll clutter the logs for a valid scenario..
+		return err
 	}
-	session.ChannelMessageSend(userChannel.ID, fmt.Sprintf(role.ConfirmationMessage, r.getRoleCode(role.RoleUid, user.ID)))
+	_, err = session.ChannelMessageSend(userChannel.ID, fmt.Sprintf(role.ConfirmationMessage, r.getRoleCode(role.RoleUid, user.ID)))
+	return err
 }
 
 func (r *RoleHandler) getRoleCode(roleUID, userUID string) string {
