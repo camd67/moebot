@@ -42,8 +42,8 @@ type Role struct {
 	RoleUid                    string
 	Permission                 Permission
 	RoleType                   RoleType
-	ConfirmationMessage        string
-	ConfirmationSecurityAnswer string
+	ConfirmationMessage        sql.NullString
+	ConfirmationSecurityAnswer sql.NullString
 }
 
 const (
@@ -60,8 +60,8 @@ const (
 	roleQueryServerRole  = `SELECT Id, ServerId, RoleUid, Permission, RoleType, ConfirmationMessage, ConfirmationSecurityAnswer FROM role WHERE ServerId = $1 AND RoleUid = $2`
 	roleQuery            = `SELECT Id, ServerId, RoleUid, Permission, RoleType, ConfirmationMessage, ConfirmationSecurityAnswer FROM role WHERE Id = $1`
 	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
-	roleUpdate           = `UPDATE role SET Permission = $1, RoleType = $2 WHERE Id = $3`
-	roleInsert           = `INSERT INTO role(ServerId, RoleUid, Permission, RoleType) VALUES($1, $2, $3, $4) RETURNING id`
+	roleUpdate           = `UPDATE role SET Permission = $1, RoleType = $2, ConfirmationMessage = $3, ConfirmationSecurityAnswer = $4 WHERE Id = $5`
+	roleInsert           = `INSERT INTO role(ServerId, RoleUid, Permission, RoleType, ConfirmationMessage, ConfirmationSecurityAnswer) VALUES($1, $2, $3, $4, $5, $6) RETURNING id`
 )
 
 var (
@@ -83,7 +83,7 @@ func RoleInsertOrUpdate(role Role) error {
 			if role.RoleType == -1 {
 				role.RoleType = RoleNone
 			}
-			_, err = moeDb.Exec(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.RoleType)
+			_, err = moeDb.Exec(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.RoleType, role.ConfirmationMessage, role.ConfirmationSecurityAnswer)
 			if err != nil {
 				log.Println("Error inserting role to db")
 				return err
@@ -97,7 +97,13 @@ func RoleInsertOrUpdate(role Role) error {
 		if role.RoleType != -1 {
 			r.RoleType = role.RoleType
 		}
-		_, err = moeDb.Exec(roleUpdate, r.Permission, r.RoleType, r.Id)
+		if role.ConfirmationMessage.Valid {
+			r.ConfirmationMessage = role.ConfirmationMessage
+		}
+		if role.ConfirmationSecurityAnswer.Valid {
+			r.ConfirmationSecurityAnswer = role.ConfirmationSecurityAnswer
+		}
+		_, err = moeDb.Exec(roleUpdate, r.Permission, r.RoleType, r.ConfirmationMessage, r.ConfirmationSecurityAnswer, r.Id)
 		if err != nil {
 			log.Println("Error updating role to db: Id - " + strconv.Itoa(r.Id))
 			return err
@@ -118,13 +124,13 @@ func RoleQueryOrInsert(role Role) (r Role, err error) {
 				role.RoleType = RoleNone
 			}
 			var insertId int
-			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.RoleType).Scan(&insertId)
+			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.RoleType, role.ConfirmationMessage, role.ConfirmationSecurityAnswer).Scan(&insertId)
 			if err != nil {
 				log.Println("Error inserting role to db")
 				return
 			}
 			row := moeDb.QueryRow(roleQuery, insertId)
-			if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.RoleType); err != nil {
+			if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.RoleType, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer); err != nil {
 				log.Println("Failed to read the newly inserted Role row. This should pretty much never happen...", err)
 				return Role{}, err
 			}
