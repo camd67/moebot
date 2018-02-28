@@ -76,6 +76,7 @@ func (r *RoleHandler) processGuildRole(allowedRoles []string, session *discordgo
 			}
 			return
 		}
+		session.ChannelMessageDelete(channel.ID, message.ID)
 		if len(params) != 3 {
 			session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role. Use `"+r.ComPrefix+" "+
 				sourceCommand+"` to receive a DM containing detailed instructions.")
