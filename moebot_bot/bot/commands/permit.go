@@ -11,18 +11,42 @@ type PermitCommand struct {
 }
 
 func (pc *PermitCommand) Execute(pack *CommPackage) {
-	// should always have more than 2 params: permission level, role name ... role name
-	if len(pack.params) < 2 {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a permission level followed by the role name")
+	args := ParseCommand(strings.Join(pack.params, " "), []string{"-permission", "-securityAnswer", "-confirmationMessage"})
+
+	if _, ok := args[""]; !ok || len(args) <= 1 {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a role name followed by one or more arguments.")
 		return
 	}
-	permLevel := db.GetPermissionFromString(pack.params[0])
-	if permLevel == -1 {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Invalid permission level")
-		return
+
+	role := db.Role{}
+
+	if perm, ok := args["-permission"]; ok {
+		permLevel := db.GetPermissionFromString(perm)
+		if permLevel == -1 {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Invalid permission level")
+			return
+		}
+		role.Permission = permLevel
 	}
+
+	if sa, ok := args["-securityAnswer"]; ok {
+		if sa == "" {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid security answer")
+			return
+		}
+		role.ConfirmationSecurityAnswer.Scan(sa)
+	}
+
+	if message, ok := args["-confirmationMessage"]; ok {
+		if message == "" {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid confirmation message")
+			return
+		}
+		role.ConfirmationMessage.Scan(message)
+	}
+
 	// find the correct role
-	roleName := strings.Join(pack.params[1:], " ")
+	roleName := args[""]
 	r := util.FindRoleByName(pack.guild.Roles, roleName)
 	if r == nil {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Unknown role name")
@@ -34,12 +58,10 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Error retrieving server information")
 		return
 	}
-	db.RoleInsertOrUpdate(db.Role{
-		ServerId:   s.Id,
-		RoleUid:    r.ID,
-		Permission: permLevel,
-	})
-	pack.session.ChannelMessageSend(pack.channel.ID, "Set permission ("+db.SprintPermission(permLevel)+") level for role "+roleName)
+	role.ServerId = s.Id
+	role.RoleUid = r.ID
+	db.RoleInsertOrUpdate(role)
+	pack.session.ChannelMessageSend(pack.channel.ID, "Edited role "+roleName+" successfully")
 }
 
 func (pc *PermitCommand) GetPermLevel() db.Permission {

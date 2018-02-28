@@ -35,11 +35,12 @@ func SetupMoebot(session *discordgo.Session) {
 }
 
 func setupOperations(session *discordgo.Session) {
+	roleHandler := &commands.RoleHandler{ComPrefix: ComPrefix}
 	operations = []interface{}{
-		&commands.TeamCommand{},
+		&commands.TeamCommand{Handler: roleHandler},
 		&commands.RoleCommand{},
-		&commands.RankCommand{},
-		&commands.NsfwCommand{},
+		&commands.RankCommand{Handler: roleHandler},
+		&commands.NsfwCommand{Handler: roleHandler},
 		&commands.HelpCommand{ComPrefix: ComPrefix},
 		&commands.ChangelogCommand{Version: version},
 		&commands.RaffleCommand{MasterId: masterId, DebugChannel: Config["debugChannel"]},
