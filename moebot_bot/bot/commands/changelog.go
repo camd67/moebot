@@ -17,6 +17,10 @@ const changeLogPrefix = "\n`->` "
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
 
+	"0.3.2": changeLogPrefix + "More code cleanup" +
+		changeLogPrefix + "Removed spoiler command (thanks discord)" +
+		changeLogPrefix + "Added verifiable roles (Credit: Shadran)",
+
 	"0.3.1": changeLogPrefix + "Code cleanup/refactor" +
 		changeLogPrefix + "Updated veteran rank handling",
 
