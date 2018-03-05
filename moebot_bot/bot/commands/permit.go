@@ -20,7 +20,7 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 
 	role := db.Role{}
 
-	if perm, ok := args["-permission"]; ok {
+	if perm, ok := args["-permission"]; ok && perm != "" {
 		permLevel := db.GetPermissionFromString(perm)
 		if permLevel == -1 {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Invalid permission level")
@@ -30,18 +30,10 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 	}
 
 	if sa, ok := args["-securityAnswer"]; ok {
-		if sa == "" {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid security answer")
-			return
-		}
 		role.ConfirmationSecurityAnswer.Scan(sa)
 	}
 
 	if message, ok := args["-confirmationMessage"]; ok {
-		if message == "" {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid confirmation message")
-			return
-		}
 		role.ConfirmationMessage.Scan(message)
 	}
 
