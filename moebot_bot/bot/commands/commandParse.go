@@ -10,7 +10,7 @@ func ParseCommand(commandLine string, arguments []string) map[string]string {
 	var currentCommand, currentCommandContent string
 	for i, s := range slicedCommand {
 		if isArgument(s, arguments) {
-			if currentCommandContent != "" {
+			if currentCommand != "" || currentCommandContent != "" {
 				result[currentCommand] = currentCommandContent
 			}
 			currentCommand = s
@@ -21,9 +21,9 @@ func ParseCommand(commandLine string, arguments []string) map[string]string {
 			} else {
 				currentCommandContent += " " + s
 			}
-			if i == len(slicedCommand)-1 && currentCommandContent != "" {
-				result[currentCommand] = currentCommandContent
-			}
+		}
+		if i == len(slicedCommand)-1 && (currentCommand != "" || currentCommandContent != "") {
+			result[currentCommand] = currentCommandContent
 		}
 	}
 	return result

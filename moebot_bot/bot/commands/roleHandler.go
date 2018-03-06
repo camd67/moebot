@@ -77,17 +77,23 @@ func (r *RoleHandler) processGuildRole(allowedRoles []string, session *discordgo
 			return
 		}
 		session.ChannelMessageDelete(channel.ID, message.ID)
-		if len(params) != 3 {
-			session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role. Use `"+r.ComPrefix+" "+
-				sourceCommand+"` to receive a DM containing detailed instructions.")
-			return
-		}
+
 		if dbRole.ConfirmationSecurityAnswer.Valid && dbRole.ConfirmationSecurityAnswer.String != "" {
+			if len(params) != 3 {
+				session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code and security answer to access this role. Use `"+r.ComPrefix+" "+
+					sourceCommand+"` to receive a DM containing detailed instructions.")
+				return
+			}
 			if params[1] != dbRole.ConfirmationSecurityAnswer.String || params[2] != r.getRoleCode(roleToAdd.ID, message.Author.ID) {
 				session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role.")
 				return
 			}
 		} else {
+			if len(params) != 2 {
+				session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role. Use `"+r.ComPrefix+" "+
+					sourceCommand+"` to receive a DM containing detailed instructions.")
+				return
+			}
 			if params[1] != r.getRoleCode(roleToAdd.ID, message.Author.ID) {
 				session.ChannelMessageSend(channel.ID, "Sorry, you need to insert the correct confirmation code to access this role.")
 				return

@@ -24,6 +24,8 @@ func TestCommandParser_ParseCommand(t *testing.T) {
 		[]testArgs{{"-arg1", "test arg1 multiple words"}, {"-arg2", "test2 hi there"}},
 		[]testArgs{{"-arg1", "test1 test aaa"}},
 		[]testArgs{{"", "test"}, {"-arg1", "test\r\nwith\r\nlinebreak"}},
+		[]testArgs{{"-argEmpty", ""}},
+		[]testArgs{{"", "test"}, {"-argEmpty", ""}},
 	}
 	checks := []checkType{}
 	for _, m := range resultMaps {
@@ -31,7 +33,16 @@ func TestCommandParser_ParseCommand(t *testing.T) {
 		check.expected = make(map[string]string)
 		for _, ts := range m {
 			if ts.argName != "" {
-				check.test += " " + ts.argName + " " + ts.value
+				if check.test != "" {
+					check.test += " "
+				}
+				check.test += ts.argName
+				if ts.value != "" {
+					if check.test != "" {
+						check.test += " "
+					}
+					check.test += ts.value
+				}
 				check.testArgs = append(check.testArgs, ts.argName)
 			} else {
 				check.test += ts.value

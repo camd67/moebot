@@ -82,12 +82,7 @@ func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
 			return
 		}
 		log.Println("Number of guilds: " + strconv.Itoa(len(guilds)))
-		var wg sync.WaitGroup
-		for _, guild := range guilds {
-			wg.Add(1)
-			go pc.loadGuild(session, guild, &wg)
-		}
-		go pc.waitLoading(&wg)
+		go pc.loadGuilds(session, guilds)
 	} else {
 		log.Println("!!! WARNING !!! Skipping loading pins. NOTE: this will break the ability to use the pin move command")
 	}
@@ -97,13 +92,14 @@ func (pc *PinMoveCommand) EventHandlers() []interface{} {
 	return []interface{}{pc.channelMovePinsUpdate}
 }
 
-func (pc *PinMoveCommand) waitLoading(wg *sync.WaitGroup) {
-	wg.Wait()
+func (pc *PinMoveCommand) loadGuilds(session *discordgo.Session, guilds []*discordgo.UserGuild) {
+	for _, guild := range guilds {
+		pc.loadGuild(session, guild)
+	}
 	pc.ready = true
 }
 
-func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.UserGuild, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo.UserGuild) {
 	server, err := db.ServerQueryOrInsert(guild.ID)
 	if err != nil {
 		log.Println("Error creating/retrieving server during loading", err)
