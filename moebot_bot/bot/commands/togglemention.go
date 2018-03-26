@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -57,4 +58,8 @@ func (mc *MentionCommand) GetPermLevel() db.Permission {
 
 func (mc *MentionCommand) GetCommandKeys() []string {
 	return []string{"TOGGLEMENTION"}
+}
+
+func (c *MentionCommand) GetCommandHelp(commPrefix string) string {
+	return fmt.Sprintf("`%[1]s togglemention <role name>` enables/disables mentioning the selected role for 5 minutes", commPrefix)
 }

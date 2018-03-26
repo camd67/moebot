@@ -247,3 +247,7 @@ func (rc *RaffleCommand) GetPermLevel() db.Permission {
 func (rc *RaffleCommand) GetCommandKeys() []string {
 	return []string{"RAFFLE"}
 }
+
+func (c *RaffleCommand) GetCommandHelp(commPrefix string) string {
+	return ""
+}

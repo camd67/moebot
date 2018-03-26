@@ -18,6 +18,7 @@ type Command interface {
 	Execute(pack *CommPackage)
 	GetPermLevel() db.Permission
 	GetCommandKeys() []string
+	GetCommandHelp(commPrefix string) string
 }
 
 type EventHandler interface {

@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -19,4 +21,8 @@ func (nc *NsfwCommand) GetPermLevel() db.Permission {
 
 func (nc *NsfwCommand) GetCommandKeys() []string {
 	return []string{"NSFW"}
+}
+
+func (c *NsfwCommand) GetCommandHelp(commPrefix string) string {
+	return fmt.Sprintf("`%[1]s NSFW` - Gives you NSFW channel permissions", commPrefix)
 }

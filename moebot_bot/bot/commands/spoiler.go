@@ -44,3 +44,7 @@ func (sc *SpoilerCommand) GetPermLevel() db.Permission {
 func (sc *SpoilerCommand) GetCommandKeys() []string {
 	return []string{"SPOILER"}
 }
+
+func (c *SpoilerCommand) GetCommandHelp(commPrefix string) string {
+	return ""
+}

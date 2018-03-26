@@ -1,4 +1,4 @@
-package bot
+package permissions
 
 import (
 	"github.com/camd67/moebot/moebot_bot/util/db"
