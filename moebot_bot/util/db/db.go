@@ -10,6 +10,10 @@ import (
 
 var moeDb *sql.DB
 
+const (
+	DbMaxUidLength = 20
+)
+
 /*
 Does all processing related to setting up the database for moebot
 */

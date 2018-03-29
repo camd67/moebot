@@ -1,6 +1,7 @@
 package permissions
 
 import (
+	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -20,7 +21,7 @@ func (p *PermissionChecker) HasPermission(userId string, roles []string, pToChec
 	if pToCheck == db.PermAll {
 		// if everyone can use this command, just allow it
 		return true
-	} else if p.isMaster(userId) {
+	} else if p.IsMaster(userId) {
 		// masters are allowed to do anything
 		return true
 	} else if pToCheck == db.PermNone {
@@ -38,6 +39,10 @@ func (p *PermissionChecker) HasPermission(userId string, roles []string, pToChec
 	return false
 }
 
-func (p *PermissionChecker) isMaster(id string) bool {
-	return id == p.MasterId
+func (p *PermissionChecker) IsGuildOwner(guild *discordgo.Guild, id string) bool {
+	return guild.OwnerID == id
+}
+
+func (p *PermissionChecker) IsMaster(id string) bool {
+	return p.MasterId == id
 }
