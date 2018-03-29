@@ -26,3 +26,7 @@ func (ec *EchoCommand) GetPermLevel() db.Permission {
 func (ec *EchoCommand) GetCommandKeys() []string {
 	return []string{"ECHO"}
 }
+
+func (c *EchoCommand) GetCommandHelp(commPrefix string) string {
+	return ""
+}

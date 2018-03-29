@@ -75,3 +75,7 @@ func (sc *SubmitCommand) GetPermLevel() db.Permission {
 func (sc *SubmitCommand) GetCommandKeys() []string {
 	return []string{"SUBMIT"}
 }
+
+func (c *SubmitCommand) GetCommandHelp(commPrefix string) string {
+	return ""
+}

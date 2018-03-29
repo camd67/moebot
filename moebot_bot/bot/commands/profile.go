@@ -2,6 +2,7 @@ package commands
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -98,4 +99,8 @@ func (pc *ProfileCommand) GetPermLevel() db.Permission {
 
 func (pc *ProfileCommand) GetCommandKeys() []string {
 	return []string{"PROFILE"}
+}
+
+func (c *ProfileCommand) GetCommandHelp(commPrefix string) string {
+	return fmt.Sprintf("`%[1]s profile` - Displays your server profile", commPrefix)
 }

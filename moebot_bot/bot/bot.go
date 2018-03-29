@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/bot/commands"
+	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 
@@ -22,7 +23,7 @@ var (
 	Config               = make(map[string]string)
 	operations           []interface{}
 	commandsMap          = make(map[string]commands.Command)
-	checker              PermissionChecker
+	checker              permissions.PermissionChecker
 	masterId             string
 )
 
@@ -31,7 +32,7 @@ func SetupMoebot(session *discordgo.Session) {
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
 	addGlobalHandlers(session)
 	setupOperations(session)
-	checker = PermissionChecker{MasterId: masterId}
+	checker = permissions.PermissionChecker{MasterId: masterId}
 }
 
 func setupOperations(session *discordgo.Session) {
@@ -41,7 +42,7 @@ func setupOperations(session *discordgo.Session) {
 		&commands.RoleCommand{},
 		&commands.RankCommand{Handler: roleHandler},
 		&commands.NsfwCommand{Handler: roleHandler},
-		&commands.HelpCommand{ComPrefix: ComPrefix},
+		&commands.HelpCommand{ComPrefix: ComPrefix, CommandsMap: commandsMap, Checker: checker},
 		&commands.ChangelogCommand{Version: version},
 		&commands.RaffleCommand{MasterId: masterId, DebugChannel: Config["debugChannel"]},
 		&commands.SubmitCommand{ComPrefix: ComPrefix},

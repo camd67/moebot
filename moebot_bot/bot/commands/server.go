@@ -2,6 +2,7 @@ package commands
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -87,4 +88,8 @@ func (sc *ServerCommand) GetPermLevel() db.Permission {
 
 func (sc *ServerCommand) GetCommandKeys() []string {
 	return []string{"SERVER"}
+}
+
+func (c *ServerCommand) GetCommandHelp(commPrefix string) string {
+	return fmt.Sprintf("`%[1]s server <config setting> <value>` - Master/Mod Changes a config setting on the server to a given value. `%[1]s server` to list configs.", commPrefix)
 }
