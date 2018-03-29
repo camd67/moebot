@@ -27,6 +27,9 @@ var (
 	masterId             string
 )
 
+/**
+Run through initial setup steps for Moebot. This is all that's necessary to setup Moebot for use
+*/
 func SetupMoebot(session *discordgo.Session) {
 	masterId = Config["masterId"]
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
@@ -35,6 +38,10 @@ func SetupMoebot(session *discordgo.Session) {
 	checker = permissions.PermissionChecker{MasterId: masterId}
 }
 
+/**
+Create all the operations to handle commands and events within moebot.
+Whenever a new operation, command, or event is added it should be added to this list
+*/
 func setupOperations(session *discordgo.Session) {
 	roleHandler := &commands.RoleHandler{ComPrefix: ComPrefix}
 	operations = []interface{}{
@@ -64,6 +71,9 @@ func setupOperations(session *discordgo.Session) {
 	setupEvents(session)
 }
 
+/**
+Run through each operation and place each command into the command map (including any aliases)
+*/
 func setupCommands() {
 	for _, o := range operations {
 		if command, ok := o.(commands.Command); ok {
@@ -74,6 +84,9 @@ func setupCommands() {
 	}
 }
 
+/**
+Run through each operation and run through any setup steps required by those operations
+*/
 func setupHandlers(session *discordgo.Session) {
 	for _, o := range operations {
 		if setup, ok := o.(commands.SetupHandler); ok {
@@ -82,6 +95,9 @@ func setupHandlers(session *discordgo.Session) {
 	}
 }
 
+/**
+Run through each operation and add a handler for any discord events those operations need
+*/
 func setupEvents(session *discordgo.Session) {
 	for _, o := range operations {
 		if handler, ok := o.(commands.EventHandler); ok {
@@ -92,12 +108,18 @@ func setupEvents(session *discordgo.Session) {
 	}
 }
 
+/**
+These handlers are global for all of moebot such as message creation and ready
+*/
 func addGlobalHandlers(discord *discordgo.Session) {
 	discord.AddHandler(ready)
 	discord.AddHandler(messageCreate)
 	discord.AddHandler(guildMemberAdd)
 }
 
+/**
+Global handler for when new guild members join a discord guild. Typically used to welcome them if the server has enabled it.
+*/
 func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
 	guild, err := session.Guild(member.GuildID)
 	// temp ignore IHG + Salt
@@ -129,6 +151,9 @@ func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd
 	session.GuildMemberRoleAdd(member.GuildID, member.User.ID, starterRole.ID)
 }
 
+/**
+Global handler for when new messages are sent in any guild. The entry point for commands and other general handling
+*/
 func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
 	// bail out if we have any messages we want to ignore such as bot messages
 	if message.Author.ID == session.State.User.ID || message.Author.Bot {
@@ -197,6 +222,9 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 }
 
+/**
+Global handler that is called whenever moebot successfully connects to discord
+*/
 func ready(session *discordgo.Session, event *discordgo.Ready) {
 	status := ComPrefix + " help"
 	err := session.UpdateStatus(0, status)
@@ -206,6 +234,9 @@ func ready(session *discordgo.Session, event *discordgo.Ready) {
 	log.Println("Set moebot's status to", status)
 }
 
+/**
+Helper handler to check if the message provided is a command and if so, executes the command
+*/
 func runCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
 	messageParts := strings.Split(message.Content, " ")
 	if len(messageParts) <= 1 {
