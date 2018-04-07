@@ -61,7 +61,7 @@ func setupOperations(session *discordgo.Session) {
 		&commands.SpoilerCommand{},
 		&commands.PollCommand{PollsHandler: commands.NewPollsHandler()},
 		&commands.MentionCommand{},
-		&commands.ServerCommand{},
+		&commands.ServerCommand{ComPrefix: ComPrefix},
 		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"},
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
@@ -160,8 +160,11 @@ func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd
 		if starterRole == nil {
 			// couldn't find the starter role, try to let them know and then delete the starter role to prevent this error from appearing again
 			if server.BotChannel.Valid {
-				session.ChannelMessageSend(server.BotChannel.String, "Hello, I couldn't find the starter role for this server! Please notify a server admin. "+
-					"Starter role will be removed.")
+				session.ChannelMessageSend(server.WelcomeChannel.String, "Hello, I couldn't find the starter role for this server! "+
+					"Please notify a server admin (Like "+util.UserIdToMention(guild.OwnerID)+") Starter role will be removed.")
+			} else if server.WelcomeChannel.Valid {
+				session.ChannelMessageSend(server.WelcomeChannel.String, "Hello, I couldn't find the starter role for this server! "+
+					"Please notify a server admin (Like "+util.UserIdToMention(guild.OwnerID)+") Starter role will be removed.")
 			}
 			log.Println("ERROR! Unable to find starter role for guild " + guild.Name + ". Deleting starter role.")
 			server.StarterRole.Scan(nil)
@@ -181,6 +184,8 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
+	//I'm guessing this block of code is the cause of our hokago-tea-time issues. Some of these are used just for their IDs while some are used for role checks.
+	// Perhaps we could cache some of the information. Maybe timeout the role cache after 1 minute?
 	channel, err := session.State.Channel(message.ChannelID)
 	if err != nil {
 		// missing channel
@@ -209,7 +214,9 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 
 	// If the server is disabled, then don't allow any message processing
 	// HOWEVER, if the user posting the message is this bot's owner or the guild's owner then let it through so they can enable the server
-	if !server.Enabled && !checker.IsMaster(message.Author.ID) && !checker.IsGuildOwner(guild, message.Author.ID) {
+	isMaster := checker.IsMaster(message.Author.ID)
+	isGuildOwner := checker.IsGuildOwner(guild, message.Author.ID)
+	if !server.Enabled && !isMaster && !isGuildOwner {
 		return
 	}
 
@@ -224,7 +231,10 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		}
 	}
 
-	isNewUser := server.RuleAgreement.Valid && starterRole != nil && util.StrContains(member.Roles, starterRole.ID, util.CaseSensitive)
+	// Check if this user is a new user. This will determine what they can/can't do on the server.
+	// Masters and guild owners are never a new user
+	isNewUser := !isMaster && !isGuildOwner && server.RuleAgreement.Valid && starterRole != nil &&
+		util.StrContains(member.Roles, starterRole.ID, util.CaseSensitive)
 
 	if strings.HasPrefix(message.Content, ComPrefix) {
 		// todo: [rate-limit-spam] should add a check here for command spam
@@ -233,6 +243,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			// if a starter role requested a command and the server has rule agreements, let them know they can't do that
 			session.ChannelMessageSend(channel.ID, "Sorry "+message.Author.Mention()+", but you have to agree to the rules first to use bot commands! "+
 				"Check the rules channel or ask an admin for more info.")
+			// We don't need to process anything else since by typing a bot command they couldn't type a rule confirmation
 			return
 		}
 		runCommand(session, message.Message, guild, channel, member)
@@ -244,7 +255,12 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			if baseRole == nil {
 				// Server only had a partial setup (rule agreement + starter role but no base role)
 				session.ChannelMessageSend(channel.ID, "Hey... this is awkward... It seems like this server's admins setup a rule agreement but no base role. "+
-					"Please let them know!")
+					"Please notify a server admin (Like "+util.UserIdToMention(guild.OwnerID)+") Rule agreement will now be removed.")
+				server.RuleAgreement.Scan(nil)
+				err = db.ServerFullUpdate(server)
+				if err != nil {
+					log.Println("Error updateing server", err)
+				}
 				return
 			}
 			session.ChannelMessageSend(message.ChannelID, "Welcome "+message.Author.Mention()+"! We hope you enjoy your stay in our Discord server!")

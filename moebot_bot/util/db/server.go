@@ -49,13 +49,14 @@ const (
 		BaseRole VARCHAR(20)
 	)`
 
-	serverColumnNames  = `Id, GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel, Enabled, WelcomeChannel, StarterRole, BaseRole`
-	serverColumnParams = `$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12`
-	serverSetParams    = `WelcomeMessage = $2, RuleAgreement = $3, VeteranRank = $4, VeteranRole = $5, DefaultPinChannelId = $6, BotChannel = $7, Enabled = $8, StarterRole = $9, BaseRole = $10`
+	serverColumnNames        = `GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel, Enabled, WelcomeChannel, StarterRole, BaseRole`
+	serverInsertColumnNames  = `GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel, WelcomeChannel, StarterRole, BaseRole`
+	serverInsertColumnParams = `$1, $2, $3, $4, $5, $6, $7, $8, $9, $10`
+	serverSetParams          = `WelcomeMessage = $2, RuleAgreement = $3, VeteranRank = $4, VeteranRole = $5, DefaultPinChannelId = $6, BotChannel = $7, Enabled = $8, StarterRole = $9, BaseRole = $10, WelcomeChannel = $11`
 
-	serverQuery                = `SELECT ` + serverColumnNames + ` FROM server WHERE Id = $1`
-	serverQueryGuild           = `SELECT ` + serverColumnNames + ` FROM server WHERE GuildUid = $1`
-	serverInsert               = `INSERT INTO server(` + serverColumnNames + `) VALUES (` + serverColumnParams + `) RETURNING id`
+	serverQuery                = `SELECT Id, ` + serverColumnNames + ` FROM server WHERE Id = $1`
+	serverQueryGuild           = `SELECT Id, ` + serverColumnNames + ` FROM server WHERE GuildUid = $1`
+	serverInsert               = `INSERT INTO server(` + serverInsertColumnNames + `) VALUES (` + serverInsertColumnParams + `) RETURNING id`
 	serverUpdate               = `UPDATE server SET ` + serverSetParams + ` WHERE Id = $1`
 	serverSetDefaultPinChannel = `UPDATE server SET DefaultPinChannelId = $1 WHERE Id = $2`
 )
@@ -68,7 +69,7 @@ var (
 		`ALTER TABLE server DROP CONSTRAINT IF EXISTS server_defaultpinchannelid_fkey`,
 		`ALTER TABLE server ADD CONSTRAINT server_defaultpinchannelid_fkey FOREIGN KEY (DefaultPinChannelId) REFERENCES channel(Id)`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS BotChannel VARCHAR(20)`,
-		`ALTER TABLE server ADD COLUMN IF NOT EXISTS Enabled BOOLEAN NOT NULL DEFAULT FALSE`,
+		`ALTER TABLE server ADD COLUMN IF NOT EXISTS Enabled BOOLEAN NOT NULL DEFAULT TRUE`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS WelcomeChannel VARCHAR(20)`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS StarterRole VARCHAR(20)`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS BaseRole VARCHAR(20)`,
@@ -93,8 +94,8 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 			// no row, so insert it add in default values
 			toInsert := Server{GuildUid: guildUid}
 			var insertId int
-			e = moeDb.QueryRow(serverInsert, toInsert.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole,
-				&s.DefaultPinChannelId, &s.BotChannel, &s.Enabled, &s.WelcomeChannel, &s.StarterRole, &s.BaseRole).Scan(&insertId)
+			e = moeDb.QueryRow(serverInsert, &toInsert.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole,
+				&s.DefaultPinChannelId, &s.BotChannel, &s.WelcomeChannel, &s.StarterRole, &s.BaseRole).Scan(&insertId)
 			if e != nil {
 				log.Println("Error inserting role to db ", e)
 				return Server{}, e
@@ -124,73 +125,74 @@ func ServerSprint(s Server) (out string) {
 	var buf bytes.Buffer
 	buf.WriteString("Server: ")
 	if s.WelcomeMessage.Valid {
-		buf.WriteString("{WelcomeMessage: ")
-		buf.WriteString(s.WelcomeMessage.String[0:15])
-		if len(s.WelcomeMessage.String) > 15 {
-			buf.WriteString("...}")
+		buf.WriteString("{WelcomeMessage: `")
+		if len(s.WelcomeMessage.String) > 25 {
+			buf.WriteString(s.WelcomeMessage.String[0:25])
+			buf.WriteString("...")
 		} else {
-			buf.WriteString("}")
+			buf.WriteString(s.WelcomeMessage.String)
 		}
-		buf.WriteString("}")
+		buf.WriteString("`}")
 	}
 	if s.WelcomeChannel.Valid {
 		if !s.WelcomeMessage.Valid {
-			buf.WriteString("{MISCONFIG: welcome channel but no message!}")
+			buf.WriteString("{!!! MISCONFIG !!!: `welcome channel but no message!`}")
 		}
-		buf.WriteString("{WelcomeChannel:")
+		buf.WriteString("{WelcomeChannel: `")
 		buf.WriteString(s.WelcomeChannel.String)
-		buf.WriteString("}")
+		buf.WriteString("`}")
 	} else {
 		if s.WelcomeMessage.Valid {
-			buf.WriteString("{WelcomeChannel: Sent via DM}")
+			buf.WriteString("{WelcomeChannel: `Sent via DM`}")
 		}
 	}
 	if s.RuleAgreement.Valid {
-		buf.WriteString("{RuleAgreement:")
-		buf.WriteString(s.RuleAgreement.String[0:15])
-		if len(s.RuleAgreement.String) > 15 {
-			buf.WriteString("...}")
+		buf.WriteString("{RuleAgreement: `")
+		if len(s.RuleAgreement.String) > 25 {
+			buf.WriteString(s.RuleAgreement.String[0:25])
+			buf.WriteString("...")
 		} else {
-			buf.WriteString("}")
+			buf.WriteString(s.RuleAgreement.String)
 		}
+		buf.WriteString("`}")
 		if !s.BaseRole.Valid {
-			buf.WriteString("{MISCONFIG: Rule agreement found but no base role set}")
+			buf.WriteString("{!!! MISCONFIG !!!: `Rule agreement found but no base role set`}")
 		}
 	}
 	if s.BotChannel.Valid {
-		buf.WriteString("{BotChannel:")
+		buf.WriteString("{BotChannel: `")
 		buf.WriteString(s.BotChannel.String)
-		buf.WriteString("}")
+		buf.WriteString("`}")
 	}
 	if s.StarterRole.Valid {
-		buf.WriteString("{StarterRole: ")
+		buf.WriteString("{StarterRole: `")
 		buf.WriteString(s.StarterRole.String)
-		buf.WriteString("}")
+		buf.WriteString("`}")
 	}
 	if s.BaseRole.Valid {
-		buf.WriteString("{BaseRole: ")
+		buf.WriteString("{BaseRole: `")
 		buf.WriteString(s.BaseRole.String)
-		buf.WriteString("}")
+		buf.WriteString("`}")
 	}
 	if s.Enabled {
-		buf.WriteString("{Enabled: ")
+		buf.WriteString("{Enabled: `")
 		buf.WriteString(strconv.FormatBool(s.Enabled))
-		buf.WriteString("}")
+		buf.WriteString("`}")
 	}
 	if s.VeteranRank.Valid {
-		buf.WriteString("{VeteranRank: ")
+		buf.WriteString("{VeteranRank: `")
 		buf.WriteString(strconv.Itoa(int(s.VeteranRank.Int64)))
-		buf.WriteString("}")
+		buf.WriteString("`}")
 		if !s.VeteranRole.Valid {
-			buf.WriteString("{MISCONFIG: veteran rank provided but no role provided!}")
+			buf.WriteString("{!!! MISCONFIG !!!: `veteran rank provided but no role provided!`}")
 		}
 	}
 	if s.VeteranRole.Valid {
-		buf.WriteString("{VeteranRole: ")
+		buf.WriteString("{VeteranRole: `")
 		buf.WriteString(s.VeteranRole.String)
-		buf.WriteString("}")
+		buf.WriteString("`}")
 		if !s.VeteranRank.Valid {
-			buf.WriteString("{MISCONFIG: veteran role provided but no rank provided!}")
+			buf.WriteString("{!!! MISCONFIG !!!: `veteran role provided but no rank provided!`}")
 		}
 	}
 	return buf.String()
@@ -204,7 +206,7 @@ func FlushServerCache() {
 
 func ServerFullUpdate(s Server) (err error) {
 	_, err = moeDb.Exec(serverUpdate, s.Id, s.WelcomeMessage, s.RuleAgreement, s.VeteranRank, s.VeteranRole, s.DefaultPinChannelId, s.BotChannel, s.Enabled,
-		s.WelcomeChannel, s.StarterRole)
+		s.StarterRole, s.BaseRole, s.WelcomeChannel)
 	if err != nil {
 		log.Println("There was an error updating the server table", err)
 	}

@@ -3,7 +3,6 @@ package commands
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -17,6 +16,7 @@ const serverPossibleCommands = "Possible configs: {WelcomeMessage -> string; max
 	db.ServerMaxRuleAgreementLengthString + "} {StarterRole -> full role name} {BaseRole -> full role name} {Enabled -> true/false}"
 
 type ServerCommand struct {
+	ComPrefix string
 }
 
 func (sc *ServerCommand) Execute(pack *CommPackage) {
@@ -27,8 +27,8 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 		return
 	}
 
+	// todo: Add clearing of server config stuff here
 	if len(pack.params) < 1 {
-		log.Println(s)
 		pack.session.ChannelMessageSend(pack.channel.ID, "This server's configuration is: "+db.ServerSprint(s))
 		return
 	}
@@ -40,7 +40,7 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 	} else {
 		configValue = strings.Join(pack.params[1:], " ")
 	}
-	if processServerConfigKey(configKey, configValue, pack, &s) {
+	if processServerConfigKey(configKey, configValue, pack, &s, sc.ComPrefix) {
 		err = db.ServerFullUpdate(s)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the server table. Your change was probably not applied.")
@@ -50,7 +50,7 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func processServerConfigKey(configKey string, configValue string, pack *CommPackage, s *db.Server) (success bool) {
+func processServerConfigKey(configKey string, configValue string, pack *CommPackage, s *db.Server, comPrefix string) (success bool) {
 	isHelp := configValue == ""
 	if configKey == "VETERANRANK" {
 		if isHelp {
@@ -86,6 +86,10 @@ func processServerConfigKey(configKey string, configValue string, pack *CommPack
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this property has a max length of: "+strconv.Itoa(db.ServerMaxWelcomeMessageLength))
 				return false
 			}
+			if strings.HasPrefix(configValue, comPrefix) {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you can't use moebot's prefix in your welcome message.")
+				return false
+			}
 			s.WelcomeMessage.Scan(configValue)
 		}
 	} else if configKey == "WELCOMECHANNEL" {
@@ -105,6 +109,10 @@ func processServerConfigKey(configKey string, configValue string, pack *CommPack
 		} else {
 			if len(configValue) > db.ServerMaxRuleAgreementLength {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this property has a max length of: "+strconv.Itoa(db.ServerMaxRuleAgreementLength))
+				return false
+			}
+			if strings.HasPrefix(configValue, comPrefix) {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you can't use moebot's prefix in your rule agreement.")
 				return false
 			}
 			s.RuleAgreement.Scan(configValue)
@@ -159,6 +167,6 @@ func (sc *ServerCommand) GetCommandKeys() []string {
 	return []string{"SERVER"}
 }
 
-func (c *ServerCommand) GetCommandHelp(commPrefix string) string {
+func (sc *ServerCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s server <config setting> <value>` - Master/Mod Changes a config setting on the server to a given value. `%[1]s server` to list configs.", commPrefix)
 }
