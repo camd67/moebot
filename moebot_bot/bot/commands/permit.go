@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -12,7 +11,7 @@ type PermitCommand struct {
 }
 
 func (pc *PermitCommand) Execute(pack *CommPackage) {
-	args := ParseCommand(strings.Join(pack.params, " "), []string{"-permission", "-securityAnswer", "-confirmationMessage"})
+	args := ParseCommand(pack.params, []string{"-permission", "-securityAnswer", "-confirmationMessage"})
 
 	if _, ok := args[""]; !ok || len(args) <= 1 {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a role name followed by one or more arguments.")
@@ -65,6 +64,6 @@ func (pc *PermitCommand) GetCommandKeys() []string {
 	return []string{"PERMIT"}
 }
 
-func (c *PermitCommand) GetCommandHelp(commPrefix string) string {
+func (pc *PermitCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s permit <role name> [-permission <perm level>] [-securityAnswer <answer>] [-confirmationMessage <message>]` - Master/All only. Edits the selected role to grant permission or add a confirmation procedure.", commPrefix)
 }
