@@ -298,6 +298,6 @@ func (pc *PinMoveCommand) GetCommandKeys() []string {
 	return []string{"PINMOVE"}
 }
 
-func (c *PinMoveCommand) GetCommandHelp(commPrefix string) string {
+func (pc *PinMoveCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s pinmove [-sendTo <#destChannel>] [-text] <#channel>` - Enables moving messages from the specified channel to the server's destination channel. The `-sendTo` option sets/changes the default destination channel. The `-text` option enables moving text on pin", commPrefix)
 }

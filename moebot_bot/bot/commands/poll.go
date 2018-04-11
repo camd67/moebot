@@ -35,6 +35,6 @@ func (pc *PollCommand) GetCommandKeys() []string {
 	return []string{"POLL"}
 }
 
-func (c *PollCommand) GetCommandHelp(commPrefix string) string {
+func (pc *PollCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s poll -options <option 1, option 2, option 3, ...> -title <poll title>` - Master/All/Mod set up a poll with the given options. Type `%[1]s poll -close <poll id> to close`", commPrefix)
 }

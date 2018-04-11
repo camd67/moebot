@@ -65,6 +65,6 @@ func (pc *PermitCommand) GetCommandKeys() []string {
 	return []string{"PERMIT"}
 }
 
-func (c *PermitCommand) GetCommandHelp(commPrefix string) string {
+func (pc *PermitCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s permit <role name> [-permission <perm level>] [-securityAnswer <answer>] [-confirmationMessage <message>]` - Master/All only. Edits the selected role to grant permission or add a confirmation procedure.", commPrefix)
 }

@@ -248,6 +248,6 @@ func (rc *RaffleCommand) GetCommandKeys() []string {
 	return []string{"RAFFLE"}
 }
 
-func (c *RaffleCommand) GetCommandHelp(commPrefix string) string {
+func (rc *RaffleCommand) GetCommandHelp(commPrefix string) string {
 	return ""
 }

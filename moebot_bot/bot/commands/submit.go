@@ -76,6 +76,6 @@ func (sc *SubmitCommand) GetCommandKeys() []string {
 	return []string{"SUBMIT"}
 }
 
-func (c *SubmitCommand) GetCommandHelp(commPrefix string) string {
+func (sc *SubmitCommand) GetCommandHelp(commPrefix string) string {
 	return ""
 }

@@ -24,6 +24,6 @@ func (pc *PingCommand) GetCommandKeys() []string {
 	return []string{"PING"}
 }
 
-func (c *PingCommand) GetCommandHelp(commPrefix string) string {
+func (pc *PingCommand) GetCommandHelp(commPrefix string) string {
 	return ""
 }

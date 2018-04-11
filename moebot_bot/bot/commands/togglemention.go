@@ -60,6 +60,6 @@ func (mc *MentionCommand) GetCommandKeys() []string {
 	return []string{"TOGGLEMENTION"}
 }
 
-func (c *MentionCommand) GetCommandHelp(commPrefix string) string {
+func (mc *MentionCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s togglemention <role name>` enables/disables mentioning the selected role for 5 minutes", commPrefix)
 }

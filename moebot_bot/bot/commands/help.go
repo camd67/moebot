@@ -33,6 +33,6 @@ func (hc *HelpCommand) GetCommandKeys() []string {
 	return []string{"HELP"}
 }
 
-func (c *HelpCommand) GetCommandHelp(commPrefix string) string {
+func (hc *HelpCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s help` - Displays this message", commPrefix)
 }

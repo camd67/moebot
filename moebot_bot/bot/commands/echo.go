@@ -27,6 +27,6 @@ func (ec *EchoCommand) GetCommandKeys() []string {
 	return []string{"ECHO"}
 }
 
-func (c *EchoCommand) GetCommandHelp(commPrefix string) string {
+func (ec *EchoCommand) GetCommandHelp(commPrefix string) string {
 	return ""
 }

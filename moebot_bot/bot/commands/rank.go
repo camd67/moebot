@@ -22,6 +22,6 @@ func (rc *RankCommand) GetCommandKeys() []string {
 	return []string{"RANK"}
 }
 
-func (c *RankCommand) GetCommandHelp(commPrefix string) string {
+func (rc *RankCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s rank <rank name>` - Changes your rank to one of the approved ranks. `%[1]s rank` to list all the ranks", commPrefix)
 }

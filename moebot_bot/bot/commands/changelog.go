@@ -71,6 +71,6 @@ func (cc *ChangelogCommand) GetCommandKeys() []string {
 	return []string{"CHANGELOG"}
 }
 
-func (c *ChangelogCommand) GetCommandHelp(commPrefix string) string {
+func (cc *ChangelogCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s changelog` - Displays the changelog for moebot", commPrefix)
 }

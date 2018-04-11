@@ -101,6 +101,6 @@ func (pc *ProfileCommand) GetCommandKeys() []string {
 	return []string{"PROFILE"}
 }
 
-func (c *ProfileCommand) GetCommandHelp(commPrefix string) string {
+func (pc *ProfileCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s profile` - Displays your server profile", commPrefix)
 }

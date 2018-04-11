@@ -93,6 +93,6 @@ func (rc *RoleCommand) GetCommandKeys() []string {
 	return []string{"ROLE"}
 }
 
-func (c *RoleCommand) GetCommandHelp(commPrefix string) string {
+func (rc *RoleCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s role <role name>` - Changes your role to one of the approved roles. `%[1]s role` to list all the roles", commPrefix)
 }

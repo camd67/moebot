@@ -23,6 +23,6 @@ func (nc *NsfwCommand) GetCommandKeys() []string {
 	return []string{"NSFW"}
 }
 
-func (c *NsfwCommand) GetCommandHelp(commPrefix string) string {
+func (nc *NsfwCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s NSFW` - Gives you NSFW channel permissions", commPrefix)
 }

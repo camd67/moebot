@@ -70,6 +70,6 @@ func (cc *CustomCommand) GetCommandKeys() []string {
 	return []string{"CUSTOM"}
 }
 
-func (c *CustomCommand) GetCommandHelp(commPrefix string) string {
+func (cc *CustomCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s custom <command name> <role name>` - Master/All/Mod Links up a role to be toggable by the command name. Type `%[1]s role <command name> to toggle`", commPrefix)
 }

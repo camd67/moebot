@@ -45,6 +45,6 @@ func (sc *SpoilerCommand) GetCommandKeys() []string {
 	return []string{"SPOILER"}
 }
 
-func (c *SpoilerCommand) GetCommandHelp(commPrefix string) string {
+func (sc *SpoilerCommand) GetCommandHelp(commPrefix string) string {
 	return ""
 }
