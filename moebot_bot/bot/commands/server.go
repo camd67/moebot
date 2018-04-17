@@ -11,9 +11,9 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
-const serverPossibleCommands = "Possible configs: {WelcomeMessage -> string; max length " + db.ServerMaxWelcomeMessageLengthString + "} " +
+const serverPossibleCommands = "Possible configs: {WelcomeMessage -> string; max length " + db.MaxMessageLengthString + "} " +
 	"{WelcomeChannel: ChannelId} {VeteranRank -> number} {VeteranRole -> full role name} {BotChannel -> channel ID} {RuleAgreement -> string; max length " +
-	db.ServerMaxRuleAgreementLengthString + "} {StarterRole -> full role name} {BaseRole -> full role name} {Enabled -> true/false}"
+	db.MaxMessageLengthString + "} {StarterRole -> full role name} {BaseRole -> full role name} {Enabled -> true/false}"
 
 type ServerCommand struct {
 	ComPrefix string
@@ -99,8 +99,8 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 		} else if shouldClear {
 			s.WelcomeMessage.Scan(nil)
 		} else {
-			if len(configValue) > db.ServerMaxWelcomeMessageLength {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this property has a max length of: "+strconv.Itoa(db.ServerMaxWelcomeMessageLength))
+			if len(configValue) > db.MaxMessageLength {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this property has a max length of: "+db.MaxMessageLengthString)
 				return false
 			}
 			if strings.HasPrefix(configValue, sc.ComPrefix) {
@@ -128,8 +128,8 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 		} else if shouldClear {
 			s.RuleAgreement.Scan(nil)
 		} else {
-			if len(configValue) > db.ServerMaxRuleAgreementLength {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this property has a max length of: "+strconv.Itoa(db.ServerMaxRuleAgreementLength))
+			if len(configValue) > db.MaxMessageLength {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this property has a max length of: "+db.MaxMessageLengthString)
 				return false
 			}
 			if strings.HasPrefix(configValue, sc.ComPrefix) {

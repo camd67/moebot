@@ -44,19 +44,15 @@ Create all the operations to handle commands and events within moebot.
 Whenever a new operation, command, or event is added it should be added to this list
 */
 func setupOperations(session *discordgo.Session) {
-	roleHandler := &commands.RoleHandler{ComPrefix: ComPrefix}
 	operations = []interface{}{
-		&commands.TeamCommand{Handler: roleHandler},
 		&commands.RoleCommand{},
-		&commands.RankCommand{Handler: roleHandler},
-		&commands.NsfwCommand{Handler: roleHandler},
+		&commands.RoleSetCommand{ComPrefix: ComPrefix},
 		&commands.HelpCommand{ComPrefix: ComPrefix, CommandsMap: commandsMap, Checker: checker},
 		&commands.ChangelogCommand{Version: version},
 		&commands.RaffleCommand{MasterId: masterId, DebugChannel: masterDebugChannel},
 		&commands.SubmitCommand{ComPrefix: ComPrefix},
 		&commands.EchoCommand{},
 		&commands.PermitCommand{},
-		&commands.CustomCommand{ComPrefix: ComPrefix},
 		&commands.PingCommand{},
 		&commands.SpoilerCommand{},
 		&commands.PollCommand{PollsHandler: commands.NewPollsHandler()},

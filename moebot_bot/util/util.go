@@ -111,6 +111,17 @@ func FindRoleByName(roles []*discordgo.Role, toFind string) *discordgo.Role {
 	return nil
 }
 
+func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {
+	// for some reason roleIds have spaces in them...
+	toFind = strings.TrimSpace(toFind)
+	for _, r := range roles {
+		if r.ID == toFind {
+			return r
+		}
+	}
+	return nil
+}
+
 func GetStringOrDefault(s sql.NullString) string {
 	if s.Valid {
 		return s.String
@@ -125,17 +136,6 @@ func GetInt64OrDefault(i sql.NullInt64) int64 {
 	} else {
 		return -1
 	}
-}
-
-func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {
-	// for some reason roleIds have spaces in them...
-	toFind = strings.TrimSpace(toFind)
-	for _, r := range roles {
-		if r.ID == toFind {
-			return r
-		}
-	}
-	return nil
 }
 
 func UpdatePollVotes(poll *db.Poll, session *discordgo.Session) error {

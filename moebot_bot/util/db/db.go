@@ -11,7 +11,9 @@ import (
 var moeDb *sql.DB
 
 const (
-	DbMaxUidLength = 20
+	DbMaxUidLength         = 20
+	MaxMessageLength       = 1900
+	MaxMessageLengthString = "1900"
 )
 
 /*
@@ -49,6 +51,7 @@ func createTables() {
 	userServerRankCreateTable()
 	// ROLE
 	roleCreateTable()
+	roleGroupCreateTable()
 	// CHANNEL
 	channelCreateTable()
 	// RAFFLE ENTRY

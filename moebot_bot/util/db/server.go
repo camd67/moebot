@@ -27,13 +27,6 @@ type Server struct {
 }
 
 const (
-	ServerMaxWelcomeMessageLength       = 1900
-	ServerMaxWelcomeMessageLengthString = "1900" // duplicate so we can have constant message declarations
-	ServerMaxRuleAgreementLength        = 1900
-	ServerMaxRuleAgreementLengthString  = "1900"
-)
-
-const (
 	serverTable = `CREATE TABLE IF NOT EXISTS server(
 		Id SERIAL NOT NULL PRIMARY KEY,
 		GuildUid VARCHAR(20) NOT NULL UNIQUE,

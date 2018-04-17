@@ -11,6 +11,7 @@ type PermitCommand struct {
 }
 
 func (pc *PermitCommand) Execute(pack *CommPackage) {
+	// todo: Could probably migrate this over to the role command. Keeping security answer and confirmation in here for now though
 	args := ParseCommand(pack.params, []string{"-permission", "-securityAnswer", "-confirmationMessage"})
 
 	if _, ok := args[""]; !ok || len(args) <= 1 {
