@@ -47,16 +47,16 @@ const (
 	RoleMaxTriggerLength       = 100
 	RoleMaxTriggerLengthString = "100"
 
-	roleQueryServerRole  = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger  FROM role WHERE ServerId = $1 AND RoleUid = $2`
-	roleQueryServer      = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger  FROM role WHERE ServerId = $1`
-	roleQuery            = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger  FROM role WHERE Id = $1`
-	roleQueryTrigger     = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE Trigger = $1`
-	roleQueryGroup       = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE GroupId = $1`
+	roleQueryServerRole  = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE RoleUid = $1 AND ServerId = $2`
+	roleQueryServer      = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE ServerId = $1`
+	roleQuery            = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE Id = $1`
+	roleQueryTrigger     = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE Trigger = $1 AND ServerId = $2`
+	roleQueryGroup       = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE GroupId = $1`
 	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
 
-	roleUpdate = `UPDATE role SET Permission = $2, ConfirmationMessage = $3, ConfirmationSecurityAnswer = $4, Trigger = $5 WHERE Id = $1`
+	roleUpdate = `UPDATE role SET GroupId = $2, Permission = $3, ConfirmationMessage = $4, ConfirmationSecurityAnswer = $5, Trigger = $6 WHERE Id = $1`
 
-	roleInsert = `INSERT INTO role(ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger) VALUES($1, $2, $3, $4, $5, $6) RETURNING id`
+	roleInsert = `INSERT INTO role(ServerId, RoleUid, GroupId, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 
 	roleDelete = `DELETE FROM role WHERE role.RoleUid = $1 AND role.ServerId = (SELECT server.id FROM server WHERE server.guilduid = $2)`
 )
@@ -73,24 +73,28 @@ var (
 		`ALTER TABLE role ADD CONSTRAINT role_confirmation_message_length CHECK(char_length(ConfirmationMessage) <= 1900)`,
 		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_confirmation_security_answer_length`,
 		`ALTER TABLE role ADD CONSTRAINT role_confirmation_security_answer_length CHECK(char_length(ConfirmationSecurityAnswer) <= 1900)`,
+		`ALTER TABLE role ADD COLUMN IF NOT EXISTS GroupId INTERGER REFERENCES role_group(Id) ON DELETE CASCADE`,
 	}
 )
 
 func RoleInsertOrUpdate(role Role) error {
-	row := moeDb.QueryRow(roleQueryServerRole, role.ServerId, role.RoleUid)
+	row := moeDb.QueryRow(roleQueryServerRole, role.RoleUid, role.ServerId)
 	var r Role
-	if err := row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
+	if err := row.Scan(&r.Id, &r.ServerId, &r.GroupId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			if role.Permission == -1 {
 				role.Permission = PermNone
 			}
-			_, err = moeDb.Exec(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.ConfirmationMessage,
+			_, err = moeDb.Exec(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.GroupId, role.Permission, role.ConfirmationMessage,
 				role.ConfirmationSecurityAnswer, role.Trigger)
 			if err != nil {
 				log.Println("Error inserting role to db")
 				return err
 			}
+		} else {
+			log.Println("Error scanning for role", err)
+			return err
 		}
 	} else {
 		// got a row, update it
@@ -114,21 +118,21 @@ func RoleInsertOrUpdate(role Role) error {
 
 func RoleQueryOrInsert(role Role) (r Role, err error) {
 	row := moeDb.QueryRow(roleQueryServerRole, role.ServerId, role.RoleUid)
-	if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
+	if err = row.Scan(&r.Id, &r.ServerId, &r.GroupId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			if role.Permission == -1 {
 				role.Permission = PermNone
 			}
 			var insertId int
-			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.ConfirmationMessage,
+			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.GroupId, role.Permission, role.ConfirmationMessage,
 				role.ConfirmationSecurityAnswer, role.Trigger).Scan(&insertId)
 			if err != nil {
 				log.Println("Error inserting role to db")
 				return
 			}
 			row := moeDb.QueryRow(roleQuery, insertId)
-			if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
+			if err = row.Scan(&r.Id, &r.ServerId, &r.GroupId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
 				log.Println("Failed to read the newly inserted Role row. This should pretty much never happen...", err)
 				return Role{}, err
 			}
@@ -147,7 +151,7 @@ func RoleQueryServer(s Server) (roles []Role, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var r Role
-		if err = rows.Scan(&r.Id, &r.ServerId, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer,
+		if err = rows.Scan(&r.Id, &r.ServerId, &r.GroupId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer,
 			&r.Trigger); err != nil {
 
 			log.Println("Error scanning from role table:", err)
@@ -167,7 +171,7 @@ func RoleQueryGroup(groupId int) (roles []Role, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var r Role
-		if err = rows.Scan(&r.Id, &r.ServerId, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer,
+		if err = rows.Scan(&r.Id, &r.ServerId, &r.GroupId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer,
 			&r.Trigger); err != nil {
 
 			log.Println("Error scanning from role table:", err)
@@ -178,16 +182,22 @@ func RoleQueryGroup(groupId int) (roles []Role, err error) {
 	return
 }
 
-func RoleQueryTrigger(trigger string) (r Role, err error) {
-	row := moeDb.QueryRow(roleQueryTrigger, trigger)
-	err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
+func RoleQueryTrigger(trigger string, serverId int) (r Role, err error) {
+	row := moeDb.QueryRow(roleQueryTrigger, trigger, serverId)
+	err = row.Scan(&r.Id, &r.ServerId, &r.GroupId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error querying for role by trigger", err)
+	}
 	// return whatever we get, error or row
 	return
 }
 
 func RoleQueryRoleUid(roleUid string, serverId int) (r Role, err error) {
-	row := moeDb.QueryRow(roleQueryTrigger, serverId, roleUid)
-	err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
+	row := moeDb.QueryRow(roleQueryServerRole, roleUid, serverId)
+	err = row.Scan(&r.Id, &r.ServerId, &r.GroupId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error querying for role by UID and serverID", err)
+	}
 	// return whatever we get, error or row
 	return
 }

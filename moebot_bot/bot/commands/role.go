@@ -30,7 +30,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 		vetRole = util.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
 	}
 	if len(pack.params) == 0 {
-		rc.printAllRoles(server, vetRole, pack)
+		printAllRoles(server, vetRole, pack)
 	} else {
 		var role *discordgo.Role
 		var roleGroup db.RoleGroup
@@ -74,7 +74,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 			}
 		} else {
 			// load up the trigger to see if it exists
-			dbRole, err := db.RoleQueryTrigger(strings.Join(pack.params[0:], " "))
+			dbRole, err := db.RoleQueryTrigger(strings.Join(pack.params[0:], " "), server.Id)
 			// an invalid trigger should pretty much never happen, but checking for it anyways
 			if err != nil || !dbRole.Trigger.Valid {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role. `"+
@@ -220,7 +220,7 @@ func (rc *RoleCommand) GetCommandKeys() []string {
 func (c *RoleCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s role <role name>` - Changes your role to one of the approved roles. `%[1]s role` to list all the roles", commPrefix)
 }
-func (rc *RoleCommand) printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage) {
+func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage) {
 	triggersByGroup := make(map[string][]string)
 	// go find all the roles for this server
 	roles, err := db.RoleQueryServer(server)
@@ -261,7 +261,7 @@ func (rc *RoleCommand) printAllRoles(server db.Server, vetRole *discordgo.Role, 
 	if len(triggersByGroup) == 0 {
 		message.WriteString("Looks like there aren't any roles I can assign to you in this server!")
 	} else {
-		message.WriteString("Roles you can add (highlighted `like this`): ")
+		message.WriteString("This server's roles (highlighted `like this`): ")
 		for groupName, triggerList := range triggersByGroup {
 			message.WriteString("Group (")
 			message.WriteString(groupName)

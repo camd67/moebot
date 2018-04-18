@@ -47,6 +47,7 @@ func setupOperations(session *discordgo.Session) {
 	operations = []interface{}{
 		&commands.RoleCommand{},
 		&commands.RoleSetCommand{ComPrefix: ComPrefix},
+		&commands.GroupSetCommand{ComPrefix: ComPrefix},
 		&commands.HelpCommand{ComPrefix: ComPrefix, CommandsMap: commandsMap, Checker: checker},
 		&commands.ChangelogCommand{Version: version},
 		&commands.RaffleCommand{MasterId: masterId, DebugChannel: masterDebugChannel},

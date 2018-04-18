@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"strconv"
+	"strings"
 )
 
 type GroupType int
@@ -15,6 +16,8 @@ const (
 	GroupTypeExclusive = 2
 	// Same as the exclusive group, but can't be removed
 	GroupTypeExclusiveNoRemove = 3
+
+	OptionsForGroupType = "ANY, EXC, ENR"
 )
 
 type RoleGroup struct {
@@ -35,13 +38,12 @@ const (
 	RoleGroupMaxNameLength       = 500
 	RoleGroupMaxNameLengthString = "500"
 
-	roleGroupQueryById   = `SELECT Id, ServerId, Name, Type FROM role_group WHERE Id = $1`
-	roleGroupQueryByName = `SELECT rg.Id, rg.ServerId, rg.Name, rg.Type FROM role_group AS rg 
-				JOIN server AS s ON rg.ServerId = s.Id 
-				WHERE rg.Name = $1 AND s.GuildUid = $2`
+	roleGroupQueryById     = `SELECT Id, ServerId, Name, Type FROM role_group WHERE Id = $1`
+	roleGroupQueryByName   = `SELECT rg.Id, rg.ServerId, rg.Name, rg.Type FROM role_group AS rg WHERE rg.Name = $1 AND rg.ServerId = $2`
 	roleGroupQueryByServer = `SELECT Id, ServerId, Name, Type FROM role_group WHERE ServerId = $1`
 	roleGroupInsert        = `INSERT INTO role_group(ServerId, Name, Type) VALUES ($1, $2, $3) RETURNING Id`
 	roleGroupUpdate        = `UPDATE role_group SET Name = $2, Type = $3 WHERE Id = $1`
+	roleGroupDeleteId      = `DELETE FROM role_group WHERE Id = $1`
 )
 
 func RoleGroupInsertOrUpdate(rg RoleGroup, s Server) error {
@@ -125,10 +127,31 @@ func RoleGroupQueryServer(s Server) (roleGroups []RoleGroup, err error) {
 	return
 }
 
+func RoleGroupQueryName(name string, serverId int) (rg RoleGroup, err error) {
+	row := moeDb.QueryRow(roleGroupQueryByName, name, serverId)
+	err = row.Scan(&rg.Id, &rg.ServerId, &rg.Name, &rg.Type)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error querying for role group by name and serverID", err)
+	}
+	// return whatever we get, error or row
+	return
+}
+
 func RoleGroupQueryId(id int) (rg RoleGroup, err error) {
 	row := moeDb.QueryRow(roleGroupQueryById, id)
 	err = row.Scan(&rg.Id, &rg.ServerId, &rg.Name, &rg.Type)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error querying for role group by id", err)
+	}
 	return
+}
+
+func RoleGroupDelete(id int) error {
+	_, err := moeDb.Exec(roleGroupDeleteId, id)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error deleting role group: ", id)
+	}
+	return err
 }
 
 func roleGroupCreateTable() {
@@ -144,4 +167,30 @@ func roleGroupCreateTable() {
 	//		return
 	//	}
 	//}
+}
+
+func GetGroupTypeFromString(s string) GroupType {
+	toCheck := strings.ToUpper(s)
+	if toCheck == "ANY" {
+		return GroupTypeAny
+	} else if toCheck == "EXCLUSIVE" || toCheck == "EXC" {
+		return GroupTypeExclusive
+	} else if toCheck == "EXCLUSIVE NO REMOVE" || toCheck == "ENR" {
+		return GroupTypeExclusiveNoRemove
+	} else {
+		return -1
+	}
+}
+
+func GetStringFromGroupType(groupType GroupType) string {
+	switch groupType {
+	case GroupTypeAny:
+		return "Any (ANY)"
+	case GroupTypeExclusive:
+		return "Exclusive (EXC)"
+	case GroupTypeExclusiveNoRemove:
+		return "Exclusive No Remove (ENR)"
+	default:
+		return "Unknown"
+	}
 }
