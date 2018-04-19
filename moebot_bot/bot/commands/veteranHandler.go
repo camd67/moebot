@@ -99,7 +99,7 @@ func (vh *VeteranHandler) veteranMessageCreate(session *discordgo.Session, messa
 
 func (vh *VeteranHandler) handleVeteranMessage(userUid string, guildUid string) (users []db.UserServerRankWrapper, err error) {
 	key := buildVeteranBufferKey(userUid, guildUid)
-	if isCooldownReached(key, messageCooldown, vh.messageCooldownMap) {
+	if isCooldownReached(key, messageCooldown, &vh.messageCooldownMap) {
 		return vh.handleVeteranChange(userUid, guildUid, messagePoints)
 	}
 	return
@@ -138,7 +138,7 @@ func (vh *VeteranHandler) veteranReactionAdd(session *discordgo.Session, reactio
 
 func (vh *VeteranHandler) handleVeteranReaction(userUid string, guildUid string) (users []db.UserServerRankWrapper, err error) {
 	key := buildVeteranBufferKey(userUid, guildUid)
-	if isCooldownReached(key, reactionCooldown, vh.reactionCooldownMap) {
+	if isCooldownReached(key, reactionCooldown, &vh.reactionCooldownMap) {
 		return vh.handleVeteranChange(userUid, guildUid, reactionPoints)
 	}
 	return
@@ -199,7 +199,7 @@ func (vh *VeteranHandler) handleVeteranChange(userUid string, guildUid string, p
 /**
 Returns true if the given key in the syncCooldownMap has passed the given cooldown duration, false otherwise
 */
-func isCooldownReached(key string, cooldown time.Duration, cooldownMap util.SyncCooldownMap) bool {
+func isCooldownReached(key string, cooldown time.Duration, cooldownMap *util.SyncCooldownMap) bool {
 	cooldownMap.RWMutex.RLock()
 	lastTime, present := cooldownMap.M[key]
 	cooldownMap.RUnlock()

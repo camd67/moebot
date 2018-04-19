@@ -24,7 +24,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 		return
 	}
 
-	if !hasDelete || (!hasName && !hasType) {
+	if !hasDelete && !hasName && !hasType {
 		// error state, they didn't give anything
 		groups, err := db.RoleGroupQueryServer(server)
 		if err != nil {
@@ -67,6 +67,11 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 		}
 		pack.session.ChannelMessageSend(pack.channel.ID, "Deleted "+deleteName+"!")
 	} else {
+		if !hasType || !hasName {
+			// invalid state at this point
+			pack.session.ChannelMessageSend(pack.channel.ID, "Please provide both a type and name when making a new group")
+			return
+		}
 		// add in a new group, or update an existing one
 		dbRoleGroup, err := db.RoleGroupQueryName(groupName, server.Id)
 		var dbOperationType string

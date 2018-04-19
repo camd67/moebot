@@ -32,11 +32,11 @@ Run through initial setup steps for Moebot. This is all that's necessary to setu
 */
 func SetupMoebot(session *discordgo.Session) {
 	masterId = Config["masterId"]
+	checker = permissions.PermissionChecker{MasterId: masterId}
 	masterDebugChannel = Config["debugChannel"]
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
 	addGlobalHandlers(session)
 	setupOperations(session)
-	checker = permissions.PermissionChecker{MasterId: masterId}
 }
 
 /**

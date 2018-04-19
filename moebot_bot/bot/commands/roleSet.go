@@ -3,6 +3,7 @@ package commands
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -65,6 +66,12 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			pack.session.ChannelMessageSend(pack.channel.ID, "You must provide at least one of: trigger, confirm, group, or security")
 			return
 		}
+		// we want to make sure we do or don't have a confirmation and security answer, since they're a pair
+		if hasConfirm != hasSecurity {
+			pack.session.ChannelMessageSend(pack.channel.ID, "You must provide both a confirmation message (with -confirm) and a security answer "+
+				"(with -security)")
+			return
+		}
 
 		r := util.FindRoleByName(pack.guild.Roles, roleName)
 		if r == nil {
@@ -76,7 +83,9 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 		var typeString string
 		if err != nil {
 			if err == sql.ErrNoRows {
-				oldRole = db.Role{}
+				oldRole = db.Role{
+					RoleUid: r.ID,
+				}
 				typeString = "added"
 				// don't return on a no row error, that means we need to add a new role
 				// validate to make sure we got the required information for a new role as opposed to an update
@@ -102,17 +111,22 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			oldRole.Trigger.Scan(triggerName)
 		}
 		if hasConfirm {
-			if len(triggerName) < 0 || len(triggerName) > db.RoleMaxTriggerLength {
+			if len(confirmText) < 0 || len(confirmText) > db.MaxMessageLength {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a trigger greater than 0 characters and less than "+
-					db.RoleMaxTriggerLengthString+". The role was not updated.")
+					db.MaxMessageLengthString+". The role was not updated.")
+				return
+			}
+			if !strings.Contains(confirmText, "%s") {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Please include `%s` somewhere in your confirmation message. This is where the user's"+
+					" security code will go.")
 				return
 			}
 			oldRole.ConfirmationMessage.Scan(confirmText)
 		}
 		if hasSecurity {
-			if len(securityText) < 0 || len(securityText) > db.RoleMaxTriggerLength {
+			if len(securityText) < 0 || len(securityText) > db.MaxMessageLength {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a trigger greater than 0 characters and less than "+
-					db.RoleMaxTriggerLengthString+". The role was not updated.")
+					db.MaxMessageLengthString+". The role was not updated.")
 				return
 			}
 			oldRole.ConfirmationSecurityAnswer.Scan(securityText)
@@ -149,6 +163,7 @@ func (rc *RoleSetCommand) GetCommandKeys() []string {
 }
 
 func (rc *RoleSetCommand) GetCommandHelp(commPrefix string) string {
-	return fmt.Sprintf("`%[1]s roleset -roleName <role name> [-trigger <trigger> -confirm <confirmation message> -security <security code> "+
-		"-group <group name]` - Master/Mod. Provide roleName plus at least one other option.", commPrefix)
+	return fmt.Sprintf("`%[1]s roleset -role <role name> [-trigger <trigger> -confirm <confirmation message> -security <security code> "+
+		"-group <group name>]` - Master/Mod. Provide roleName plus at least one other option. Security code must be prefixed with `-` in your "+
+		"confirmation message, and must include `%%s` somewhere in it", commPrefix)
 }

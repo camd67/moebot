@@ -73,8 +73,14 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 				return
 			}
 		} else {
-			// load up the trigger to see if it exists
-			dbRole, err := db.RoleQueryTrigger(strings.Join(pack.params[0:], " "), server.Id)
+			// load up the trigger to see if it exists, stripping out anything prefixed with - (our security text)
+			var triggerWords []string
+			for _, param := range pack.params {
+				if !strings.HasPrefix(param, "-") {
+					triggerWords = append(triggerWords, param)
+				}
+			}
+			dbRole, err = db.RoleQueryTrigger(strings.Join(triggerWords, " "), server.Id)
 			// an invalid trigger should pretty much never happen, but checking for it anyways
 			if err != nil || !dbRole.Trigger.Valid {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role. `"+
@@ -109,8 +115,8 @@ Actually go through and update the roles for this user based on the given role a
 func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, group db.RoleGroup) {
 	if util.StrContains(pack.member.Roles, role.ID, util.CaseSensitive) {
 		if group.Type == db.GroupTypeExclusiveNoRemove {
-			pack.session.ChannelMessageSend(pack.channel.ID, "You've already got that role! You can change roles but can't remove them in the "+
-				group.Name+" group.")
+			pack.session.ChannelMessageSend(pack.channel.ID, "You've already got that role! You can change roles but can't remove them in the `"+
+				group.Name+"` group.")
 		} else {
 			pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, role.ID)
 			pack.session.ChannelMessageSend(pack.channel.ID, "Removed role "+role.Name+" for "+pack.message.Author.Mention())
@@ -131,9 +137,9 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 			// we'll always be adding a role here
 			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
 			var message bytes.Buffer
-			message.WriteString("Added role ")
+			message.WriteString("Added role `")
 			message.WriteString(role.Name)
-			message.WriteString(" for ")
+			message.WriteString("` for ")
 			message.WriteString(pack.message.Author.Mention())
 			// we should only find one other role, but just in case
 			foundOtherRole := false
@@ -199,7 +205,7 @@ func (rc *RoleCommand) sendConfirmationMessage(session *discordgo.Session, chann
 		// could log error creating user channel, but seems like it'll clutter the logs for a valid scenario..
 		return err
 	}
-	_, err = session.ChannelMessageSend(userChannel.ID, fmt.Sprintf(role.ConfirmationMessage.String, rc.getRoleCode(role.RoleUid, user.ID)))
+	_, err = session.ChannelMessageSend(userChannel.ID, fmt.Sprintf(role.ConfirmationMessage.String, "-"+rc.getRoleCode(role.RoleUid, user.ID)))
 	return err
 }
 

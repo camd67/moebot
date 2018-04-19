@@ -73,7 +73,7 @@ var (
 		`ALTER TABLE role ADD CONSTRAINT role_confirmation_message_length CHECK(char_length(ConfirmationMessage) <= 1900)`,
 		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_confirmation_security_answer_length`,
 		`ALTER TABLE role ADD CONSTRAINT role_confirmation_security_answer_length CHECK(char_length(ConfirmationSecurityAnswer) <= 1900)`,
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS GroupId INTERGER REFERENCES role_group(Id) ON DELETE CASCADE`,
+		`ALTER TABLE role ADD COLUMN IF NOT EXISTS GroupId INTEGER REFERENCES role_group(Id) ON DELETE CASCADE`,
 	}
 )
 
@@ -98,7 +98,7 @@ func RoleInsertOrUpdate(role Role) error {
 		}
 	} else {
 		// got a row, update it
-		if role.Permission != -1 {
+		if role.Permission > 0 {
 			r.Permission = role.Permission
 		}
 		if role.ConfirmationMessage.Valid {
@@ -107,9 +107,15 @@ func RoleInsertOrUpdate(role Role) error {
 		if role.ConfirmationSecurityAnswer.Valid {
 			r.ConfirmationSecurityAnswer = role.ConfirmationSecurityAnswer
 		}
-		_, err = moeDb.Exec(roleUpdate, r.Id, r.Permission, r.ConfirmationMessage, r.ConfirmationSecurityAnswer, r.Trigger)
+		if role.Trigger.Valid {
+			r.Trigger = role.Trigger
+		}
+		if role.GroupId > 0 {
+			r.GroupId = role.GroupId
+		}
+		_, err = moeDb.Exec(roleUpdate, r.Id, r.GroupId, r.Permission, r.ConfirmationMessage, r.ConfirmationSecurityAnswer, r.Trigger)
 		if err != nil {
-			log.Println("Error updating role to db: Id - " + strconv.Itoa(r.Id))
+			log.Println("Error updating role to db: Id " + strconv.Itoa(r.Id))
 			return err
 		}
 	}
