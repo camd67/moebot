@@ -66,12 +66,6 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			pack.session.ChannelMessageSend(pack.channel.ID, "You must provide at least one of: trigger, confirm, group, or security")
 			return
 		}
-		// we want to make sure we do or don't have a confirmation and security answer, since they're a pair
-		if hasConfirm != hasSecurity {
-			pack.session.ChannelMessageSend(pack.channel.ID, "You must provide both a confirmation message (with -confirm) and a security answer "+
-				"(with -security)")
-			return
-		}
 
 		r := util.FindRoleByName(pack.guild.Roles, roleName)
 		if r == nil {
@@ -116,11 +110,6 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 					db.MaxMessageLengthString+". The role was not updated.")
 				return
 			}
-			if !strings.Contains(confirmText, "%s") {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Please include `%s` somewhere in your confirmation message. This is where the user's"+
-					" security code will go.")
-				return
-			}
 			oldRole.ConfirmationMessage.Scan(confirmText)
 		}
 		if hasSecurity {
@@ -128,6 +117,10 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a trigger greater than 0 characters and less than "+
 					db.MaxMessageLengthString+". The role was not updated.")
 				return
+			}
+			if !strings.HasPrefix(securityText, "-") {
+				// append on a - to the front of the security code
+				securityText = "-" + securityText
 			}
 			oldRole.ConfirmationSecurityAnswer.Scan(securityText)
 		}
@@ -165,5 +158,5 @@ func (rc *RoleSetCommand) GetCommandKeys() []string {
 func (rc *RoleSetCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s roleset -role <role name> [-trigger <trigger> -confirm <confirmation message> -security <security code> "+
 		"-group <group name>]` - Master/Mod. Provide roleName plus at least one other option. Security code must be prefixed with `-` in your "+
-		"confirmation message, and must include `%%s` somewhere in it", commPrefix)
+		"confirmation message if you want to include it.", commPrefix)
 }

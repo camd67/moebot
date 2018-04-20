@@ -35,6 +35,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 		var role *discordgo.Role
 		var roleGroup db.RoleGroup
 		var dbRole db.Role
+		var confirmCodes []string
 		// TODO: convert this to use the actual veteran name
 		if strings.EqualFold(pack.params[0], "veteran") {
 			// before anything, if the server doesn't have a rank or role bail out
@@ -74,13 +75,16 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 			}
 		} else {
 			// load up the trigger to see if it exists, stripping out anything prefixed with - (our security text)
-			var triggerWords []string
+			var roleNameBuf bytes.Buffer
 			for _, param := range pack.params {
 				if !strings.HasPrefix(param, "-") {
-					triggerWords = append(triggerWords, param)
+					roleNameBuf.WriteString(param)
+					roleNameBuf.WriteString(" ")
+				} else {
+					confirmCodes = append(confirmCodes, param)
 				}
 			}
-			dbRole, err = db.RoleQueryTrigger(strings.Join(triggerWords, " "), server.Id)
+			dbRole, err = db.RoleQueryTrigger(strings.Trim(roleNameBuf.String(), " "), server.Id)
 			// an invalid trigger should pretty much never happen, but checking for it anyways
 			if err != nil || !dbRole.Trigger.Valid {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role. `"+
@@ -101,7 +105,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 			}
 		}
 		// process the role to see if it has a confirmation message, then decide if we need to bail out or continue to the role update phase
-		if !rc.processRoleConfirmation(dbRole, role, pack) {
+		if !rc.processRoleConfirmation(dbRole, role, pack, confirmCodes) {
 			return
 		}
 
@@ -162,36 +166,43 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 	}
 }
 
-func (rc *RoleCommand) processRoleConfirmation(dbRole db.Role, roleToAdd *discordgo.Role, pack *CommPackage) (shouldProceed bool) {
+func (rc *RoleCommand) processRoleConfirmation(dbRole db.Role, roleToAdd *discordgo.Role, pack *CommPackage, confirmCodes []string) (shouldProceed bool) {
+	// we only want to check for a confirmation when we have an actual confirmation message and they don't already have the role
 	if dbRole.ConfirmationMessage.Valid && dbRole.ConfirmationMessage.String != "" && !util.StrContains(pack.member.Roles, roleToAdd.ID, util.CaseSensitive) {
-		if len(pack.params) == 1 {
+		// no confirm codes provided, given them their confirmation code
+		if len(confirmCodes) <= 0 {
 			err := rc.sendConfirmationMessage(pack.session, pack.channel, dbRole, pack.message.Author)
 			if err == nil {
 				pack.session.ChannelMessageSend(pack.channel.ID, pack.message.Author.Mention()+" check your PM's for further instructions!")
 			} else {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, I couldn't send you a PM! Please check your settings to allow direct messages from users on this server.")
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, I couldn't send you a PM! Please check your settings to allow direct messages from "+
+					"users on this server.")
 			}
 			return false
 		}
+
+		// they gave us some sort of confirmation code, delete their message
 		pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
 
+		// Optionally check for a security answer, since we can have just a confirmation code and no security
 		if dbRole.ConfirmationSecurityAnswer.Valid && dbRole.ConfirmationSecurityAnswer.String != "" {
-			if len(pack.params) != 3 {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert the correct confirmation code and security answer to access this role. Use `"+rc.ComPrefix+" "+
-					dbRole.Trigger.String+"` to receive a DM containing detailed instructions.")
+			if len(confirmCodes) != 2 {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert a confirmation code and security answer to access "+
+					"this role. Use `"+rc.ComPrefix+" "+dbRole.Trigger.String+"` to receive a DM containing detailed instructions.")
 				return false
 			}
-			if pack.params[1] != dbRole.ConfirmationSecurityAnswer.String || pack.params[2] != rc.getRoleCode(roleToAdd.ID, pack.message.Author.ID) {
+			if !util.StrContains(confirmCodes, dbRole.ConfirmationSecurityAnswer.String, util.CaseSensitive) ||
+				!util.StrContains(confirmCodes, "-"+rc.getRoleCode(roleToAdd.ID, pack.message.Author.ID), util.CaseSensitive) {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert the correct confirmation code to access this role.")
 				return false
 			}
 		} else {
-			if len(pack.params) != 2 {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert the correct confirmation code to access this role. Use `"+rc.ComPrefix+" "+
-					dbRole.Trigger.String+"` to receive a DM containing detailed instructions.")
+			if len(confirmCodes) != 1 {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert a confirmation code to access this role. Use `"+
+					rc.ComPrefix+" "+dbRole.Trigger.String+"` to receive a DM containing detailed instructions.")
 				return false
 			}
-			if pack.params[1] != rc.getRoleCode(roleToAdd.ID, pack.message.Author.ID) {
+			if !util.StrContains(confirmCodes, "-"+rc.getRoleCode(roleToAdd.ID, pack.message.Author.ID), util.CaseSensitive) {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert the correct confirmation code to access this role.")
 				return false
 			}
@@ -205,7 +216,8 @@ func (rc *RoleCommand) sendConfirmationMessage(session *discordgo.Session, chann
 		// could log error creating user channel, but seems like it'll clutter the logs for a valid scenario..
 		return err
 	}
-	_, err = session.ChannelMessageSend(userChannel.ID, fmt.Sprintf(role.ConfirmationMessage.String, "-"+rc.getRoleCode(role.RoleUid, user.ID)))
+	message := role.ConfirmationMessage.String + "\nYour confirmation code: `-" + rc.getRoleCode(role.RoleUid, user.ID) + "`"
+	_, err = session.ChannelMessageSend(userChannel.ID, message)
 	return err
 }
 
@@ -269,7 +281,7 @@ func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage)
 	} else {
 		message.WriteString("This server's roles (highlighted `like this`): ")
 		for groupName, triggerList := range triggersByGroup {
-			message.WriteString("Group (")
+			message.WriteString("\nGroup (")
 			message.WriteString(groupName)
 			// TODO: add group type string here
 			message.WriteString("): `")

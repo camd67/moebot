@@ -12,7 +12,7 @@ import (
 )
 
 const serverPossibleCommands = "Possible configs: {WelcomeMessage -> string; max length " + db.MaxMessageLengthString + "} " +
-	"{WelcomeChannel: ChannelId} {VeteranRank -> number} {VeteranRole -> full role name} {BotChannel -> channel ID} {RuleAgreement -> string; max length " +
+	"{WelcomeChannel -> ChannelId} {VeteranRank -> number} {VeteranRole -> full role name} {BotChannel -> channel ID} {RuleAgreement -> string; max length " +
 	db.MaxMessageLengthString + "} {StarterRole -> full role name} {BaseRole -> full role name} {Enabled -> true/false}"
 
 type ServerCommand struct {
