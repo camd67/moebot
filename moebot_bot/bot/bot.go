@@ -233,7 +233,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	isNewUser := !isMaster && !isGuildOwner && server.RuleAgreement.Valid && starterRole != nil &&
 		util.StrContains(member.Roles, starterRole.ID, util.CaseSensitive)
 
-	if strings.HasPrefix(message.Content, ComPrefix) {
+	if strings.HasPrefix(strings.ToUpper(message.Content), strings.ToUpper(ComPrefix)) {
 		// todo: [rate-limit-spam] should add a check here for command spam
 
 		if isNewUser {
