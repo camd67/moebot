@@ -19,6 +19,13 @@ const changeLogPrefix = "\n`->` "
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
 
+	"0.4.0": changeLogPrefix + "Removed all hardcoded values!" +
+		changeLogPrefix + "Merged rank, team, and NSFW into a single command: role" +
+		changeLogPrefix + "Added roleSet and groupSet commands for mods" +
+		changeLogPrefix + "Added server configuration for welcome messages, and rule agreement as well as server config clearing" +
+		changeLogPrefix + "Made help contextual to your permission level (Credit: Shadran)" +
+		changeLogPrefix + "First big step towards public bot status!",
+
 	"0.3.2": changeLogPrefix + "More code cleanup" +
 		changeLogPrefix + "Removed spoiler command (thanks discord)" +
 		changeLogPrefix + "Added verifiable roles (Credit: Shadran)",
