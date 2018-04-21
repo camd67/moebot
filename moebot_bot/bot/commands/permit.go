@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -12,7 +11,8 @@ type PermitCommand struct {
 }
 
 func (pc *PermitCommand) Execute(pack *CommPackage) {
-	args := ParseCommand(strings.Join(pack.params, " "), []string{"-permission", "-securityAnswer", "-confirmationMessage"})
+	// todo: Could probably migrate this over to the role command. Keeping security answer and confirmation in here for now though
+	args := ParseCommand(pack.params, []string{"-permission", "-securityAnswer", "-confirmationMessage"})
 
 	if _, ok := args[""]; !ok || len(args) <= 1 {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a role name followed by one or more arguments.")

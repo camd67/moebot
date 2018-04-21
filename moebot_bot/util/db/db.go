@@ -10,6 +10,12 @@ import (
 
 var moeDb *sql.DB
 
+const (
+	DbMaxUidLength         = 20
+	MaxMessageLength       = 1900
+	MaxMessageLengthString = "1900"
+)
+
 /*
 Does all processing related to setting up the database for moebot
 */
@@ -45,6 +51,7 @@ func createTables() {
 	userServerRankCreateTable()
 	// ROLE
 	roleCreateTable()
+	roleGroupCreateTable()
 	// CHANNEL
 	channelCreateTable()
 	// RAFFLE ENTRY

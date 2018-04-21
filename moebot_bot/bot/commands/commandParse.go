@@ -1,14 +1,14 @@
 package commands
 
-import (
-	"strings"
-)
+import "strings"
 
-func ParseCommand(commandLine string, arguments []string) map[string]string {
+/*
+Parses a given param list, mapping them to the given arguments if possible.
+*/
+func ParseCommand(commParams []string, arguments []string) map[string]string {
 	result := make(map[string]string)
-	slicedCommand := strings.Split(commandLine, " ")
 	var currentCommand, currentCommandContent string
-	for i, s := range slicedCommand {
+	for i, s := range commParams {
 		if isArgument(s, arguments) {
 			if currentCommand != "" || currentCommandContent != "" {
 				result[currentCommand] = currentCommandContent
@@ -22,7 +22,7 @@ func ParseCommand(commandLine string, arguments []string) map[string]string {
 				currentCommandContent += " " + s
 			}
 		}
-		if i == len(slicedCommand)-1 && (currentCommand != "" || currentCommandContent != "") {
+		if i == len(commParams)-1 && (currentCommand != "" || currentCommandContent != "") {
 			result[currentCommand] = currentCommandContent
 		}
 	}
@@ -31,7 +31,7 @@ func ParseCommand(commandLine string, arguments []string) map[string]string {
 
 func isArgument(s string, arguments []string) bool {
 	for _, a := range arguments {
-		if s == a {
+		if strings.EqualFold(s, a) {
 			return true
 		}
 	}

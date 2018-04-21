@@ -40,12 +40,10 @@ type VeteranHandler struct {
 func NewVeteranHandler(comPrefix string, debugChannel string, masterId string) *VeteranHandler {
 	result := &VeteranHandler{}
 	result.reactionCooldownMap = util.SyncCooldownMap{
-		sync.RWMutex{},
-		make(map[string]int64),
+		M: make(map[string]int64),
 	}
 	result.messageCooldownMap = util.SyncCooldownMap{
-		sync.RWMutex{},
-		make(map[string]int64),
+		M: make(map[string]int64),
 	}
 	result.vBuffer = veteranBuffer{
 		m:            make(map[string]int),
@@ -62,12 +60,24 @@ func (vh *VeteranHandler) EventHandlers() []interface{} {
 }
 
 func (vh *VeteranHandler) veteranMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
+	// todo: Another place where we need to update to prevent network failure due to hokago-tea-time. Perhaps we could group these together somehow?
+	// 1 entry point for all handlers perhaps?
 	channel, err := session.State.Channel(message.ChannelID)
 	if err != nil {
 		// missing channel
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, channel)
 		return
 	}
+
+	server, err := db.ServerQueryOrInsert(channel.GuildID)
+	if err != nil {
+		return
+	}
+	if !server.VeteranRank.Valid || !server.VeteranRole.Valid {
+		// they didn't set up any veteran config settings, bail out
+		return
+	}
+
 	// ignore some common bot prefixes
 	if !(strings.HasPrefix(message.Content, "->") || strings.HasPrefix(message.Content, "~") || strings.HasPrefix(message.Content, vh.comPrefix)) {
 		changedUsers, err := vh.handleVeteranMessage(message.Author.ID, channel.GuildID)
@@ -83,11 +93,13 @@ func (vh *VeteranHandler) veteranMessageCreate(session *discordgo.Session, messa
 			}
 		}
 	}
+	// need to clear the server buffer here, since we don't have full clear functionality yet
+	db.FlushServerCache()
 }
 
 func (vh *VeteranHandler) handleVeteranMessage(userUid string, guildUid string) (users []db.UserServerRankWrapper, err error) {
 	key := buildVeteranBufferKey(userUid, guildUid)
-	if isCooldownReached(key, messageCooldown, vh.messageCooldownMap) {
+	if isCooldownReached(key, messageCooldown, &vh.messageCooldownMap) {
 		return vh.handleVeteranChange(userUid, guildUid, messagePoints)
 	}
 	return
@@ -98,6 +110,15 @@ func (vh *VeteranHandler) veteranReactionAdd(session *discordgo.Session, reactio
 	channel, err := session.Channel(reactionAdd.ChannelID)
 	if err != nil {
 		log.Println("Error trying to get channel", err)
+		return
+	}
+
+	server, err := db.ServerQueryOrInsert(channel.GuildID)
+	if err != nil {
+		return
+	}
+	if !server.VeteranRank.Valid || !server.VeteranRole.Valid {
+		// they didn't set up any veteran config settings, bail out
 		return
 	}
 
@@ -112,11 +133,12 @@ func (vh *VeteranHandler) veteranReactionAdd(session *discordgo.Session, reactio
 			}
 		}
 	}
+	db.FlushServerCache()
 }
 
 func (vh *VeteranHandler) handleVeteranReaction(userUid string, guildUid string) (users []db.UserServerRankWrapper, err error) {
 	key := buildVeteranBufferKey(userUid, guildUid)
-	if isCooldownReached(key, reactionCooldown, vh.reactionCooldownMap) {
+	if isCooldownReached(key, reactionCooldown, &vh.reactionCooldownMap) {
 		return vh.handleVeteranChange(userUid, guildUid, reactionPoints)
 	}
 	return
@@ -177,7 +199,7 @@ func (vh *VeteranHandler) handleVeteranChange(userUid string, guildUid string, p
 /**
 Returns true if the given key in the syncCooldownMap has passed the given cooldown duration, false otherwise
 */
-func isCooldownReached(key string, cooldown time.Duration, cooldownMap util.SyncCooldownMap) bool {
+func isCooldownReached(key string, cooldown time.Duration, cooldownMap *util.SyncCooldownMap) bool {
 	cooldownMap.RWMutex.RLock()
 	lastTime, present := cooldownMap.M[key]
 	cooldownMap.RUnlock()

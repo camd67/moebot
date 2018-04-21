@@ -6,7 +6,7 @@ import (
 )
 
 type checkType struct {
-	test     string
+	test     []string
 	testArgs []string
 	expected map[string]string
 }
@@ -18,34 +18,28 @@ type testArgs struct {
 
 func TestCommandParser_ParseCommand(t *testing.T) {
 	resultMaps := [][]testArgs{
-		[]testArgs{{"", ""}},
-		[]testArgs{{"", "test"}},
-		[]testArgs{{"", "test"}, {"-arg1", "test1"}, {"-arg2", "test2"}},
-		[]testArgs{{"-arg1", "test arg1 multiple words"}, {"-arg2", "test2 hi there"}},
-		[]testArgs{{"-arg1", "test1 test aaa"}},
-		[]testArgs{{"", "test"}, {"-arg1", "test\r\nwith\r\nlinebreak"}},
-		[]testArgs{{"-argEmpty", ""}},
-		[]testArgs{{"", "test"}, {"-argEmpty", ""}},
+		{{"", ""}},
+		{{"", "test"}},
+		{{"", "test"}, {"-arg1", "test1"}, {"-arg2", "test2"}},
+		{{"-arg1", "test arg1 multiple words"}, {"-arg2", "test2 hi there"}},
+		{{"-arg1", "test1 test aaa"}},
+		{{"", "test"}, {"-arg1", "test\r\nwith\r\nlinebreak"}},
+		{{"-argEmpty", ""}},
+		{{"", "test"}, {"-argEmpty", ""}},
 	}
-	checks := []checkType{}
+	var checks []checkType
 	for _, m := range resultMaps {
 		var check checkType
 		check.expected = make(map[string]string)
 		for _, ts := range m {
 			if ts.argName != "" {
-				if check.test != "" {
-					check.test += " "
-				}
-				check.test += ts.argName
+				check.test = append(check.test, ts.argName)
 				if ts.value != "" {
-					if check.test != "" {
-						check.test += " "
-					}
-					check.test += ts.value
+					check.test = append(check.test, ts.value)
 				}
 				check.testArgs = append(check.testArgs, ts.argName)
 			} else {
-				check.test += ts.value
+				check.test = append(check.test, ts.value)
 			}
 			if !(ts.argName == "" && ts.value == "") {
 				check.expected[ts.argName] = ts.value
