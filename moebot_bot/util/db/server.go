@@ -27,6 +27,7 @@ type Server struct {
 }
 
 const (
+	// todo: Remove this circular dependency (server defaultPinChannelId -> channel ID -> server ID)
 	serverTable = `CREATE TABLE IF NOT EXISTS server(
 		Id SERIAL NOT NULL PRIMARY KEY,
 		GuildUid VARCHAR(20) NOT NULL UNIQUE,

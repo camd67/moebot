@@ -44,6 +44,8 @@ const (
 	roleGroupInsert        = `INSERT INTO role_group(ServerId, Name, Type) VALUES ($1, $2, $3) RETURNING Id`
 	roleGroupUpdate        = `UPDATE role_group SET Name = $2, Type = $3 WHERE Id = $1`
 	roleGroupDeleteId      = `DELETE FROM role_group WHERE Id = $1`
+
+	UncategorizedGroup = "Uncategorized"
 )
 
 func RoleGroupInsertOrUpdate(rg RoleGroup, s Server) error {

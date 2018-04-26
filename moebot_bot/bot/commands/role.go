@@ -84,7 +84,12 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 					confirmCodes = append(confirmCodes, param)
 				}
 			}
-			dbRole, err = db.RoleQueryTrigger(strings.Trim(roleNameBuf.String(), " "), server.Id)
+			roleNameString := strings.Trim(roleNameBuf.String(), " ")
+			if len(roleNameString) == 0 {
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must provide a valid role name")
+				return
+			}
+			dbRole, err = db.RoleQueryTrigger(roleNameString, server.Id)
 			// an invalid trigger should pretty much never happen, but checking for it anyways
 			if err != nil || !dbRole.Trigger.Valid {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role. `"+

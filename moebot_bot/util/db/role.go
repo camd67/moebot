@@ -15,6 +15,8 @@ const (
 	PermAll Permission = 2
 	// Mod level permission, allowed to do some server changing commands
 	PermMod Permission = 50
+	// Guild Owner permission. Essentially a master
+	PermGuildOwner Permission = 90
 	// Used to disable something, no one can have this permission level
 	PermNone Permission = 100
 	// Master level permission, can't ever be ignored or disabled
@@ -38,7 +40,7 @@ const (
 		ServerId INTEGER REFERENCES server(Id) ON DELETE CASCADE,
 		GroupId INTEGER REFERENCES role_group(Id) ON DELETE CASCADE,
 		RoleUid VARCHAR(20) NOT NULL UNIQUE,
-		Permission SMALLINT NOT NULL,
+		Permission SMALLINT NOT NULL DEFAULT 2,
 		ConfirmationMessage VARCHAR CONSTRAINT role_confirmation_message_length CHECK (char_length(ConfirmationMessage) <= 1900),
 		ConfirmationSecurityAnswer VARCHAR CONSTRAINT role_confirmation_security_answer_length CHECK (char_length(ConfirmationMessage) <= 1900),
 		Trigger TEXT CONSTRAINT role_trigger_length CHECK(char_length(Trigger) <= 100)
@@ -50,7 +52,7 @@ const (
 	roleQueryServerRole  = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE RoleUid = $1 AND ServerId = $2`
 	roleQueryServer      = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE ServerId = $1`
 	roleQuery            = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE Id = $1`
-	roleQueryTrigger     = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE Trigger = $1 AND ServerId = $2`
+	roleQueryTrigger     = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE UPPER(Trigger) = UPPER($1) AND ServerId = $2`
 	roleQueryGroup       = `SELECT Id, ServerId, GroupId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE GroupId = $1`
 	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
 
@@ -74,6 +76,7 @@ var (
 		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_confirmation_security_answer_length`,
 		`ALTER TABLE role ADD CONSTRAINT role_confirmation_security_answer_length CHECK(char_length(ConfirmationSecurityAnswer) <= 1900)`,
 		`ALTER TABLE role ADD COLUMN IF NOT EXISTS GroupId INTEGER REFERENCES role_group(Id) ON DELETE CASCADE`,
+		`ALTER TABLE role ALTER COLUMN Permission SET DEFAULT 2`,
 	}
 )
 
@@ -84,7 +87,7 @@ func RoleInsertOrUpdate(role Role) error {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			if role.Permission == -1 {
-				role.Permission = PermNone
+				role.Permission = PermAll
 			}
 			_, err = moeDb.Exec(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.GroupId, role.Permission, role.ConfirmationMessage,
 				role.ConfirmationSecurityAnswer, role.Trigger)
@@ -128,7 +131,7 @@ func RoleQueryOrInsert(role Role) (r Role, err error) {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			if role.Permission == -1 {
-				role.Permission = PermNone
+				role.Permission = PermAll
 			}
 			var insertId int
 			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.GroupId, role.Permission, role.ConfirmationMessage,
@@ -237,6 +240,8 @@ func GetPermissionFromString(s string) Permission {
 		return PermAll
 	} else if toCheck == "MOD" {
 		return PermMod
+	} else if toCheck == "GUILD OWNER" || toCheck == "GO" {
+		return PermGuildOwner
 	} else if toCheck == "NONE" {
 		return PermNone
 	} else if toCheck == "MASTER" {
@@ -248,10 +253,12 @@ func GetPermissionFromString(s string) Permission {
 
 func SprintPermission(p Permission) string {
 	switch p {
-	case PermMod:
-		return "Mod"
 	case PermAll:
 		return "All"
+	case PermMod:
+		return "Mod"
+	case PermGuildOwner:
+		return "Guild Owner"
 	case PermNone:
 		return "None"
 	case PermMaster:
@@ -259,6 +266,20 @@ func SprintPermission(p Permission) string {
 	default:
 		return "Unknown"
 	}
+}
+
+/**
+Currently only a subset of roles are assignable by the bot
+*/
+func IsAssignablePermissionLevel(p Permission) bool {
+	return p == PermMod || p == PermAll
+}
+
+/**
+Gets a string representing all the possible assignable permission levels
+*/
+func GetAssignableRoles() string {
+	return "{All, Mod}"
 }
 
 func roleCreateTable() {
