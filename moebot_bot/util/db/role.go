@@ -211,8 +211,8 @@ func RoleQueryRoleUid(roleUid string, serverId int) (r Role, err error) {
 	return
 }
 
-func RoleQueryPermission(roleUid []string) (p []Permission) {
-	idCollection := "{" + strings.Join(roleUid, ",") + "}"
+func RoleQueryPermission(roleUids []string) (p []Permission) {
+	idCollection := "{" + strings.Join(roleUids, ",") + "}"
 	r, err := moeDb.Query(roleQueryPermissions, idCollection)
 	if err != nil {
 		log.Println("Error querying for user permissions", err)
