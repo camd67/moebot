@@ -7,7 +7,7 @@ This project/package is responsible for all API requests. Mostly for the website
 ### moebot_bot
 Everything for the discord part of moebot
 #### bot
-This package is for any commands and processing related directly to discord itself. 
+This package is for any commands and processing related directly to discord itself.
 Functions in this package should directly do things related to discord such as sending messages,
 receiving messages, and changing discord related information
 #### util
@@ -25,9 +25,10 @@ This package is for any database tables and database connections/commands. Each 
     * `dbPass` is the root database password and `moeDbPass` is what moebot will login with
     * `masterId` is the discord User ID associated with the bot's master. __NOTE:__ this user can perform any command on any server that this bot is a part of!
     * `debugChannel` is the channel to send __all__ moebot related error messages to.
+    * `loadPings` determines if pins are loaded. 0 = don't load pins, 1 = load pins
 * Duplicate `config/pg_pass.example.txt` and rename it to `pg_pass.secret`
     * Replace the whole file with your default postgres password. This must match `dbPass` in `mb_config.secret`
-    * __Note:__ this file should have exactly 1 line! Any trailing newlines will break the login process 
+    * __Note:__ this file should have exactly 1 line! Any trailing newlines will break the login process
 * Create a docker volume: `docker volume create moebot-data`
 * Run `docker-compose up --build -d` to run moebot in the background
 * Invite moebot to your server!

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
 	"path/filepath"
@@ -87,6 +88,16 @@ This is useful when you don't have a User object, but want to mention them
 */
 func UserIdToMention(userId string) string {
 	return fmt.Sprintf("<@%s>", userId)
+}
+
+func ExtractChannelIdFromString(message string) (id string, valid bool) {
+	// channelIds go with the format of <#1234567>
+	if len(message) < 2 || len(message) > 23 {
+		return "", false
+	}
+	id = message[2 : len(message)-1]
+	_, err := strconv.Atoi(id)
+	return id, err == nil
 }
 
 func MakeStringBold(s string) string {
@@ -311,23 +322,31 @@ func GetSpoilerContents(messageParams []string) (title string, text string) {
 	return strings.Replace(strings.Replace(reg.FindString(strings.Join(messageParams, " ")), "]", "", 1), "[", "", 1), reg.ReplaceAllString(strings.Join(messageParams, " "), "")
 }
 
-func MoveMessage(session *discordgo.Session, message *discordgo.Message, destChannelUid string) {
-	session.ChannelMessageDelete(message.ChannelID, message.ID)
-	files := []*discordgo.File{}
-	for _, a := range message.Attachments {
-		response, err := http.Get(a.URL)
-		if err != nil {
-			continue
-		}
-		defer response.Body.Close()
-		b, _ := ioutil.ReadAll(response.Body)
-		files = append(files, &discordgo.File{
-			Name:        a.Filename,
-			Reader:      bytes.NewReader(b),
-			ContentType: mime.TypeByExtension(filepath.Ext(a.Filename)),
-		})
+func MoveMessage(session *discordgo.Session, message *discordgo.Message, destChannelUid string, deleteOldPin bool) {
+	if deleteOldPin {
+		session.ChannelMessageDelete(message.ChannelID, message.ID)
 	}
-	content := message.Author.Mention() + " posted in <#" + message.ChannelID + ">: " + message.Content
+	var files []*discordgo.File
+	for _, a := range message.Attachments {
+		func() {
+			response, err := http.Get(a.URL)
+			if err != nil {
+				return
+			}
+			defer response.Body.Close()
+			b, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				log.Println("Error reading from attachment response", err)
+				return
+			}
+			files = append(files, &discordgo.File{
+				Name:        a.Filename,
+				Reader:      bytes.NewReader(b),
+				ContentType: mime.TypeByExtension(filepath.Ext(a.Filename)),
+			})
+		}()
+	}
+	content := message.Author.Mention() + " posted the following message in <#" + message.ChannelID + ">:\n" + message.Content
 
 	session.ChannelMessageSendComplex(destChannelUid, &discordgo.MessageSend{
 		Content: content,

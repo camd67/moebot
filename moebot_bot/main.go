@@ -9,11 +9,10 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/bot"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
-
-	"github.com/bwmarrin/discordgo"
 )
 
 func main() {
@@ -40,22 +39,21 @@ func main() {
 	}
 
 	bot.SetupMoebot(discord)
+	defer db.DisconnectAll()
 
 	// start up a connection with discord
 	err = discord.Open()
 	if err != nil {
 		log.Fatal("Error starting discord: ", err)
+		return
 	}
+	defer discord.Close()
 
 	// halt until we get a SIGTERM or similar
 	log.Println("Moebot's up and running! Press CTRL + C to exit...")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-
-	// Clean up any connections to outside resources
-	discord.Close()
-	db.DisconnectAll()
 
 	fmt.Println("Exited moebot! Seeya later!")
 }

@@ -12,22 +12,20 @@ import (
 A Server (guild in discord terms) that stores information related to what over server settings are.
 */
 type Server struct {
-	Id                  int
-	GuildUid            string
-	WelcomeMessage      sql.NullString // Message user gets sent when they first join the server, either via PM or public message depending on WelcomeChannel
-	RuleAgreement       sql.NullString // Message to type when the user agrees to the rules
-	VeteranRank         sql.NullInt64  // Rank at which a user can be promoted to the veteran role
-	VeteranRole         sql.NullString // Role to apply when a user can become a veteran
-	BotChannel          sql.NullString // Where any bot related information or errors get sent to.
-	DefaultPinChannelId sql.NullInt64  //
-	Enabled             bool           // defaults to true, so that new servers that add moebot can immediately start using her. This can be turned off later
-	WelcomeChannel      sql.NullString // Channel to post a welcome message. If null, send via PM's
-	StarterRole         sql.NullString // The role that is added when someone first joins a server
-	BaseRole            sql.NullString // The role that is added when someone types the RuleAgreement message. Should only exist when RuleAgreement isn't null
+	Id             int
+	GuildUid       string
+	WelcomeMessage sql.NullString // Message user gets sent when they first join the server, either via PM or public message depending on WelcomeChannel
+	RuleAgreement  sql.NullString // Message to type when the user agrees to the rules
+	VeteranRank    sql.NullInt64  // Rank at which a user can be promoted to the veteran role
+	VeteranRole    sql.NullString // Role to apply when a user can become a veteran
+	BotChannel     sql.NullString // Where any bot related information or errors get sent to.
+	Enabled        bool           // defaults to true, so that new servers that add moebot can immediately start using her. This can be turned off later
+	WelcomeChannel sql.NullString // Channel to post a welcome message. If null, send via PM's
+	StarterRole    sql.NullString // The role that is added when someone first joins a server
+	BaseRole       sql.NullString // The role that is added when someone types the RuleAgreement message. Should only exist when RuleAgreement isn't null
 }
 
 const (
-	// todo: Remove this circular dependency (server defaultPinChannelId -> channel ID -> server ID)
 	serverTable = `CREATE TABLE IF NOT EXISTS server(
 		Id SERIAL NOT NULL PRIMARY KEY,
 		GuildUid VARCHAR(20) NOT NULL UNIQUE,
@@ -35,7 +33,6 @@ const (
 		RuleAgreement VARCHAR(1900),
 		VeteranRank INTEGER,
 		VeteranRole VARCHAR(20),
-		DefaultPinChannelId INTEGER NULL REFERENCES channel(Id),
 		BotChannel VARCHAR(20),
 		Enabled BOOLEAN NOT NULL DEFAULT TRUE,
 		WelcomeChannel VARCHAR(20),
@@ -43,30 +40,28 @@ const (
 		BaseRole VARCHAR(20)
 	)`
 
-	serverColumnNames        = `GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel, Enabled, WelcomeChannel, StarterRole, BaseRole`
-	serverInsertColumnNames  = `GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, DefaultPinChannelId, BotChannel, WelcomeChannel, StarterRole, BaseRole`
-	serverInsertColumnParams = `$1, $2, $3, $4, $5, $6, $7, $8, $9, $10`
-	serverSetParams          = `WelcomeMessage = $2, RuleAgreement = $3, VeteranRank = $4, VeteranRole = $5, DefaultPinChannelId = $6, BotChannel = $7, Enabled = $8, StarterRole = $9, BaseRole = $10, WelcomeChannel = $11`
+	serverColumnNames        = `GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, BotChannel, Enabled, WelcomeChannel, StarterRole, BaseRole`
+	serverInsertColumnNames  = `GuildUid, WelcomeMessage, RuleAgreement, VeteranRank, VeteranRole, BotChannel, WelcomeChannel, StarterRole, BaseRole`
+	serverInsertColumnParams = `$1, $2, $3, $4, $5, $6, $7, $8, $9`
+	serverSetParams          = `WelcomeMessage = $2, RuleAgreement = $3, VeteranRank = $4, VeteranRole = $5, BotChannel = $6, Enabled = $7, StarterRole = $8, BaseRole = $9, WelcomeChannel = $10`
 
-	serverQuery                = `SELECT Id, ` + serverColumnNames + ` FROM server WHERE Id = $1`
-	serverQueryGuild           = `SELECT Id, ` + serverColumnNames + ` FROM server WHERE GuildUid = $1`
-	serverInsert               = `INSERT INTO server(` + serverInsertColumnNames + `) VALUES (` + serverInsertColumnParams + `) RETURNING id`
-	serverUpdate               = `UPDATE server SET ` + serverSetParams + ` WHERE Id = $1`
-	serverSetDefaultPinChannel = `UPDATE server SET DefaultPinChannelId = $1 WHERE Id = $2`
+	serverQuery      = `SELECT Id, ` + serverColumnNames + ` FROM server WHERE Id = $1`
+	serverQueryGuild = `SELECT Id, ` + serverColumnNames + ` FROM server WHERE GuildUid = $1`
+	serverInsert     = `INSERT INTO server(` + serverInsertColumnNames + `) VALUES (` + serverInsertColumnParams + `) RETURNING id`
+	serverUpdate     = `UPDATE server SET ` + serverSetParams + ` WHERE Id = $1`
 )
 
 var (
 	serverUpdateTable = []string{
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS VeteranRank INTEGER`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS VeteranRole VARCHAR(20)`,
-		`ALTER TABLE server ADD COLUMN IF NOT EXISTS DefaultPinChannelId INTEGER NULL`,
-		`ALTER TABLE server DROP CONSTRAINT IF EXISTS server_defaultpinchannelid_fkey`,
-		`ALTER TABLE server ADD CONSTRAINT server_defaultpinchannelid_fkey FOREIGN KEY (DefaultPinChannelId) REFERENCES channel(Id)`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS BotChannel VARCHAR(20)`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS Enabled BOOLEAN NOT NULL DEFAULT TRUE`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS WelcomeChannel VARCHAR(20)`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS StarterRole VARCHAR(20)`,
 		`ALTER TABLE server ADD COLUMN IF NOT EXISTS BaseRole VARCHAR(20)`,
+		`ALTER TABLE server DROP CONSTRAINT IF EXISTS server_defaultpinchannelid_fkey`,
+		`ALTER TABLE server DROP COLUMN IF EXISTS DefaultPinChannelId`,
 	}
 
 	serverMemoryBuffer = struct {
@@ -89,7 +84,7 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 			toInsert := Server{GuildUid: guildUid}
 			var insertId int
 			e = moeDb.QueryRow(serverInsert, &toInsert.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole,
-				&s.DefaultPinChannelId, &s.BotChannel, &s.WelcomeChannel, &s.StarterRole, &s.BaseRole).Scan(&insertId)
+				&s.BotChannel, &s.WelcomeChannel, &s.StarterRole, &s.BaseRole).Scan(&insertId)
 			if e != nil {
 				log.Println("Error inserting role to db ", e)
 				return Server{}, e
@@ -111,7 +106,7 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 }
 
 func serverScan(row *sql.Row, s *Server) error {
-	return row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.DefaultPinChannelId, &s.BotChannel, &s.Enabled,
+	return row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.BotChannel, &s.Enabled,
 		&s.WelcomeChannel, &s.StarterRole, &s.BaseRole)
 }
 
@@ -199,7 +194,7 @@ func FlushServerCache() {
 }
 
 func ServerFullUpdate(s Server) (err error) {
-	_, err = moeDb.Exec(serverUpdate, s.Id, s.WelcomeMessage, s.RuleAgreement, s.VeteranRank, s.VeteranRole, s.DefaultPinChannelId, s.BotChannel, s.Enabled,
+	_, err = moeDb.Exec(serverUpdate, s.Id, s.WelcomeMessage, s.RuleAgreement, s.VeteranRank, s.VeteranRole, s.BotChannel, s.Enabled,
 		s.StarterRole, s.BaseRole, s.WelcomeChannel)
 	if err != nil {
 		log.Println("There was an error updating the server table", err)
@@ -220,12 +215,4 @@ func serverCreateTable() {
 			return
 		}
 	}
-}
-
-func ServerSetDefaultPinChannel(serverId int, channelId int) error {
-	_, err := moeDb.Exec(serverSetDefaultPinChannel, channelId, serverId)
-	if err != nil {
-		log.Println("Failed to set pin channel", err)
-	}
-	return err
 }

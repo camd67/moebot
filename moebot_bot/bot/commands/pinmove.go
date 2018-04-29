@@ -1,14 +1,11 @@
 package commands
 
 import (
-	"database/sql"
-	"errors"
+	"bytes"
 	"fmt"
 	"log"
 	"mime"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -24,51 +21,120 @@ type PinMoveCommand struct {
 }
 
 func (pc *PinMoveCommand) Execute(pack *CommPackage) {
-	if len(pack.params) == 0 {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to specify at least a valid channel.")
-		return
-	}
 	if !pc.ready {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, the pin move feature is still loading.")
 		return
 	}
-	var err error
-	var pinChannel string
-	regNumbers := regexp.MustCompile("\\d+")
-	enableText := false
-	for i := 0; i < len(pack.params)-1; i++ {
-		if pack.params[i] == "-sendTo" {
-			pinChannel = regNumbers.FindString(pack.params[i+1])
+	commMap := ParseCommand(pack.params, []string{"-channel", "-dest", "-text", "-delete"})
+	sourceChannelText, hasSource := commMap["-channel"]
+	destChannelText, hasDest := commMap["-dest"]
+	_, hasTextParam := commMap["-text"]
+	_, hasDeleteParam := commMap["-delete"]
+
+	if !hasSource {
+		pack.session.ChannelMessageSend(pack.channel.ID, "You must specify a source and destination channel for this command.")
+		return
+	}
+
+	if hasDest && sourceChannelText == destChannelText {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Please provide two different channels for pin moving.")
+		return
+	}
+
+	// validate to make sure the two channels exist.
+	// These can easily be refactored when we switch to session state
+	var sourceChannel *discordgo.Channel
+	var destChannel *discordgo.Channel
+	sourceChannelUid, sourceChannelValid := util.ExtractChannelIdFromString(sourceChannelText)
+	var destChannelUid string
+	// default to true on dest channel in case we didn't provide one
+	destChannelValid := true
+	if hasDest {
+		destChannelUid, destChannelValid = util.ExtractChannelIdFromString(destChannelText)
+	}
+	if !sourceChannelValid || !destChannelValid {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Please provide your channels in the `#channel-name` format")
+		return
+	}
+	for _, c := range pack.guild.Channels {
+		if c.ID == sourceChannelUid {
+			sourceChannel = c
 		}
-		if pack.params[i] == "-text" {
-			enableText = true
+		if hasDest && c.ID == destChannelUid {
+			destChannel = c
 		}
 	}
+	if sourceChannel == nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "That source channel doesn't exist, please provide a valid source channel in the #channel-name format")
+		return
+	}
+	if hasDest && destChannel == nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "That destination channel doesn't exist, please provide a valid destination channel in the "+
+			"#channel-name format")
+		return
+	}
+
 	server, err := db.ServerQueryOrInsert(pack.guild.ID)
-	if pinChannel == "" && (!server.DefaultPinChannelId.Valid || server.DefaultPinChannelId.Int64 == 0) {
-		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there is no default destination channel set. You need to specify at least a valid destination channel.")
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding this server. This is an issue with moebot not Discord")
 		return
 	}
-	sourceChannelUid := regNumbers.FindString(pack.params[len(pack.params)-1])
-	if pinChannel != "" {
-		if err = pc.newPinChannel(pinChannel, server, pack); err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
-			return
-		}
-	}
-	var pinEnabled bool
-	if pinEnabled, err = togglePin(sourceChannelUid, enableText, server, pack); err != nil {
-		pack.session.ChannelMessageSend(pack.channel.ID, err.Error())
+
+	dbChannel, err := db.ChannelQueryOrInsert(sourceChannel.ID, &server)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error getting the channel. This is an issue with moebot not Discord.")
 		return
 	}
-	message := "Message move on pin has been "
-	if pinEnabled {
-		message += "enabled"
+	if !dbChannel.MoveChannelUid.Valid && !hasDest {
+		pack.session.ChannelMessageSend(pack.channel.ID, "The provided channel doesn't have a destination. Please provide one.")
+		return
+	}
+
+	// Overwrite with our new properties
+	dbChannel.MovePins = true
+	if hasDest {
+		dbChannel.MoveChannelUid.Scan(destChannel.ID)
+	}
+	dbChannel.MoveTextPins = hasTextParam
+	dbChannel.DeletePin = hasDeleteParam
+
+	err = db.ChannelUpdate(dbChannel)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error updating the channel. This is an issue with moebot not Discord.")
+		return
+	}
+
+	// Then load the pins if necessary
+	pc.pinnedMessages.Lock()
+	if _, pinsLoaded := pc.pinnedMessages.M[sourceChannel.ID]; !pinsLoaded {
+		log.Println("Loading channel: " + sourceChannel.Name)
+		go pc.loadChannel(pack.session, &server, sourceChannel)
+	}
+	pc.pinnedMessages.Unlock()
+
+	var message bytes.Buffer
+	message.WriteString("Message move on pin has been ")
+	if dbChannel.MovePins {
+		message.WriteString("enabled")
 	} else {
-		message += "disabled"
+		message.WriteString("disabled")
 	}
-	message += " on channel <#" + sourceChannelUid + ">"
-	pack.session.ChannelMessageSend(pack.channel.ID, message)
+	message.WriteString(" on channel <#")
+	message.WriteString(sourceChannel.ID)
+	message.WriteString(">. Sending pinned images to <#")
+	message.WriteString(dbChannel.MoveChannelUid.String)
+	message.WriteString(">")
+	if dbChannel.MoveTextPins {
+		message.WriteString(" Also moving text pins.")
+	} else {
+		message.WriteString(" Not including text pins.")
+	}
+	if dbChannel.DeletePin {
+		message.WriteString(" Deleting any pinned messages when moved.")
+	} else {
+		message.WriteString(" Not deleting any pinned messages when moved.")
+	}
+	pack.session.ChannelMessageSend(pack.channel.ID, message.String())
 }
 
 func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
@@ -82,7 +148,6 @@ func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
 			log.Println("Error loading guilds, some functions may not work correctly.", err)
 			return
 		}
-		log.Println("Number of guilds: " + strconv.Itoa(len(guilds)))
 		go pc.loadGuilds(session, guilds)
 	} else {
 		log.Println("!!! WARNING !!! Skipping loading pins. NOTE: this will break the ability to use the pin move command")
@@ -111,16 +176,23 @@ func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo
 		log.Println("Error retrieving channels during loading", err)
 		return
 	}
+	dbChannels, err := db.ChannelQueryByServer(server)
 	for _, channel := range channels {
-		if channel.Type == discordgo.ChannelTypeGuildText { //only loading text channels for now
-			pc.loadChannel(session, &server, channel)
+		//only loading text channels for now
+		if channel.Type == discordgo.ChannelTypeGuildText {
+			for _, dbC := range dbChannels {
+				// also only load text channels which have pin moving enabled
+				if dbC.ChannelUid == channel.ID && dbC.MovePins {
+					log.Println("LOADING CHANNEL: " + channel.Name)
+					pc.loadChannel(session, &server, channel)
+				}
+			}
+			log.Println("Done processing channel: " + channel.Name)
 		}
 	}
 }
 
 func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *db.Server, channel *discordgo.Channel) {
-	log.Println("Loading channel: " + channel.Name + " (" + channel.ID + ")")
-
 	_, err := db.ChannelQueryOrInsert(channel.ID, server)
 	if err != nil {
 		log.Println("Error creating/retrieving channel during loading", err)
@@ -130,73 +202,17 @@ func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *db.Ser
 }
 
 func (pc *PinMoveCommand) loadPinnedMessages(session *discordgo.Session, channel *discordgo.Channel) {
-	pinnedMessages := []string{}
+	var pinnedMessages []string
 	messages, err := session.ChannelMessagesPinned(channel.ID)
 	if err != nil {
 		log.Println("Error retrieving pinned channel messages", err)
 	}
-	log.Println("Loading pinned messages > " + strconv.Itoa(len(messages)))
 	for _, message := range messages {
 		pinnedMessages = append(pinnedMessages, message.ID)
 	}
 	pc.pinnedMessages.Lock()
 	pc.pinnedMessages.M[channel.ID] = pinnedMessages
 	pc.pinnedMessages.Unlock()
-}
-
-func (pc *PinMoveCommand) newPinChannel(newPinChannelUid string, server db.Server, pack *CommPackage) error {
-	var newPinChannel *discordgo.Channel
-	var err error
-	for _, c := range pack.guild.Channels {
-		if c.ID == newPinChannelUid {
-			newPinChannel = c
-			break
-		}
-	}
-	if newPinChannel == nil {
-		return errors.New("Sorry, you need to specify a valid destination channel")
-	}
-	var currentPinChannel *db.Channel
-	if server.DefaultPinChannelId.Valid && server.DefaultPinChannelId.Int64 > 0 {
-		currentPinChannel, err = db.ChannelQueryById(int(server.DefaultPinChannelId.Int64))
-		if err != nil && err != sql.ErrNoRows {
-			return errors.New("Sorry, there was a problem retrieving the current pin channel")
-		}
-	}
-	if currentPinChannel == nil || currentPinChannel.ChannelUid != newPinChannel.ID {
-		dbNewPinChannel, err := db.ChannelQueryOrInsert(newPinChannel.ID, &server)
-		if err != nil {
-			return errors.New("Sorry, there was a problem retrieving the new pin channel")
-		}
-		err = db.ServerSetDefaultPinChannel(server.Id, dbNewPinChannel.Id)
-		if err != nil {
-			return errors.New("Sorry, there was a problem setting the new pin channel")
-		}
-		server.DefaultPinChannelId.Scan(dbNewPinChannel.Id)
-	}
-	return nil
-}
-
-func togglePin(sourceChannelUid string, enableTextPins bool, server db.Server, pack *CommPackage) (bool, error) {
-	var sourceChannel *discordgo.Channel
-	for _, c := range pack.guild.Channels {
-		if c.ID == sourceChannelUid {
-			sourceChannel = c
-			break
-		}
-	}
-	if sourceChannel == nil {
-		return false, errors.New("Sorry, you need to specify a valid source channel")
-	}
-	dbSourceChannel, err := db.ChannelQueryOrInsert(sourceChannel.ID, &server)
-	if err != nil {
-		return false, errors.New("Sorry, there was a problem retrieving the source channel")
-	}
-	err = db.ChannelSetPin(dbSourceChannel.Id, !dbSourceChannel.MovePins, enableTextPins)
-	if err != nil {
-		return false, errors.New("Sorry, there was a problem setting the pin status")
-	}
-	return !dbSourceChannel.MovePins, nil
 }
 
 func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pinsUpdate *discordgo.ChannelPinsUpdate) {
@@ -214,20 +230,12 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		log.Println("Error while retrieving server from database", err)
 		return
 	}
-	if !server.DefaultPinChannelId.Valid || server.DefaultPinChannelId.Int64 == 0 {
-		return
-	}
 	dbChannel, err := db.ChannelQueryOrInsert(pinsUpdate.ChannelID, &server)
 	if err != nil {
 		log.Println("Error while retrieving source channel from database", err)
 		return
 	}
-	if !dbChannel.MovePins {
-		return
-	}
-	dbDestChannel, err := db.ChannelQueryById(int(server.DefaultPinChannelId.Int64))
-	if err != nil {
-		log.Println("Error while retrieving destination channel from database", err)
+	if !dbChannel.MovePins || !dbChannel.MoveChannelUid.Valid {
 		return
 	}
 	newPinnedMessages, err := pc.getUpdatePinnedMessages(session, pinsUpdate.ChannelID)
@@ -256,16 +264,15 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		moveMessage = true
 	}
 	if moveMessage {
-		util.MoveMessage(session, newPinnedMessage, dbDestChannel.ChannelUid)
+		util.MoveMessage(session, newPinnedMessage, dbChannel.MoveChannelUid.String, dbChannel.DeletePin)
 	}
 }
 
-func (pc *PinMoveCommand) getUpdatePinnedMessages(session *discordgo.Session, channelId string) ([]*discordgo.Message, error) {
-	result := []*discordgo.Message{}
+func (pc *PinMoveCommand) getUpdatePinnedMessages(session *discordgo.Session, channelId string) (result []*discordgo.Message, err error) {
 	currentPinnedMessages, err := session.ChannelMessagesPinned(channelId)
-	messagesId := []string{}
+	var messagesId []string
 	if err != nil {
-		return result, err
+		return
 	}
 	for _, m := range currentPinnedMessages {
 		if !pc.pinnedMessageAlreadyLoaded(m.ID, channelId) {
@@ -276,12 +283,12 @@ func (pc *PinMoveCommand) getUpdatePinnedMessages(session *discordgo.Session, ch
 	pc.pinnedMessages.Lock()
 	pc.pinnedMessages.M[channelId] = messagesId //refreshes pinned messages in case of messages removed from pins
 	pc.pinnedMessages.Unlock()
-	return result, nil
+	return
 }
 
 func (pc *PinMoveCommand) pinnedMessageAlreadyLoaded(messageId string, channelId string) bool {
-	defer pc.pinnedMessages.RUnlock()
 	pc.pinnedMessages.RLock()
+	defer pc.pinnedMessages.RUnlock()
 	for _, m := range pc.pinnedMessages.M[channelId] {
 		if messageId == m {
 			return true
@@ -299,5 +306,7 @@ func (pc *PinMoveCommand) GetCommandKeys() []string {
 }
 
 func (pc *PinMoveCommand) GetCommandHelp(commPrefix string) string {
-	return fmt.Sprintf("`%[1]s pinmove [-sendTo <#destChannel>] [-text] <#channel>` - Enables moving messages from the specified channel to the server's destination channel. The `-sendTo` option sets/changes the default destination channel. The `-text` option enables moving text on pin", commPrefix)
+	return fmt.Sprintf("`%[1]s pinmove -channel <#sourceChannel> -dest <#destChannel> [-text -delete]` - Enables moving pinned messages from one channel to "+
+		"another. The `-dest` option sets/changes the destination channel. The `-text` option enables moving text as well as images on pin. The `-delete` "+
+		"option will delete the message before moving.", commPrefix)
 }
