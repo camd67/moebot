@@ -107,7 +107,6 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	// Then load the pins if necessary
 	pc.pinnedMessages.Lock()
 	if _, pinsLoaded := pc.pinnedMessages.M[sourceChannel.ID]; !pinsLoaded {
-		log.Println("Loading channel: " + sourceChannel.Name)
 		go pc.loadChannel(pack.session, &server, sourceChannel)
 	}
 	pc.pinnedMessages.Unlock()
@@ -162,6 +161,7 @@ func (pc *PinMoveCommand) loadGuilds(session *discordgo.Session, guilds []*disco
 	for _, guild := range guilds {
 		pc.loadGuild(session, guild)
 	}
+	log.Println("All Guild channels have been processed for pin loading.")
 	pc.ready = true
 }
 
@@ -177,17 +177,19 @@ func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo
 		return
 	}
 	dbChannels, err := db.ChannelQueryByServer(server)
+	if len(dbChannels) == 0 {
+		// If we've got no channels in the database there's no way we will have channels that are configured for pin moving
+		return
+	}
 	for _, channel := range channels {
 		//only loading text channels for now
 		if channel.Type == discordgo.ChannelTypeGuildText {
 			for _, dbC := range dbChannels {
 				// also only load text channels which have pin moving enabled
 				if dbC.ChannelUid == channel.ID && dbC.MovePins {
-					log.Println("LOADING CHANNEL: " + channel.Name)
 					pc.loadChannel(session, &server, channel)
 				}
 			}
-			log.Println("Done processing channel: " + channel.Name)
 		}
 	}
 }
