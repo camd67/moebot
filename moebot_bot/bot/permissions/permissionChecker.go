@@ -9,20 +9,23 @@ type PermissionChecker struct {
 	MasterId string
 }
 
-func (p *PermissionChecker) HasAllPerm(userId string, roles []string) bool {
-	return p.HasPermission(userId, roles, db.PermAll)
+func (p *PermissionChecker) HasAllPerm(userId string, roles []string, guild *discordgo.Guild) bool {
+	return p.HasPermission(userId, roles, guild, db.PermAll)
 }
 
-func (p *PermissionChecker) HasModPerm(userId string, roles []string) bool {
-	return p.HasPermission(userId, roles, db.PermMod)
+func (p *PermissionChecker) HasModPerm(userId string, roles []string, guild *discordgo.Guild) bool {
+	return p.HasPermission(userId, roles, guild, db.PermMod)
 }
 
-func (p *PermissionChecker) HasPermission(userId string, roles []string, permToCheck db.Permission) bool {
+func (p *PermissionChecker) HasPermission(userId string, roles []string, guild *discordgo.Guild, permToCheck db.Permission) bool {
 	if permToCheck == db.PermAll {
 		// if everyone can use this command, just allow it
 		return true
 	} else if p.IsMaster(userId) {
 		// masters are allowed to do anything
+		return true
+	} else if p.IsGuildOwner(guild, userId) && permToCheck < db.PermGuildOwner {
+		// Special check for guild owners
 		return true
 	} else if permToCheck == db.PermNone {
 		// if no one can use this command, never do it

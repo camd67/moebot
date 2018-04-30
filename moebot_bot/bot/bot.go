@@ -293,8 +293,8 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 
 	if command, commPresent := commandsMap[commandKey]; commPresent {
 		params := messageParts[2:]
-		if !checker.HasPermission(message.Author.ID, member.Roles, command.GetPermLevel()) {
-			session.ChannelMessageSend(channel.ID, "Sorry, this command has a minimum permission of "+db.SprintPermission(command.GetPermLevel()))
+		if !checker.HasPermission(message.Author.ID, member.Roles, guild, command.GetPermLevel()) {
+			session.ChannelMessageSend(channel.ID, "Sorry, you don't have a high enough permission level to access this command.")
 			log.Println("!!PERMISSION VIOLATION!! Processing command: " + commandKey + " from user: {" + message.Author.String() + "}| With Params:{" +
 				strings.Join(params, ",") + "}")
 			return
