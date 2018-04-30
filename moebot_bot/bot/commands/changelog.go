@@ -19,6 +19,11 @@ const changeLogPrefix = "\n`->` "
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
 
+	"0.4.1": changeLogPrefix + "Improved profile command" +
+		changeLogPrefix + "Fix bug with permission checking" +
+		changeLogPrefix + "Fix bug with help command displaying too much" +
+		changeLogPrefix + "Change pinmove to use different infrastructure, and include delete option",
+
 	"0.4.0": changeLogPrefix + "Removed all hardcoded values!" +
 		changeLogPrefix + "Merged rank, team, and NSFW into a single command: role" +
 		changeLogPrefix + "Added roleSet and groupSet commands for mods" +
