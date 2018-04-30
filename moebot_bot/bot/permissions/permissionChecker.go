@@ -24,7 +24,7 @@ func (p *PermissionChecker) HasPermission(userId string, roles []string, guild *
 	} else if p.IsMaster(userId) {
 		// masters are allowed to do anything
 		return true
-	} else if p.IsGuildOwner(guild, userId) && permToCheck < db.PermGuildOwner {
+	} else if IsGuildOwner(guild, userId) && permToCheck < db.PermGuildOwner {
 		// Special check for guild owners
 		return true
 	} else if permToCheck == db.PermNone {
@@ -42,10 +42,10 @@ func (p *PermissionChecker) HasPermission(userId string, roles []string, guild *
 	return false
 }
 
-func (p *PermissionChecker) IsGuildOwner(guild *discordgo.Guild, id string) bool {
-	return guild.OwnerID == id
-}
-
 func (p *PermissionChecker) IsMaster(id string) bool {
 	return p.MasterId == id
+}
+
+func IsGuildOwner(guild *discordgo.Guild, id string) bool {
+	return guild.OwnerID == id
 }

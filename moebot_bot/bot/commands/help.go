@@ -17,7 +17,7 @@ func (hc *HelpCommand) Execute(pack *CommPackage) {
 	if len(pack.params) == 0 {
 		message := "Moebot has the following commands:\n"
 		for _, v := range hc.CommandsMap {
-			if hc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, v.GetPermLevel()) && v.GetCommandHelp(hc.ComPrefix) != "" {
+			if hc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, v.GetPermLevel()) && v.GetCommandHelp(hc.ComPrefix) != "" {
 				message += v.GetCommandHelp(hc.ComPrefix) + "\n"
 			}
 		}

@@ -112,6 +112,10 @@ func MakeStringStrikethrough(s string) string {
 	return "~~" + s + "~~"
 }
 
+func MakeStringCode(s string) string {
+	return "`" + s + "`"
+}
+
 func FindRoleByName(roles []*discordgo.Role, toFind string) *discordgo.Role {
 	toFind = strings.ToUpper(toFind)
 	for _, r := range roles {

@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"strconv"
+	"time"
 
+	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -16,7 +19,7 @@ type ProfileCommand struct {
 
 func (pc *ProfileCommand) Execute(pack *CommPackage) {
 	// special stuff for master rank
-	if pc.MasterId == pack.message.Author.ID {
+	if pc.MasterId == pack.message.Author.ID && len(pack.params) > 1 && pack.params[0] != "-a" {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+"'s profile:\nMy favorite user! ❤️")
 		return
 	}
@@ -29,14 +32,49 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 		if err != sql.ErrNoRows {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue getting your information!")
 			return
-		}
-		if err == sql.ErrNoRows || usr == nil {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, you don't have a rank yet!")
-			return
+		} else {
+			// ErrNoRows. Overwrite the usr value, so we don't accidentally get an NPE later
+			usr = nil
 		}
 	}
-	pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+"'s profile:\nRank: "+convertRankToString(usr.Rank,
-		server.VeteranRank))
+	var message bytes.Buffer
+	message.WriteString(pack.message.Author.Mention())
+	message.WriteString("'s profile:")
+	message.WriteString("\nRank: ")
+	if usr != nil {
+		message.WriteString(convertRankToString(usr.Rank, server.VeteranRank))
+	} else {
+		message.WriteString("Unranked")
+	}
+	message.WriteString("\nPermission Level: ")
+	message.WriteString(util.MakeStringCode(pc.getPermissionLevel(pack)))
+	message.WriteString("\nServer join date: ")
+	t, err := time.Parse(time.RFC3339Nano, pack.member.JoinedAt)
+	if err != nil {
+		message.WriteString(util.MakeStringCode("Unknown"))
+	} else {
+		message.WriteString(util.MakeStringCode(t.Format(time.UnixDate)))
+	}
+	pack.session.ChannelMessageSend(pack.message.ChannelID, message.String())
+}
+
+func (pc *ProfileCommand) getPermissionLevel(pack *CommPackage) string {
+	// special checks for certain roles that aren't in the database
+	if pack.message.Author.ID == pc.MasterId {
+		return db.SprintPermission(db.PermMaster)
+	} else if permissions.IsGuildOwner(pack.guild, pack.message.Author.ID) {
+		return db.SprintPermission(db.PermGuildOwner)
+	}
+
+	perms := db.RoleQueryPermission(pack.member.Roles)
+	highestPerm := db.PermAll
+	// Find the highest permission level this user has
+	for _, userPerm := range perms {
+		if userPerm > highestPerm {
+			highestPerm = userPerm
+		}
+	}
+	return db.SprintPermission(highestPerm)
 }
 
 func convertRankToString(rank int, serverMax sql.NullInt64) (rankString string) {

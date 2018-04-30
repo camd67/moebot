@@ -212,7 +212,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	// If the server is disabled, then don't allow any message processing
 	// HOWEVER, if the user posting the message is this bot's owner or the guild's owner then let it through so they can enable the server
 	isMaster := checker.IsMaster(message.Author.ID)
-	isGuildOwner := checker.IsGuildOwner(guild, message.Author.ID)
+	isGuildOwner := permissions.IsGuildOwner(guild, message.Author.ID)
 	if !server.Enabled && !isMaster && !isGuildOwner {
 		return
 	}
