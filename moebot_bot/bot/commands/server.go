@@ -111,7 +111,7 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 		}
 	} else if configKey == "WELCOMECHANNEL" {
 		if isHelp {
-			pack.session.ChannelMessageSend(pack.channel.ID, "WelcomeChannel: "+util.GetStringOrDefault(s.BotChannel))
+			pack.session.ChannelMessageSend(pack.channel.ID, "WelcomeChannel: "+util.GetStringOrDefault(s.WelcomeChannel))
 		} else if shouldClear {
 			s.WelcomeChannel.Scan(nil)
 		} else {
