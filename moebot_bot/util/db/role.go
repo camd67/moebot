@@ -92,7 +92,7 @@ func RoleInsertOrUpdate(role Role) error {
 			_, err = moeDb.Exec(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.GroupId, role.Permission, role.ConfirmationMessage,
 				role.ConfirmationSecurityAnswer, role.Trigger)
 			if err != nil {
-				log.Println("Error inserting role to db")
+				log.Println("Error inserting role to db", err)
 				return err
 			}
 		} else {
@@ -118,7 +118,7 @@ func RoleInsertOrUpdate(role Role) error {
 		}
 		_, err = moeDb.Exec(roleUpdate, r.Id, r.GroupId, r.Permission, r.ConfirmationMessage, r.ConfirmationSecurityAnswer, r.Trigger)
 		if err != nil {
-			log.Println("Error updating role to db: Id " + strconv.Itoa(r.Id))
+			log.Println("Error updating role to db: Id "+strconv.Itoa(r.Id), err)
 			return err
 		}
 	}

@@ -48,7 +48,7 @@ const (
 	UncategorizedGroup = "Uncategorized"
 )
 
-func RoleGroupInsertOrUpdate(rg RoleGroup, s Server) error {
+func RoleGroupInsertOrUpdate(rg RoleGroup, s Server) (newId int, err error) {
 	row := moeDb.QueryRow(roleGroupQueryById, rg.Id)
 	var dbRg RoleGroup
 	if err := row.Scan(&dbRg.Id, &dbRg.ServerId, &dbRg.Name, &dbRg.Type); err != nil {
@@ -57,15 +57,16 @@ func RoleGroupInsertOrUpdate(rg RoleGroup, s Server) error {
 			if rg.Type <= 0 {
 				rg.Type = GroupTypeAny
 			}
-			_, err = moeDb.Exec(roleGroupInsert, s.Id, rg.Name, rg.Type)
+			err := moeDb.QueryRow(roleGroupInsert, s.Id, rg.Name, rg.Type).Scan(&newId)
 			if err != nil {
 				log.Println("Error inserting roleGroup to db")
-				return err
+				return -1, err
 			}
+
 		} else {
 			// got some other kind of error
 			log.Println("Error scanning roleGroup row from database", err)
-			return err
+			return -1, err
 		}
 	} else {
 		// got a row, update it
@@ -78,10 +79,11 @@ func RoleGroupInsertOrUpdate(rg RoleGroup, s Server) error {
 		_, err = moeDb.Exec(roleGroupUpdate, dbRg.Id, dbRg.Name, dbRg.Type)
 		if err != nil {
 			log.Println("Error updating roleGroup to db: Id - " + strconv.Itoa(dbRg.Id))
-			return err
+			return -1, err
 		}
+		newId = dbRg.Id
 	}
-	return nil
+	return newId, nil
 }
 
 /*

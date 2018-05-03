@@ -100,7 +100,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 			return
 		}
 		dbRoleGroup.Type = newType
-		err = db.RoleGroupInsertOrUpdate(dbRoleGroup, server)
+		_, err = db.RoleGroupInsertOrUpdate(dbRoleGroup, server)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue updating the role group. This most likely means your change "+
 				"wasn't applied")

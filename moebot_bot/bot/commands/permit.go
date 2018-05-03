@@ -12,7 +12,6 @@ type PermitCommand struct {
 }
 
 func (pc *PermitCommand) Execute(pack *CommPackage) {
-	// todo: Could probably migrate this over to the role command. Keeping security answer and confirmation in here for now though
 	args := ParseCommand(pack.params, []string{"-permission"})
 	roleName, rolePresent := args[""]
 	permText, permPresent := args["-permission"]
@@ -45,7 +44,7 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// we don't want to return on a no row error, instead add a default group so we can add later
-			err = db.RoleGroupInsertOrUpdate(db.RoleGroup{
+			newGroupId, err := db.RoleGroupInsertOrUpdate(db.RoleGroup{
 				ServerId: s.Id,
 				Name:     db.UncategorizedGroup,
 				Type:     db.GroupTypeAny,
@@ -55,14 +54,23 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 					"not Discord")
 				return
 			}
+			// Then update the returned dbRole to get the correct information
+			dbRole.GroupId = newGroupId
 		} else {
 			// if we got any other errors, then we want to bail out
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue retrieving that role. This is an issue with moebot and not discord")
 			return
 		}
 	}
+	// Overwrite the values even if present, since these should be the same
+	dbRole.ServerId = s.Id
+	dbRole.RoleUid = r.ID
 	dbRole.Permission = permLevel
-	db.RoleInsertOrUpdate(dbRole)
+	err = db.RoleInsertOrUpdate(dbRole)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue editing that role. This is an issue with moebot not Discord.")
+		return
+	}
 	pack.session.ChannelMessageSend(pack.channel.ID, "Edited role "+roleName+" successfully")
 }
 

@@ -24,7 +24,7 @@ func (p *PermissionChecker) HasPermission(userId string, roles []string, guild *
 	} else if p.IsMaster(userId) {
 		// masters are allowed to do anything
 		return true
-	} else if IsGuildOwner(guild, userId) && permToCheck < db.PermGuildOwner {
+	} else if IsGuildOwner(guild, userId) && permToCheck <= db.PermGuildOwner {
 		// Special check for guild owners
 		return true
 	} else if permToCheck == db.PermNone {
