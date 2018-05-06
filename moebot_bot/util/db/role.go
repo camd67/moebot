@@ -234,6 +234,9 @@ func RoleDelete(roleUid string, guildUid string) error {
 	return err
 }
 
+/**
+Gets a permission value from a string. This should be used when accepting user input.
+*/
 func GetPermissionFromString(s string) Permission {
 	toCheck := strings.ToUpper(s)
 	if toCheck == "ALL" {
@@ -251,6 +254,9 @@ func GetPermissionFromString(s string) Permission {
 	}
 }
 
+/**
+Gets a string from a permission level for use when informing users of what permission they can enter
+*/
 func SprintPermission(p Permission) string {
 	switch p {
 	case PermAll:
@@ -261,6 +267,27 @@ func SprintPermission(p Permission) string {
 		return "Guild Owner"
 	case PermNone:
 		return "None"
+	case PermMaster:
+		return "Master"
+	default:
+		return "Unknown"
+	}
+}
+
+/*
+Gets a string from a permission, which is the user-facing string NOT the assignable string.
+For example: "Your permission level is: GetPermissionString(PermAll)"
+*/
+func GetPermissionString(p Permission) string {
+	switch p {
+	case PermAll:
+		return "Normal User"
+	case PermMod:
+		return "Mod"
+	case PermGuildOwner:
+		return "Guild Owner"
+	case PermNone:
+		return "How did you get this role...?"
 	case PermMaster:
 		return "Master"
 	default:

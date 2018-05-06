@@ -74,7 +74,7 @@ func (pc *ProfileCommand) getPermissionLevel(pack *CommPackage) string {
 			highestPerm = userPerm
 		}
 	}
-	return db.SprintPermission(highestPerm)
+	return db.GetPermissionString(highestPerm)
 }
 
 func convertRankToString(rank int, serverMax sql.NullInt64) (rankString string) {
