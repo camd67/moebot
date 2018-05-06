@@ -56,8 +56,6 @@ func createTables() {
 	channelCreateTable()
 	// RAFFLE ENTRY
 	moeDb.Exec(raffleTable)
-	// CUSTOM ROLE
-	//moeDb.Exec(customRoleTable)
 	//POLL
 	moeDb.Exec(pollTable)
 	moeDb.Exec(pollOptionTable)
