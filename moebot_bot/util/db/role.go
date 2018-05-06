@@ -234,7 +234,7 @@ func RoleDelete(roleUid string, guildUid string) error {
 	return err
 }
 
-/**
+/*
 Gets a permission value from a string. This should be used when accepting user input.
 */
 func GetPermissionFromString(s string) Permission {
@@ -254,7 +254,7 @@ func GetPermissionFromString(s string) Permission {
 	}
 }
 
-/**
+/*
 Gets a string from a permission level for use when informing users of what permission they can enter
 */
 func SprintPermission(p Permission) string {
@@ -295,14 +295,14 @@ func GetPermissionString(p Permission) string {
 	}
 }
 
-/**
+/*
 Currently only a subset of roles are assignable by the bot
 */
 func IsAssignablePermissionLevel(p Permission) bool {
 	return p == PermMod || p == PermAll
 }
 
-/**
+/*
 Gets a string representing all the possible assignable permission levels
 */
 func GetAssignableRoles() string {

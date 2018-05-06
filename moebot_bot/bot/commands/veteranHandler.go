@@ -196,7 +196,7 @@ func (vh *VeteranHandler) handleVeteranChange(userUid string, guildUid string, p
 	return users, nil
 }
 
-/**
+/*
 Returns true if the given key in the syncCooldownMap has passed the given cooldown duration, false otherwise
 */
 func isCooldownReached(key string, cooldown time.Duration, cooldownMap *util.SyncCooldownMap) bool {

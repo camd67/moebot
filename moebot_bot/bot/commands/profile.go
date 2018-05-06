@@ -112,7 +112,7 @@ func convertRankToString(rank int, serverMax sql.NullInt64) (rankString string) 
 	return convertToEmphasizedRankString(rankPrefixes, rankPrefixIndex, rankSeparator)
 }
 
-/**
+/*
 Converts an array of strings to an emphasized string, currently used only for ranks. Looks like:
 ~element1~,**element2**, element3, element4
 */

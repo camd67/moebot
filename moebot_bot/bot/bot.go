@@ -27,7 +27,7 @@ var (
 	masterDebugChannel string
 )
 
-/**
+/*
 Run through initial setup steps for Moebot. This is all that's necessary to setup Moebot for use
 */
 func SetupMoebot(session *discordgo.Session) {
@@ -39,7 +39,7 @@ func SetupMoebot(session *discordgo.Session) {
 	setupOperations(session)
 }
 
-/**
+/*
 Create all the operations to handle commands and events within moebot.
 Whenever a new operation, command, or event is added it should be added to this list
 */
@@ -69,7 +69,7 @@ func setupOperations(session *discordgo.Session) {
 	setupEvents(session)
 }
 
-/**
+/*
 Run through each operation and place each command into the command map (including any aliases)
 */
 func setupCommands() {
@@ -82,7 +82,7 @@ func setupCommands() {
 	}
 }
 
-/**
+/*
 Run through each operation and run through any setup steps required by those operations
 */
 func setupHandlers(session *discordgo.Session) {
@@ -93,7 +93,7 @@ func setupHandlers(session *discordgo.Session) {
 	}
 }
 
-/**
+/*
 Run through each operation and add a handler for any discord events those operations need
 */
 func setupEvents(session *discordgo.Session) {
@@ -106,7 +106,7 @@ func setupEvents(session *discordgo.Session) {
 	}
 }
 
-/**
+/*
 These handlers are global for all of moebot such as message creation and ready
 */
 func addGlobalHandlers(discord *discordgo.Session) {
@@ -115,7 +115,7 @@ func addGlobalHandlers(discord *discordgo.Session) {
 	discord.AddHandler(guildMemberAdd)
 }
 
-/**
+/*
 Global handler for when new guild members join a discord guild. Typically used to welcome them if the server has enabled it.
 */
 func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
@@ -172,7 +172,7 @@ func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd
 	}
 }
 
-/**
+/*
 Global handler for when new messages are sent in any guild. The entry point for commands and other general handling
 */
 func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
@@ -268,7 +268,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 }
 
-/**
+/*
 Global handler that is called whenever moebot successfully connects to discord
 */
 func ready(session *discordgo.Session, event *discordgo.Ready) {
@@ -280,7 +280,7 @@ func ready(session *discordgo.Session, event *discordgo.Ready) {
 	log.Println("Set moebot's status to", status)
 }
 
-/**
+/*
 Helper handler to check if the message provided is a command and if so, executes the command
 */
 func runCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {

@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-/**
+/*
 A Server (guild in discord terms) that stores information related to what over server settings are.
 */
 type Server struct {
