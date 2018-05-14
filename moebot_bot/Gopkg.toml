@@ -36,3 +36,7 @@
   branch = "master"
   name = "github.com/golang/freetype"
   
+[[constraint]]
+  branch = "master"
+  name = "github.com/turnage/graw"
+  
