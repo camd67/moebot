@@ -13,6 +13,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/reddit"
 )
 
 func main() {
@@ -21,6 +22,12 @@ func main() {
 	configFile, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		log.Fatal("Error reading config from file. Path: " + configPath)
+	}
+
+	redditAgentPath := os.Getenv("REDDIT_CONFIG_PATH")
+	redditHandle, err := reddit.NewHandle(redditAgentPath)
+	if err != nil {
+		log.Fatal("Error reading from reddit agent file. Path: " + redditAgentPath)
 	}
 
 	configText := util.NormalizeNewlines(string(configFile))
@@ -38,7 +45,7 @@ func main() {
 		log.Fatal("Error starting discord...", err)
 	}
 
-	bot.SetupMoebot(discord)
+	bot.SetupMoebot(discord, redditHandle)
 	defer db.DisconnectAll()
 
 	// start up a connection with discord

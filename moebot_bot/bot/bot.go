@@ -9,6 +9,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/reddit"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -30,20 +31,20 @@ var (
 /*
 Run through initial setup steps for Moebot. This is all that's necessary to setup Moebot for use
 */
-func SetupMoebot(session *discordgo.Session) {
+func SetupMoebot(session *discordgo.Session, redditHandle *reddit.Handle) {
 	masterId = Config["masterId"]
 	checker = permissions.PermissionChecker{MasterId: masterId}
 	masterDebugChannel = Config["debugChannel"]
 	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
 	addGlobalHandlers(session)
-	setupOperations(session)
+	setupOperations(session, redditHandle)
 }
 
 /*
 Create all the operations to handle commands and events within moebot.
 Whenever a new operation, command, or event is added it should be added to this list
 */
-func setupOperations(session *discordgo.Session) {
+func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 	operations = []interface{}{
 		&commands.RoleCommand{},
 		&commands.RoleSetCommand{ComPrefix: ComPrefix},
@@ -61,6 +62,7 @@ func setupOperations(session *discordgo.Session) {
 		&commands.ServerCommand{ComPrefix: ComPrefix},
 		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"},
+		&commands.AwwnimeCommand{RedditHandle: redditHandle},
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
 	}
 
