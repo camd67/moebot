@@ -5,6 +5,8 @@ secrets:
     file: ./config/pg_pass.secret
   MB_CONFIG:
     file: ./config/mb_config.secret
+  REDDIT_CONFIG:
+    file: ./config/agentfile.secret
 
 services:
   db:
@@ -30,12 +32,14 @@ services:
     container_name: "moebot"
     secrets:
       - MB_CONFIG
+      - REDDIT_CONFIG
     depends_on:
       - db
     networks:
       - backend
     environment:
       MOEBOT_CONFIG_PATH: /run/secrets/MB_CONFIG
+      REDDIT_CONFIG_PATH: /run/secrets/REDDIT_CONFIG
 
   nginx:
     build: ./www
