@@ -191,9 +191,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
-	//I'm guessing this block of code is the cause of our hokago-tea-time issues. Some of these are used just for their IDs while some are used for role checks.
-	// Perhaps we could cache some of the information. Maybe timeout the role cache after 1 minute?
-	channel, err := session.State.Channel(message.ChannelID)
+	channel, err := session.Channel(message.ChannelID)
 	if err != nil {
 		// missing channel
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, channel)

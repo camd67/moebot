@@ -62,7 +62,7 @@ func (vh *VeteranHandler) EventHandlers() []interface{} {
 func (vh *VeteranHandler) veteranMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
 	// todo: Another place where we need to update to prevent network failure due to hokago-tea-time. Perhaps we could group these together somehow?
 	// 1 entry point for all handlers perhaps?
-	channel, err := session.State.Channel(message.ChannelID)
+	channel, err := session.Channel(message.ChannelID)
 	if err != nil {
 		// missing channel
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, channel)
