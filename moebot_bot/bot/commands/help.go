@@ -8,15 +8,15 @@ import (
 )
 
 type HelpCommand struct {
-	ComPrefix   string
-	CommandsMap map[string]Command
-	Checker     permissions.PermissionChecker
+	ComPrefix string
+	Commands  func() []Command
+	Checker   permissions.PermissionChecker
 }
 
 func (hc *HelpCommand) Execute(pack *CommPackage) {
 	if len(pack.params) == 0 {
 		message := "Moebot has the following commands:\n"
-		for _, v := range hc.CommandsMap {
+		for _, v := range hc.Commands() {
 			if hc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, v.GetPermLevel()) && v.GetCommandHelp(hc.ComPrefix) != "" {
 				message += v.GetCommandHelp(hc.ComPrefix) + "\n"
 			}

@@ -48,7 +48,7 @@ func setupOperations(session *discordgo.Session) {
 		&commands.RoleCommand{},
 		&commands.RoleSetCommand{ComPrefix: ComPrefix},
 		&commands.GroupSetCommand{ComPrefix: ComPrefix},
-		&commands.HelpCommand{ComPrefix: ComPrefix, CommandsMap: commandsMap, Checker: checker},
+		&commands.HelpCommand{ComPrefix: ComPrefix, Commands: getCommands, Checker: checker}, //using a delegate here because it will remain accurate regardless of what gets added to operations
 		&commands.ChangelogCommand{Version: version},
 		&commands.RaffleCommand{MasterId: masterId, DebugChannel: masterDebugChannel},
 		&commands.SubmitCommand{ComPrefix: ComPrefix},
@@ -69,15 +69,23 @@ func setupOperations(session *discordgo.Session) {
 	setupEvents(session)
 }
 
+func getCommands() []commands.Command {
+	result := []commands.Command{}
+	for _, o := range operations {
+		if command, ok := o.(commands.Command); ok {
+			result = append(result, command)
+		}
+	}
+	return result
+}
+
 /*
 Run through each operation and place each command into the command map (including any aliases)
 */
 func setupCommands() {
-	for _, o := range operations {
-		if command, ok := o.(commands.Command); ok {
-			for _, key := range command.GetCommandKeys() {
-				commandsMap[key] = command
-			}
+	for _, command := range getCommands() {
+		for _, key := range command.GetCommandKeys() {
+			commandsMap[key] = command
 		}
 	}
 }
