@@ -8,12 +8,12 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/reddit"
 )
 
-type AwwnimeCommand struct {
+type RandomCommand struct {
 	PermChecker  permissions.PermissionChecker
 	RedditHandle *reddit.Handle
 }
 
-func (ac *AwwnimeCommand) Execute(pack *CommPackage) {
+func (ac *RandomCommand) Execute(pack *CommPackage) {
 	send, err := ac.RedditHandle.GetRandomImage("awwnime")
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Ooops... Looks like this command isn't working right now. Sorry!")
@@ -23,12 +23,12 @@ func (ac *AwwnimeCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSendComplex(pack.channel.ID, send)
 }
 
-func (ac *AwwnimeCommand) GetPermLevel() db.Permission {
+func (ac *RandomCommand) GetPermLevel() db.Permission {
 	return db.PermAll
 }
-func (ac *AwwnimeCommand) GetCommandKeys() []string {
+func (ac *RandomCommand) GetCommandKeys() []string {
 	return []string{"RANDOM", "R"}
 }
-func (ac *AwwnimeCommand) GetCommandHelp(commPrefix string) string {
+func (ac *RandomCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s r` or `%[1]s random` - Posts a cute anime character.", commPrefix)
 }
