@@ -117,5 +117,7 @@ func (handle *Handle) renewTokenIfNecessary() error {
 			return errors.New("Couldn't renew token")
 		}
 	}
+
+	handle.tokenStartTime = time.Now()
 	return nil
 }
