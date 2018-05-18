@@ -9,9 +9,15 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jzelinskie/geddit"
+)
+
+const (
+	tokenTimeLimit = time.Minute * 59 // Tokens last an hour, refresh them every almost-hour
+	imageLimit     = 100              // 100 is max allowed by reddit listing apis
 )
 
 var (
@@ -19,8 +25,13 @@ var (
 )
 
 type Handle struct {
-	session         *geddit.OAuthSession
-	isAuthenticated bool
+	session        *geddit.OAuthSession
+	tokenStartTime time.Time
+
+	clientID     string
+	clientSecret string
+	username     string
+	password     string
 }
 
 func NewHandle(clientID, clientSecret, username, password string) (*Handle, error) {
@@ -32,20 +43,25 @@ func NewHandle(clientID, clientSecret, username, password string) (*Handle, erro
 	)
 	if err != nil {
 		log.Println("Error getting reddit oauth session")
-		return &Handle{isAuthenticated: false}, err
+		return &Handle{}, err
 	}
 
 	err = session.LoginAuth(username, password)
 	if err != nil {
-		return &Handle{isAuthenticated: false}, err
+		return &Handle{}, err
 	}
 
-	return &Handle{session: session, isAuthenticated: true}, err
+	return &Handle{session: session, tokenStartTime: time.Now(), clientID: clientID, clientSecret: clientSecret, username: username, password: password}, err
 }
 
 func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, error) {
-	if !handle.isAuthenticated {
-		return nil, errors.New("Handle was not authenticated")
+	if handle.session == nil {
+		return nil, errors.New("Handle's session was not setup")
+	}
+
+	err := handle.renewTokenIfNecessary()
+	if err != nil {
+		return nil, err
 	}
 
 	posts, err := handle.getListing(subreddit)
@@ -76,7 +92,7 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("Error preparing repsonse body")
+		log.Printf("Error preparing repsonse body")
 		return nil, err
 	}
 
@@ -90,5 +106,16 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 }
 
 func (handle *Handle) getListing(subreddit string) ([]*geddit.Submission, error) {
-	return handle.session.SubredditSubmissions(subreddit, geddit.HotSubmissions, geddit.ListingOptions{Limit: 100})
+	return handle.session.SubredditSubmissions(subreddit, geddit.HotSubmissions, geddit.ListingOptions{Limit: imageLimit})
+}
+
+func (handle *Handle) renewTokenIfNecessary() error {
+	if handle.tokenStartTime.Add(tokenTimeLimit).Before(time.Now()) {
+		log.Println("Reddit token expired, getting new token")
+		err := handle.session.LoginAuth(handle.username, handle.password)
+		if err != nil {
+			return errors.New("Couldn't renew token")
+		}
+	}
+	return nil
 }
