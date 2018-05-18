@@ -5,3 +5,7 @@ moeDataPass~
 masterId~
 debugChannel~
 loadPins~
+redditClientID~
+redditClientSecret~
+redditUserName~
+redditPassword~
