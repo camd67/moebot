@@ -38,5 +38,5 @@
   
 [[constraint]]
   branch = "master"
-  name = "github.com/turnage/graw"
+  name = "github.com/jzelinskie/geddit"
   
