@@ -30,5 +30,5 @@ func (ic *IrlCommand) GetCommandKeys() []string {
 	return []string{"IRL"}
 }
 func (ic *IrlCommand) GetCommandHelp(commPrefix string) string {
-	return fmt.Sprintf("`%[1]s r` or `%[1]s random` - Posts a cute anime character.", commPrefix)
+	return fmt.Sprintf("`%[1]s irl` - Posts a relatable meme.", commPrefix)
 }

@@ -30,5 +30,5 @@ func (mc *MemeCommand) GetCommandKeys() []string {
 	return []string{"MEME"}
 }
 func (mc *MemeCommand) GetCommandHelp(commPrefix string) string {
-	return fmt.Sprintf("`%[1]s r` or `%[1]s random` - Posts a cute anime character.", commPrefix)
+	return fmt.Sprintf("`%[1]s meme` - Posts a dank memerino.", commPrefix)
 }
