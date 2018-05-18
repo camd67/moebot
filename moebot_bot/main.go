@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/bot"
@@ -17,17 +19,13 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	// read in configuration information
 	configPath := os.Getenv("MOEBOT_CONFIG_PATH")
 	configFile, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		log.Fatal("Error reading config from file. Path: " + configPath)
-	}
-
-	redditAgentPath := os.Getenv("REDDIT_CONFIG_PATH")
-	redditHandle, err := reddit.NewHandle(redditAgentPath)
-	if err != nil {
-		log.Fatal("Error reading from reddit agent file. Path: " + redditAgentPath)
 	}
 
 	configText := util.NormalizeNewlines(string(configFile))
@@ -43,6 +41,11 @@ func main() {
 	discord, err := discordgo.New("Bot " + bot.Config["secret"])
 	if err != nil {
 		log.Fatal("Error starting discord...", err)
+	}
+
+	redditHandle, err := reddit.NewHandle(bot.Config["redditClientID"], bot.Config["redditClientSecret"], bot.Config["redditUserName"], bot.Config["redditPassword"])
+	if err != nil {
+		log.Println("Error getting reddit session, related functionality won't work")
 	}
 
 	bot.SetupMoebot(discord, redditHandle)

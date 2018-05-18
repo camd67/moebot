@@ -2,47 +2,78 @@ package reddit
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
-	"time"
+	"path"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/jzelinskie/geddit"
+)
 
-	"github.com/turnage/graw/reddit"
+var (
+	whitelistedContentTypes = map[string]bool{"image/png": true, "image/jpeg": true}
 )
 
 type Handle struct {
-	bot reddit.Bot
+	session         *geddit.OAuthSession
+	isAuthenticated bool
 }
 
-func NewHandle(filePath string) (*Handle, error) {
-	handle, err := reddit.NewBotFromAgentFile(filePath, 0)
+func NewHandle(clientID, clientSecret, username, password string) (*Handle, error) {
+	session, err := geddit.NewOAuthSession(
+		clientID,
+		clientSecret,
+		fmt.Sprintf("Discord `moebot` by %s", username),
+		"http://redirect.url",
+	)
 	if err != nil {
-		fmt.Print("error from getting new bot")
-		handle = nil
+		log.Println("Error getting reddit oauth session")
+		return &Handle{isAuthenticated: false}, err
 	}
 
-	return &Handle{bot: handle}, err
+	err = session.LoginAuth(username, password)
+	if err != nil {
+		log.Println("Error getting auth token")
+		return &Handle{isAuthenticated: false}, err
+	}
+
+	return &Handle{session: session, isAuthenticated: true}, err
 }
 
 func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, error) {
-	harvest, err := handle.getListing(subreddit)
+	if !handle.isAuthenticated {
+		return nil, errors.New("Handle was not authenticated")
+	}
+
+	posts, err := handle.getListing(subreddit)
 	if err != nil {
-		fmt.Printf("Error getting harvest from subreddit %s", subreddit)
+		log.Println("Error getting listing from subreddit %s", subreddit)
 		return nil, err
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	randPost := harvest.Posts[rand.Intn(len(harvest.Posts)-1)]
+	var resp *http.Response
+	var ext string
 
-	resp, err := http.Get(randPost.URL)
-	if err != nil {
-		fmt.Printf("Error requesting image: " + randPost.URL)
-		return nil, err
+	// Keep looking until you find an acceptable image
+	for {
+		randPost := posts[rand.Intn(len(posts)-1)]
+		ext = path.Ext(randPost.URL)
+
+		resp, err = http.Get(randPost.URL)
+		if err != nil {
+			log.Printf("Error requesting image: " + randPost.URL)
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		if _, ok := whitelistedContentTypes[resp.Header.Get("Content-Type")]; ok {
+			break
+		}
 	}
-	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -50,17 +81,15 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 		return nil, err
 	}
 
-	content := "content ;3"
 	return &discordgo.MessageSend{
-		Content: content,
 		File: &discordgo.File{
-			Name:        "Spoiler.gif",
-			ContentType: "image/gif",
+			Name:        fmt.Sprintf("%s%s", subreddit, ext),
+			ContentType: resp.Header.Get("Content-Type"),
 			Reader:      bytes.NewReader(body),
 		},
 	}, err
 }
 
-func (handle *Handle) getListing(subreddit string) (reddit.Harvest, error) {
-	return handle.bot.Listing(subreddit, "")
+func (handle *Handle) getListing(subreddit string) ([]*geddit.Submission, error) {
+	return handle.session.SubredditSubmissions(subreddit, geddit.HotSubmissions, geddit.ListingOptions{Limit: 100})
 }
