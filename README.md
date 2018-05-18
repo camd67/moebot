@@ -26,7 +26,7 @@ This package is for any database tables and database connections/commands. Each 
     * `masterId` is the discord User ID associated with the bot's master. __NOTE:__ this user can perform any command on any server that this bot is a part of!
     * `debugChannel` is the channel to send __all__ moebot related error messages to.
     * `loadPings` determines if pins are loaded. 0 = don't load pins, 1 = load pins
-    * To use commands that make use of reddit, you must have a registered script app here: https://www.reddit.com/prefs/apps
+    * To use commands that make use of reddit commands, you must have a registered script app here: https://www.reddit.com/prefs/apps
     * `redditClientID` is the client ID of your app
     * `redditClientSecret` is the secret of your app
     * `redditUserName` is the login username for a reddit account
