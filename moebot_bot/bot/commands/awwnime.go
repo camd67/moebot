@@ -14,7 +14,12 @@ type AwwnimeCommand struct {
 }
 
 func (ac *AwwnimeCommand) Execute(pack *CommPackage) {
-	send, _ := ac.RedditHandle.GetRandomImage("/r/awwnime")
+	send, err := ac.RedditHandle.GetRandomImage("awwnime")
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Ooops... Looks like this command isn't working right now. Sorry!")
+		return
+	}
+
 	pack.session.ChannelMessageSendComplex(pack.channel.ID, send)
 
 	// request the image
@@ -26,7 +31,7 @@ func (ac *AwwnimeCommand) GetPermLevel() db.Permission {
 	return db.PermAll
 }
 func (ac *AwwnimeCommand) GetCommandKeys() []string {
-	return []string{"RANDOM"}
+	return []string{"RANDOM", "R"}
 }
 func (ac *AwwnimeCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s r` or `%[1]s random` - Posts a cute anime character.", commPrefix)
