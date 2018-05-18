@@ -21,10 +21,6 @@ func (ac *AwwnimeCommand) Execute(pack *CommPackage) {
 	}
 
 	pack.session.ChannelMessageSendComplex(pack.channel.ID, send)
-
-	// request the image
-	// send or something
-	return
 }
 
 func (ac *AwwnimeCommand) GetPermLevel() db.Permission {
