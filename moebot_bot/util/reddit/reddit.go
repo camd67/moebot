@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"path"
 	"sync"
 	"time"
 
@@ -17,12 +16,13 @@ import (
 )
 
 const (
-	tokenTimeLimit = time.Minute * 59 // Tokens last an hour, refresh them every almost-hour
-	imageLimit     = 100              // 100 is max allowed by reddit listing apis
+	tokenTimeLimit    = time.Minute * 59 // Tokens last an hour, refresh them every almost-hour
+	imageLimit        = 100              // 100 is max allowed by reddit listing apis
+	randImgRetryLimit = 5                // Maximum tries to find random image from listing that will work
 )
 
 var (
-	whitelistedContentTypes = map[string]bool{"image/png": true, "image/jpeg": true}
+	whitelistedContentTypes = map[string]string{"image/png": ".png", "image/jpeg": ".jpg"}
 )
 
 type tokenTimer struct {
@@ -78,11 +78,11 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 
 	var resp *http.Response
 	var ext string
+	tryCount := 0
 
 	// Keep looking until you find an acceptable image
 	for {
 		randPost := posts[rand.Intn(len(posts)-1)]
-		ext = path.Ext(randPost.URL)
 
 		resp, err = http.Get(randPost.URL)
 		if err != nil {
@@ -91,8 +91,15 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 		}
 		defer resp.Body.Close()
 
-		if _, ok := whitelistedContentTypes[resp.Header.Get("Content-Type")]; ok {
+		if whitelistedExt, ok := whitelistedContentTypes[resp.Header.Get("Content-Type")]; ok {
+			ext = whitelistedExt
 			break
+		}
+
+		tryCount++
+		if tryCount > randImgRetryLimit {
+			log.Printf("Couldn't find a usable image in subreddit " + subreddit)
+			return nil, errors.New("Couldn't find a usable image in subreddit " + subreddit)
 		}
 	}
 
@@ -102,9 +109,10 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 		return nil, err
 	}
 
+	log.Printf("Sending image %s with content type %s", subreddit+ext, resp.Header.Get("Content-Type"))
 	return &discordgo.MessageSend{
 		File: &discordgo.File{
-			Name:        fmt.Sprintf("%s%s", subreddit, ext),
+			Name:        subreddit + ext,
 			ContentType: resp.Header.Get("Content-Type"),
 			Reader:      bytes.NewReader(body),
 		},
