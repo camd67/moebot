@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -24,9 +25,14 @@ var (
 	whitelistedContentTypes = map[string]bool{"image/png": true, "image/jpeg": true}
 )
 
+type tokenTimer struct {
+	sync.Mutex
+	startTime time.Time
+}
+
 type Handle struct {
-	session        *geddit.OAuthSession
-	tokenStartTime time.Time
+	session *geddit.OAuthSession
+	tTimer  tokenTimer
 
 	clientID     string
 	clientSecret string
@@ -51,7 +57,7 @@ func NewHandle(clientID, clientSecret, username, password string) (*Handle, erro
 		return &Handle{}, err
 	}
 
-	return &Handle{session: session, tokenStartTime: time.Now(), clientID: clientID, clientSecret: clientSecret, username: username, password: password}, err
+	return &Handle{session: session, tTimer: tokenTimer{startTime: time.Now()}, clientID: clientID, clientSecret: clientSecret, username: username, password: password}, err
 }
 
 func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, error) {
@@ -110,14 +116,15 @@ func (handle *Handle) getListing(subreddit string) ([]*geddit.Submission, error)
 }
 
 func (handle *Handle) renewTokenIfNecessary() error {
-	if handle.tokenStartTime.Add(tokenTimeLimit).Before(time.Now()) {
+	handle.tTimer.Lock()
+	defer handle.tTimer.Unlock()
+	if handle.tTimer.startTime.Add(tokenTimeLimit).Before(time.Now()) {
 		log.Println("Reddit token expired, getting new token")
 		err := handle.session.LoginAuth(handle.username, handle.password)
 		if err != nil {
 			return errors.New("Couldn't renew token")
 		}
+		handle.tTimer.startTime = time.Now()
 	}
-
-	handle.tokenStartTime = time.Now()
 	return nil
 }
