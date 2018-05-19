@@ -82,7 +82,8 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 
 	// Keep looking until you find an acceptable image
 	for {
-		randPost := posts[rand.Intn(len(posts)-1)]
+		i := rand.Intn(len(posts) - 1)
+		randPost := posts[i]
 
 		resp, err = http.Get(randPost.URL)
 		if err != nil {
@@ -101,6 +102,7 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 			log.Printf("Couldn't find a usable image in subreddit " + subreddit)
 			return nil, errors.New("Couldn't find a usable image in subreddit " + subreddit)
 		}
+		removeBadSubmission(posts, i)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -135,4 +137,9 @@ func (handle *Handle) renewTokenIfNecessary() error {
 		handle.tTimer.startTime = time.Now()
 	}
 	return nil
+}
+
+func removeBadSubmission(s []*geddit.Submission, i int) []*geddit.Submission {
+	s[i] = s[0]
+	return s[1:]
 }
