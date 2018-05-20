@@ -3,13 +3,11 @@ package commands
 import (
 	"fmt"
 
-	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 	"github.com/camd67/moebot/moebot_bot/util/reddit"
 )
 
 type MemeCommand struct {
-	PermChecker  permissions.PermissionChecker
 	RedditHandle *reddit.Handle
 }
 
