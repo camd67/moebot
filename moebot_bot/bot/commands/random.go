@@ -28,5 +28,5 @@ func (ac *RandomCommand) GetCommandKeys() []string {
 	return []string{"RANDOM", "R"}
 }
 func (ac *RandomCommand) GetCommandHelp(commPrefix string) string {
-	return fmt.Sprintf("`%[1]s r` or `%[1]s random` - Posts a cute anime character.", commPrefix)
+	return fmt.Sprintf("`%[1]s random` - Posts a cute anime character.", commPrefix)
 }
