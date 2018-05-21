@@ -26,6 +26,11 @@ This package is for any database tables and database connections/commands. Each 
     * `masterId` is the discord User ID associated with the bot's master. __NOTE:__ this user can perform any command on any server that this bot is a part of!
     * `debugChannel` is the channel to send __all__ moebot related error messages to.
     * `loadPings` determines if pins are loaded. 0 = don't load pins, 1 = load pins
+    * To use commands that make use of reddit commands, you must have a registered script app here: https://www.reddit.com/prefs/apps
+    * `redditClientID` is the client ID of your app
+    * `redditClientSecret` is the secret of your app
+    * `redditUserName` is the login username for a reddit account
+    * `redditPassword` is the login password for a reddit account
 * Duplicate `config/pg_pass.example.txt` and rename it to `pg_pass.secret`
     * Replace the whole file with your default postgres password. This must match `dbPass` in `mb_config.secret`
     * __Note:__ this file should have exactly 1 line! Any trailing newlines will break the login process
