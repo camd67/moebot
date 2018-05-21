@@ -62,9 +62,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.ServerCommand{ComPrefix: ComPrefix},
 		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"},
-		&commands.RandomCommand{RedditHandle: redditHandle},
-		&commands.MemeCommand{RedditHandle: redditHandle},
-		&commands.IrlCommand{RedditHandle: redditHandle},
+		&commands.SubCommand{RedditHandle: redditHandle},
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
 	}
 
