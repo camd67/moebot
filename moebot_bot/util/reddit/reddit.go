@@ -141,5 +141,6 @@ func (handle *Handle) renewTokenIfNecessary() error {
 
 func removeBadSubmission(s []*geddit.Submission, i int) []*geddit.Submission {
 	s[i] = s[0]
+	s[0] = nil
 	return s[1:]
 }
