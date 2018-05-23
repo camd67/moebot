@@ -3,10 +3,13 @@ package auth
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
+	"github.com/bwmarrin/discordgo"
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
@@ -15,11 +18,20 @@ type MoeCustomClaims struct {
 }
 
 type User struct {
-	Username string
-	Password string
+	Username string `json:"username"`
+	Password string `json:"password,omitempty"`
+	Avatar   string `json:"avatar"`
 }
 
-type DiscordCode struct {
+type discordToken struct {
+	Access_token  string
+	Token_type    string
+	Expires_in    int64
+	Refresh_token string
+	Scope         string
+}
+
+type discordOAuthCode struct {
 	Code  string
 	State string
 }
@@ -29,7 +41,6 @@ func PasswordLoginHandler(w http.ResponseWriter, r *http.Request) {
 	user := User{}
 	var response []byte
 	json.NewDecoder(r.Body).Decode(&user)
-	fmt.Println(user.Username + " " + user.Password)
 	if user.Username != "test" || user.Password != "test" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -37,13 +48,7 @@ func PasswordLoginHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(response)
 		return
 	}
-	claims := MoeCustomClaims{
-		jwt.StandardClaims{
-			ExpiresAt: 15000,
-			Issuer:    "MoeBot API",
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := createNewToken(user.Username)
 	ss, _ := token.SignedString(signKey)
 	response, err := json.Marshal(struct{ Jwt string }{Jwt: ss})
 	if err != nil {
@@ -63,32 +68,21 @@ func DiscordBeginOAuth(w http.ResponseWriter, r *http.Request) {
 
 func DiscordCompleteOAuth(w http.ResponseWriter, r *http.Request) {
 	signKey := []byte("test") //replace with file read
-	codeGrant := DiscordCode{}
+	codeGrant := discordOAuthCode{}
 	var response []byte
 	json.NewDecoder(r.Body).Decode(&codeGrant)
-	client := &http.Client{}
-	resp, _ := client.PostForm("https://discordapp.com/api/oauth2/token", url.Values{
-		"client_id":     {"432291649754759169"},
-		"client_secret": {"c6BViHBOTqmUm4tPOYPB9Ku0iUX8AjI-"},
-		"grant_type":    {"authorization_code"},
-		"code":          {codeGrant.Code},
-		"redirect_uri":  {"http://localhost:8080/login/discord"},
-	})
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, _ := ioutil.ReadAll(resp.Body)
-		bodyString := string(bodyBytes)
-		fmt.Println(bodyString)
+	discordToken := discordRequestToken(codeGrant.Code)
+	session, _ := discordgo.New("Bearer " + discordToken.Access_token)
+	defer session.Close()
+	user, err := session.User("@me")
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	claims := MoeCustomClaims{
-		jwt.StandardClaims{
-			ExpiresAt: 15000,
-			Issuer:    "MoeBot API",
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := createNewToken(user.Username)
 	ss, _ := token.SignedString(signKey)
-	response, err := json.Marshal(struct{ Jwt string }{Jwt: ss})
+	response, err = json.Marshal(struct{ Jwt string }{Jwt: ss})
 	if err != nil {
 		fmt.Println(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -97,4 +91,50 @@ func DiscordCompleteOAuth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
+}
+
+func createNewToken(username string) *jwt.Token {
+	currentTime := time.Now()
+	claims := MoeCustomClaims{
+		jwt.StandardClaims{
+			IssuedAt:  currentTime.Unix(),
+			ExpiresAt: currentTime.Add(time.Hour * 24 * 7).Unix(),
+			Issuer:    "MoeBot API",
+			Subject:   username,
+		},
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+}
+
+func discordRequestToken(codeGrant string) discordToken {
+	token := discordToken{}
+	client := &http.Client{}
+	r, _ := client.PostForm("https://discordapp.com/api/oauth2/token", url.Values{
+		"client_id":     {"432291649754759169"},
+		"client_secret": {"c6BViHBOTqmUm4tPOYPB9Ku0iUX8AjI-"},
+		"grant_type":    {"authorization_code"},
+		"code":          {codeGrant},
+		"redirect_uri":  {"http://localhost:8080/login/discord"},
+	})
+	defer r.Body.Close()
+	if r.StatusCode == http.StatusOK {
+		json.NewDecoder(r.Body).Decode(&token)
+	}
+	return token
+}
+
+func CheckToken(tokenString string) (*jwt.Token, error) {
+	if !strings.HasPrefix(tokenString, "Bearer ") {
+		return nil, fmt.Errorf("Unrecognized Authorization Header")
+	}
+	token, err := jwt.Parse(strings.TrimPrefix(tokenString, "Bearer "), func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte("test"), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
 }

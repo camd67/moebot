@@ -1,5 +1,20 @@
 <template>
-  <div>Please wait...</div>
+  <v-content>
+    <v-container fluid fill-height>
+      <v-layout align-center justify-center>
+        <v-flex  xs12 sm8 md4>
+          <v-card elevation-12>
+            <v-card-text>
+              <div class="headline">
+                <v-progress-circular indeterminate color="primary"></v-progress-circular>
+                Please wait...
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-flex>
+      </v-layout>
+    </v-container>
+  </v-content>
 </template>
 
 <script>
@@ -13,7 +28,7 @@ export default {
         }
       },
       response => {
-        this.submitError = response.error
+        this.$router.push('/')
       }
     )
   }
