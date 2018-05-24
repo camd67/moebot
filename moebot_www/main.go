@@ -1,55 +1,83 @@
 package main
 
 import (
-	"fmt"
+	"encoding/base64"
+	"encoding/json"
+	"io/ioutil"
+	"log"
 	"net/http"
-	"strings"
+	"os"
 
 	"github.com/camd67/moebot/moebot_www/auth"
-	"github.com/camd67/moebot/moebot_www/moebot_api"
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/camd67/moebot/moebot_www/db"
+	"github.com/camd67/moebot/moebot_www/moebotApi"
 
 	"github.com/gorilla/mux"
 )
 
-type authenticationMiddleware struct {
-	secretKey []byte
-}
-
-func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenString := r.Header.Get("Authorization")
-		if !strings.HasPrefix(tokenString, "Bearer ") {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		token, err := jwt.Parse(strings.TrimPrefix(tokenString, "Bearer "), func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-			}
-			return amw.secretKey, nil
-		})
-		if err != nil || !token.Valid {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+type config struct {
+	Base64SecretKey string
+	ClientID        string
+	ClientSecret    string
+	RedirectURI     string
+	OAuthLoginURI   string
+	Address         string
+	DbRootPwd       string
+	DbUsername      string
+	DbPassword      string
+	DbHost          string
 }
 
 func main() {
+	os.Setenv("MOEBOT_WWW_CONFIG_PATH", "config.json")
+	configPath := os.Getenv("MOEBOT_WWW_CONFIG_PATH")
+	config, err := readConfig(configPath)
+	if err != nil {
+		log.Println("Cannot read config file!")
+		return
+	}
+	key, err := base64.StdEncoding.DecodeString(config.Base64SecretKey)
+	if err != nil {
+		log.Println("Invalid token generation key")
+		return
+	}
+	db := db.NewDatabase(config.DbHost, config.DbRootPwd, config.DbUsername, config.DbPassword)
+	db.Initialize()
+	amw := auth.NewAuthMiddleware(key)
+	authManager := auth.NewAuthManager(amw, db, config.ClientID, config.ClientSecret, config.RedirectURI, config.OAuthLoginURI)
+	api := &moebotApi.MoebotApi{amw}
+
 	router := mux.NewRouter()
-	api := router.PathPrefix("/api").Subrouter()
-	amw := authenticationMiddleware{}
-	api.HandleFunc("/user", moebotApi.UserInfo)
-	api.Use(amw.Middleware)
-	router.HandleFunc("/auth/password", auth.PasswordLoginHandler)
-	router.HandleFunc("/auth/discord", auth.DiscordBeginOAuth)
-	router.HandleFunc("/auth/discordOAuth", auth.DiscordCompleteOAuth)
+	apiRouter := router.PathPrefix("/api").Subrouter()
+	apiRouter.HandleFunc("/user", api.UserInfo)
+	apiRouter.HandleFunc("/heartbeat", api.Heartbeat)
+	apiRouter.Use(amw.Middleware)
+
+	router.HandleFunc("/auth/password", authManager.PasswordLoginHandler)
+	router.HandleFunc("/auth/register", authManager.PasswordRegister)
+	router.HandleFunc("/auth/discord", authManager.DiscordBeginOAuth)
+	router.HandleFunc("/auth/discordOAuth", authManager.DiscordCompleteOAuth)
 	router.PathPrefix("/static").Handler(http.FileServer(http.Dir("./dist/")))
 	router.PathPrefix("/").HandlerFunc(vueHandler)
 
-	http.ListenAndServe(":8081", router)
+	log.Println("Starting MoeBot API on address " + config.Address + "...")
+
+	http.ListenAndServe(config.Address, router)
+}
+
+func readConfig(path string) (*config, error) {
+	result := &config{}
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func vueHandler(w http.ResponseWriter, r *http.Request) {
