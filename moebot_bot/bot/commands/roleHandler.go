@@ -9,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type RoleHandler struct {
@@ -44,7 +45,7 @@ func (r *RoleHandler) processGuildRole(allowedRoles []string, session *discordgo
 		session.ChannelMessageSend(channel.ID, "Sorry "+message.Author.Mention()+" I don't recognize that role...")
 		return
 	}
-	guildMember, err := session.GuildMember(guild.ID, message.Author.ID)
+	guildMember, err := moeDiscord.GetMember(message.Author.ID, guild.ID, session)
 	if err != nil {
 		log.Println("Unable to find guild member", err)
 		return

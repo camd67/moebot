@@ -12,6 +12,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type PinMoveCommand struct {
@@ -222,7 +223,7 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		log.Println("Pinmove is still loading, exiting pin handler")
 		return
 	}
-	channel, err := session.Channel(pinsUpdate.ChannelID)
+	channel, err := moeDiscord.GetChannel(pinsUpdate.ChannelID, session)
 	if err != nil {
 		log.Println("Error while retrieving channel by UID", err)
 		return

@@ -9,6 +9,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 	"github.com/camd67/moebot/moebot_bot/util/reddit"
 
 	"github.com/bwmarrin/discordgo"
@@ -129,9 +130,8 @@ func addGlobalHandlers(discord *discordgo.Session) {
 Global handler for when new guild members join a discord guild. Typically used to welcome them if the server has enabled it.
 */
 func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
-	guild, err := session.Guild(member.GuildID)
+	guild, err := moeDiscord.GetGuild(member.GuildID, session)
 	if err != nil {
-		log.Println("Error fetching guild during guild member add", err)
 		session.ChannelMessageSend(masterDebugChannel, fmt.Sprint("Error fetching guild during guild member add", err, member))
 		return
 	}
@@ -192,7 +192,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 
 	timer := util.StartNamedTimer("channel_start")
-	channel, err := session.Channel(message.ChannelID)
+	channel, err := moeDiscord.GetChannel(message.ChannelID, session)
 	if err != nil {
 		// missing channel
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, channel)
@@ -200,7 +200,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 	timer.AddMark("end_channel")
 
-	guild, err := session.Guild(channel.GuildID)
+	guild, err := moeDiscord.GetGuild(channel.GuildID, session)
 	if err != nil {
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, guild)
 		return
@@ -224,7 +224,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 	timer.AddMark(util.TimerMarkDbEnd + "user_profile")
 
-	member, err := session.GuildMember(guild.ID, message.Author.ID)
+	member, err := moeDiscord.GetMember(message.Author.ID, guild.ID, session)
 	if err != nil {
 		log.Println("ERROR! Unable to get member in messageCreate ", err, message)
 		return
