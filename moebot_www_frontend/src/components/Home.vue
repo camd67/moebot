@@ -1,20 +1,20 @@
 <template>
   <div>
-    <v-navigation-drawer app></v-navigation-drawer>
-    <v-toolbar app>
+    <v-navigation-drawer app mini-variant>
+      <v-list class="pa-0">
+        <v-list-tile avatar>
+          <v-list-tile-avatar>
+            <img :src="user.avatar" >
+          </v-list-tile-avatar>
+        </v-list-tile>
+      </v-list>
+      <ServerList/>
+    </v-navigation-drawer>
+    <v-toolbar dark color="primary" app>
       <v-spacer/>
-      <v-menu>
-        <v-btn slot="activator" icon>
-          <v-avatar size="32px">
-            <img :src="user.avatar"/>
-          </v-avatar>
-        </v-btn>
-        <v-list>
-          <v-list-tile @click="logout">
-            <v-list-tile-title>Logout</v-list-tile-title>
-          </v-list-tile>
-        </v-list>
-      </v-menu>
+      <v-btn icon @click="logout">
+        <v-icon>exit_to_app</v-icon>
+      </v-btn>
     </v-toolbar>
     <v-content>
       <v-container fluid>
@@ -27,12 +27,13 @@
 </template>
 
 <script>
+import ServerList from './ServerList.vue'
 export default {
   data () {
     return {
       user: {
         username: '',
-        avatar: '/static/baseline_person_black_18dp.png'
+        avatar: '/static/defaultDiscordAvatar.png'
       }
     }
   },
@@ -49,6 +50,9 @@ export default {
       localStorage.removeItem('jwt')
       this.$router.go(this.$router.currentRoute)
     }
+  },
+  components: {
+    ServerList
   }
 }
 </script>

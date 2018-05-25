@@ -18,9 +18,9 @@ func (a *MoebotApi) UserInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	response, _ := json.Marshal(&struct {
-		Username string
-		Avatar   string
-	}{Username: r.Header.Get("X-UserID"), Avatar: "/static/baseline_person_black_18dp.png"})
+		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
+	}{Username: r.Header.Get("X-UserID"), Avatar: "/static/defaultDiscordAvatar.png"})
 	w.Write(response)
 }
 
