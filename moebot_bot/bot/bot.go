@@ -9,6 +9,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/event"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 	"github.com/camd67/moebot/moebot_bot/util/reddit"
 
@@ -191,7 +192,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
-	timer := util.StartNamedTimer("channel_start")
+	timer := event.StartNamedTimer("channel_start")
 	channel, err := moeDiscord.GetChannel(message.ChannelID, session)
 	if err != nil {
 		// missing channel
@@ -215,14 +216,14 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 	timer.AddMark("db_server_end")
 
-	timer.AddMark(util.TimerMarkDbBegin + "user_profile")
+	timer.AddMark(event.TimerMarkDbBegin + "user_profile")
 	userProfile, err := db.UserQueryOrInsert(message.Author.ID)
 	if err != nil {
 		session.ChannelMessageSend(channel.ID, "Sorry, there was an error fetching your user profile. This is an issue with moebot not discord. "+
 			"Please contact a moebot developer/admin.")
 		return
 	}
-	timer.AddMark(util.TimerMarkDbEnd + "user_profile")
+	timer.AddMark(event.TimerMarkDbEnd + "user_profile")
 
 	member, err := moeDiscord.GetMember(message.Author.ID, guild.ID, session)
 	if err != nil {
@@ -309,7 +310,7 @@ func ready(session *discordgo.Session, event *discordgo.Ready) {
 Helper handler to check if the message provided is a command and if so, executes the command
 */
 func runCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member,
-	userProfile *db.UserProfile, timer *util.Timer) {
+	userProfile *db.UserProfile, timer *event.Timer) {
 	messageParts := strings.Split(message.Content, " ")
 	if len(messageParts) <= 1 {
 		// bad command, missing command after prefix
@@ -318,7 +319,7 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	commandKey := strings.ToUpper(messageParts[1])
 
 	if command, commPresent := commandsMap[commandKey]; commPresent {
-		timer.AddMark(util.TimerMarkCommandBegin + commandKey)
+		timer.AddMark(event.TimerMarkCommandBegin + commandKey)
 		params := messageParts[2:]
 		if !checker.HasPermission(message.Author.ID, member.Roles, guild, command.GetPermLevel()) {
 			session.ChannelMessageSend(channel.ID, "Sorry, you don't have a high enough permission level to access this command.")
@@ -330,6 +331,6 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 		session.ChannelTyping(message.ChannelID)
 		pack := commands.NewCommPackage(session, message, guild, member, channel, params)
 		command.Execute(&pack)
-		timer.AddMark(util.TimerMarkCommandEnd + commandKey)
+		timer.AddMark(event.TimerMarkCommandEnd + commandKey)
 	}
 }

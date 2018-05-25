@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/camd67/moebot/moebot_bot/util"
+	"github.com/camd67/moebot/moebot_bot/util/event"
 )
 
 type MetricType int
@@ -17,8 +17,8 @@ const (
 )
 
 type MetricTimerJson struct {
-	Events []util.TimerMark `json:"events"`
-	UserId int              `json:"userId"`
+	Events []event.TimerMark `json:"events"`
+	UserId int               `json:"userId"`
 }
 
 type Metric struct {
@@ -37,7 +37,7 @@ const (
 	metricInsert = `INSERT INTO metric(Type, Data) VALUES ($1, $2)`
 )
 
-func MetricInsertTimer(metric util.Timer, user UserProfile) error {
+func MetricInsertTimer(metric event.Timer, user UserProfile) error {
 	jsonData, err := json.Marshal(MetricTimerJson{
 		Events: metric.Marks,
 		UserId: user.Id,

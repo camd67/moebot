@@ -12,6 +12,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type RoleCommand struct {
@@ -27,7 +28,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 	}
 	var vetRole *discordgo.Role
 	if server.VeteranRole.Valid {
-		vetRole = util.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
+		vetRole = moeDiscord.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
 	}
 	if len(pack.params) == 0 {
 		printAllRoles(server, vetRole, pack)
@@ -96,7 +97,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 					rc.ComPrefix+" role` to list all roles for this server.")
 				return
 			}
-			role = util.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
+			role = moeDiscord.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
 			if role == nil {
 				log.Println("Nil dbRole when searching for dbRole id:" + dbRole.RoleUid)
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server. It may have been deleted.")
@@ -154,7 +155,7 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 			foundOtherRole := false
 			for _, dbGroupRole := range fullGroupRoles {
 				if util.StrContains(pack.member.Roles, dbGroupRole.RoleUid, util.CaseSensitive) {
-					roleToRemove := util.FindRoleById(pack.guild.Roles, dbGroupRole.RoleUid)
+					roleToRemove := moeDiscord.FindRoleById(pack.guild.Roles, dbGroupRole.RoleUid)
 					// The user already has this role, remove it and tell them
 					if !foundOtherRole {
 						message.WriteString("\nAlso removed:")

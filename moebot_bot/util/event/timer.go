@@ -1,4 +1,7 @@
-package util
+/*
+Processing and type definitions for events within moebot.
+*/
+package event
 
 import "time"
 

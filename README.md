@@ -1,22 +1,6 @@
 # moebot
 The bot for discord, but with moe!
 
-## Package rules per sub-project
-### api
-This project/package is responsible for all API requests. Mostly for the website. Not currently in use.
-### moebot_bot
-Everything for the discord part of moebot
-#### bot
-This package is for any commands and processing related directly to discord itself.
-Functions in this package should directly do things related to discord such as sending messages,
-receiving messages, and changing discord related information
-#### util
-This package should be for general functions that are independent of discord (but may relate to discord, such as converting to a discord mention or searching for a role)
-No state should be persisted in the `util` package. When considering adding a function to `util` consider if the function would
-be used in more than one command. If it's tied to one specific feature, it doesn't belong in `util`.
-#### db
-This package is for any database tables and database connections/commands. Each database table should have it's own file, with querying/insert/deletion commands.
-
 ## Setup (discord bot)
 * Install docker
 * Duplicate `config/mb_config.example.txt` and rename it to `mb_config.secret`

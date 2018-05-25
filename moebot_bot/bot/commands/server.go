@@ -177,7 +177,7 @@ func (sc *ServerCommand) defaultServerRoleSet(pack *CommPackage, configValue str
 	} else if shouldClear {
 		toSet.Scan(nil)
 	} else {
-		role := util.FindRoleByName(pack.guild.Roles, configValue)
+		role := moeDiscord.FindRoleByName(pack.guild.Roles, configValue)
 		if role == nil {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid role and make sure it's the full role name")
 			return false
