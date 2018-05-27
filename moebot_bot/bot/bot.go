@@ -1,3 +1,6 @@
+/*
+The main entry point and handling of discord events.
+*/
 package bot
 
 import (

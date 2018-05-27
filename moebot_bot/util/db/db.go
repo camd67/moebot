@@ -1,3 +1,6 @@
+/*
+All database interactions and database tables within moebot's database
+*/
 package db
 
 import (

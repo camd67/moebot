@@ -1,3 +1,6 @@
+/*
+Specific command functionality for moebot. Each command should be in its own file.
+*/
 package commands
 
 import (
