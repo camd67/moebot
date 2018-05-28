@@ -1,4 +1,4 @@
-# moebot [![CodeFactor](https://www.codefactor.io/repository/github/camd67/moebot)](https://www.codefactor.io/repository/github/camd67/moebot)
+# moebot [![CodeFactor](https://www.codefactor.io/repository/github/camd67/moebot/badge)](https://www.codefactor.io/repository/github/camd67/moebot)
 The bot for discord, but with moe!
 
 ## Setup (discord bot)
