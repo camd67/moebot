@@ -332,7 +332,7 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 		}
 		log.Println("Processing command: " + commandKey + " from user: {" + message.Author.String() + "}| With Params:{" + strings.Join(params, ",") + "}")
 		session.ChannelTyping(message.ChannelID)
-		pack := commands.NewCommPackage(session, message, guild, member, channel, params)
+		pack := commands.NewCommPackage(session, message, guild, member, channel, params, userProfile, timer)
 		command.Execute(&pack)
 		timer.AddMark(event.TimerMarkCommandEnd + commandKey)
 	}

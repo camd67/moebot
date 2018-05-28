@@ -62,6 +62,8 @@ func createTables() {
 	//POLL
 	moeDb.Exec(pollTable)
 	moeDb.Exec(pollOptionTable)
+	// METRIC
+	metricCreateTable()
 }
 
 /*

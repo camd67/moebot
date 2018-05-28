@@ -10,9 +10,9 @@ type PingCommand struct {
 }
 
 func (pc *PingCommand) Execute(pack *CommPackage) {
-	// seems this has some time drift when using docker for windows... need to verify if it's accurate on the server
+	// seems this has some time drift when using docker for windows...
 	messageTime, _ := pack.message.Timestamp.Parse()
-	pingTime := time.Duration(time.Now().UnixNano() - messageTime.UnixNano())
+	pingTime := time.Now().Sub(messageTime)
 	pack.session.ChannelMessageSend(pack.channel.ID, "Latency to server: "+pingTime.String())
 }
 
