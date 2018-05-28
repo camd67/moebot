@@ -17,13 +17,16 @@
 export default {
   data () {
     return {
-      serverList: [
-        {id: 1, icon: 'https://vuejs.org/images/logo.png'},
-        {id: 2, icon: 'https://vuejs.org/images/logo.png'},
-        {id: 3, icon: 'https://vuejs.org/images/logo.png'},
-        {id: 4, icon: 'https://vuejs.org/images/logo.png'}
-      ]
+      serverList: []
     }
+  },
+  mounted: function () {
+    this.$http.get('/api/serverlist', {headers: {'Authorization': 'Bearer ' + localStorage.getItem('jwt')}}).then(
+      response => {
+        this.serverList = response.data
+      },
+      response => {}
+    )
   }
 }
 </script>

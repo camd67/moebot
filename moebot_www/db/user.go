@@ -25,6 +25,7 @@ const (
 	userSelectPassword     = `SELECT Password FROM users WHERE Username = $1`
 	userSelectByUsername   = `SELECT ID, Username, Email, DiscordUID, DiscordAuthToken, DiscordTokenExpiration FROM users WHERE Username = $1 AND Password = $2`
 	userSelectByDiscordUID = `SELECT ID, Username, Email, DiscordUID, DiscordAuthToken, DiscordTokenExpiration FROM users WHERE DiscordUID = $1`
+	userSelectByID         = `SELECT ID, Username, Email, DiscordUID, DiscordAuthToken, DiscordTokenExpiration FROM users WHERE ID = $1`
 	userInsert             = `INSERT INTO users (Username, Password, Email, DiscordUID, DiscordAuthToken, DiscordRefreshToken, DiscordTokenExpiration) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ID`
 )
 
@@ -70,7 +71,7 @@ func (t *userTable) SelectByUsername(username string, password string) (*User, e
 	}
 	user := &User{}
 	row = t.db.QueryRow(userSelectByUsername, username, passwordHash)
-	if e := row.Scan(&user.ID, &user.Username, &user.Email, &user.DiscordTokenExpiration, &user.DiscordAuthToken, &user.DiscordTokenExpiration); e != nil {
+	if e := row.Scan(&user.ID, &user.Username, &user.Email, &user.DiscordUID, &user.DiscordAuthToken, &user.DiscordTokenExpiration); e != nil {
 		log.Println("User not found - ", e)
 		return nil, e
 	}
@@ -80,8 +81,18 @@ func (t *userTable) SelectByUsername(username string, password string) (*User, e
 func (t *userTable) SelectByDiscordUID(discordUID string) (*User, error) {
 	user := &User{}
 	row := t.db.QueryRow(userSelectByDiscordUID, discordUID)
-	if e := row.Scan(&user.ID, &user.Username, &user.Email, &user.DiscordTokenExpiration, &user.DiscordAuthToken, &user.DiscordTokenExpiration); e != nil {
-		log.Println("User not found")
+	if e := row.Scan(&user.ID, &user.Username, &user.Email, &user.DiscordUID, &user.DiscordAuthToken, &user.DiscordTokenExpiration); e != nil {
+		log.Println("User not found - ", e)
+		return nil, e
+	}
+	return user, nil
+}
+
+func (t *userTable) SelectByID(userID string) (*User, error) {
+	user := &User{}
+	row := t.db.QueryRow(userSelectByID, userID)
+	if e := row.Scan(&user.ID, &user.Username, &user.Email, &user.DiscordUID, &user.DiscordAuthToken, &user.DiscordTokenExpiration); e != nil {
+		log.Println("User not found - ", e)
 		return nil, e
 	}
 	return user, nil

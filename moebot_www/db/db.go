@@ -16,6 +16,7 @@ type MoeWebDb struct {
 	db           *sql.DB
 	tables       []dataTable
 	Users        *userTable
+	GuildEvents  *guildEventTable
 }
 
 type dataTable interface {
@@ -97,7 +98,8 @@ func (d *MoeWebDb) connectToRoot() *sql.DB {
 
 func (d *MoeWebDb) createTables() {
 	d.Users = &userTable{d.db}
-	d.tables = []dataTable{d.Users}
+	d.GuildEvents = &guildEventTable{d.db}
+	d.tables = []dataTable{d.Users, d.GuildEvents}
 	for _, t := range d.tables {
 		t.createTable()
 	}

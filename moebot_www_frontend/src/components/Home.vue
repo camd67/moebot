@@ -37,7 +37,7 @@ export default {
       }
     }
   },
-  created: function () {
+  mounted: function () {
     this.$http.get('/api/user', {headers: {'Authorization': 'Bearer ' + localStorage.getItem('jwt')}}).then(
       response => {
         this.user = response.data
