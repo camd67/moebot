@@ -5,3 +5,4 @@ moeDataPass~
 masterId~
 debugChannel~
 loadPins~
+host~

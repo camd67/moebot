@@ -19,13 +19,13 @@ const (
 /*
 Does all processing related to setting up the database for moebot
 */
-func SetupDatabase(dbPass string, moeDataPass string) {
-	rootDb := connectToRoot(dbPass)
+func SetupDatabase(host string, dbPass string, moeDataPass string) {
+	rootDb := connectToRoot(host, dbPass)
 	createMoebotDatabase(rootDb, moeDataPass)
 	rootDb.Close()
 
 	// actually connect with moebot now
-	moeDb = openDb(createConnString("moebot", moeDataPass, "moebot"))
+	moeDb = openDb(createConnString(host, "moebot", moeDataPass, "moebot"))
 	createTables()
 	log.Println("Finished initalizing the DB and creating tables")
 }
@@ -95,10 +95,10 @@ func OpenTransaction() (tx *sql.Tx) {
 	return
 }
 
-func connectToRoot(dbPass string) *sql.DB {
+func connectToRoot(host string, dbPass string) *sql.DB {
 	sleepTime := 5 * time.Second
 	for {
-		db, err := sql.Open("postgres", createConnString("postgres", dbPass, "postgres"))
+		db, err := sql.Open("postgres", createConnString(host, "postgres", dbPass, "postgres"))
 		if err != nil {
 			log.Println("Unable to open DB connection", err)
 			log.Println("Waiting before attempting to reconnect")
@@ -129,6 +129,6 @@ func openDb(connString string) *sql.DB {
 	return db
 }
 
-func createConnString(user string, pass string, db string) string {
-	return "host=database user=" + user + " password=" + pass + " dbname=" + db + " sslmode=disable"
+func createConnString(host string, user string, pass string, db string) string {
+	return "host=" + host + " user=" + user + " password=" + pass + " dbname=" + db + " sslmode=disable"
 }

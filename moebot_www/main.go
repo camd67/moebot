@@ -22,7 +22,7 @@ type config struct {
 	Base64SecretKey string
 	ClientID        string
 	ClientSecret    string
-	MoeBotSecret    string
+	MoeBotToken     string
 	RedirectURI     string
 	OAuthLoginURI   string
 	Address         string
@@ -48,20 +48,17 @@ func main() {
 	moeWebDb := db.NewDatabase(config.DbHost, config.DbRootPwd, config.DbUsername, config.DbPassword)
 	moeWebDb.Initialize()
 
+	botDb.SetupDatabase(config.DbHost, config.DbRootPwd, config.DbPassword)
+
 	routeAuthMap := map[*mux.Route]botDb.Permission{}
 
 	amw := auth.NewAuthMiddleware(key)
 	authManager := auth.NewAuthManager(amw, moeWebDb, config.ClientID, config.ClientSecret, config.RedirectURI, config.OAuthLoginURI)
-	log.Println(config.MoeBotSecret)
-	session, err := discordgo.New("Bot " + config.MoeBotSecret)
+	session, err := discordgo.New("Bot " + config.MoeBotToken)
 	if err != nil {
 		log.Fatal("Error starting discord...", err)
 	}
-	err = session.Open()
-	if err != nil {
-		log.Fatal("Error starting discord...", err)
-	}
-	defer session.Close()
+
 	api := &moebotApi.MoebotApi{Amw: amw, Session: session, MoeWebDb: moeWebDb}
 
 	router := mux.NewRouter()

@@ -34,7 +34,7 @@ func SetupMoebot(session *discordgo.Session) {
 	masterId = Config["masterId"]
 	checker = permissions.PermissionChecker{MasterId: masterId}
 	masterDebugChannel = Config["debugChannel"]
-	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
+	db.SetupDatabase(Config["host"], Config["dbPass"], Config["moeDataPass"])
 	addGlobalHandlers(session)
 	setupOperations(session)
 }

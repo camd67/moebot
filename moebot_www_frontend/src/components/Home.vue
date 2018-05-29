@@ -1,16 +1,13 @@
 <template>
   <div>
     <v-navigation-drawer app mini-variant>
-      <v-list class="pa-0">
-        <v-list-tile avatar>
-          <v-list-tile-avatar>
-            <img :src="user.avatar" >
-          </v-list-tile-avatar>
-        </v-list-tile>
-      </v-list>
+      <v-toolbar flat class="transparent">
+        <UserAvatar/>
+      </v-toolbar>
       <ServerList/>
     </v-navigation-drawer>
     <v-toolbar dark color="primary" app>
+      <v-toolbar-title>MoeBot Website</v-toolbar-title>
       <v-spacer/>
       <v-btn icon @click="logout">
         <v-icon>exit_to_app</v-icon>
@@ -28,23 +25,8 @@
 
 <script>
 import ServerList from './ServerList.vue'
+import UserAvatar from './UserAvatar.vue'
 export default {
-  data () {
-    return {
-      user: {
-        username: '',
-        avatar: '/static/defaultDiscordAvatar.png'
-      }
-    }
-  },
-  mounted: function () {
-    this.$http.get('/api/user', {headers: {'Authorization': 'Bearer ' + localStorage.getItem('jwt')}}).then(
-      response => {
-        this.user = response.data
-      },
-      response => {}
-    )
-  },
   methods: {
     logout: function (event) {
       localStorage.removeItem('jwt')
@@ -52,7 +34,8 @@ export default {
     }
   },
   components: {
-    ServerList
+    ServerList,
+    UserAvatar
   }
 }
 </script>

@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	botDb "github.com/camd67/moebot/moebot_bot/util/db"
 	"github.com/camd67/moebot/moebot_www/auth"
 	"github.com/camd67/moebot/moebot_www/db"
 )
@@ -43,7 +44,7 @@ func (a *MoebotApi) UserInfo(w http.ResponseWriter, r *http.Request) {
 		response, _ = json.Marshal(&struct {
 			Username string `json:"username"`
 			Avatar   string `json:"avatar"`
-		}{Username: discordUser.Username, Avatar: fmt.Sprintf("https://cdn.discordapp.com/avatars/%v/%v.png", discordUser.ID, discordUser.Avatar)})
+		}{Username: discordUser.Username, Avatar: fmt.Sprintf("https://cdn.discordapp.com/avatars/%v/%v.gif", discordUser.ID, discordUser.Avatar)})
 	} else {
 		w.WriteHeader(http.StatusOK)
 		response, _ = json.Marshal(&struct {
@@ -77,8 +78,10 @@ func (a *MoebotApi) Heartbeat(w http.ResponseWriter, r *http.Request) {
 
 func (a *MoebotApi) ServerList(w http.ResponseWriter, r *http.Request) {
 	type guildData struct {
-		ServerUID string `json:"id"`
-		Icon      string `json:"icon"`
+		ServerUID  string `json:"id"`
+		Icon       string `json:"icon"`
+		Name       string `json:"name"`
+		UserRights int    `json:"userRights"`
 	}
 	w.Header().Set("Content-Type", "application/json")
 	userID := r.Header.Get("X-UserID")
@@ -105,16 +108,52 @@ func (a *MoebotApi) ServerList(w http.ResponseWriter, r *http.Request) {
 		w.Write(errorResponse("Cannot find matching Discord User"))
 		return
 	}
+	guilds, err := a.Session.UserGuilds(100, "", "")
+	if err != nil {
+		log.Println("Failed to load Guilds - ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(errorResponse("Cannot find user guilds"))
+		return
+	}
 
-	for _, g := range a.Session.State.Guilds {
-		if _, err = a.Session.GuildMember(g.ID, discordUser.ID); err == nil {
-			responseData = append(responseData, &guildData{ServerUID: g.ID, Icon: fmt.Sprintf("https://cdn.discordapp.com/icons/%v/%v.png", g.ID, g.Icon)})
+	for _, g := range guilds {
+		if m, err := a.Session.GuildMember(g.ID, discordUser.ID); err == nil {
+			guild, err := a.Session.Guild(g.ID)
+			if err == nil {
+				m.GuildID = guild.ID
+				var icon string
+				if g.Icon != "" {
+					icon = fmt.Sprintf("https://cdn.discordapp.com/icons/%v/%v.png", guild.ID, g.Icon)
+				} else {
+					icon = "/static/defaultDiscordAvatar.png"
+				}
+				responseData = append(responseData, &guildData{ServerUID: g.ID, Icon: icon, Name: g.Name, UserRights: int(getPermissionLevel(m, guild))})
+			}
 		}
 	}
 	response, _ = json.Marshal(responseData)
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 	return
+}
+
+func getPermissionLevel(member *discordgo.Member, guild *discordgo.Guild) botDb.Permission {
+	if member.GuildID != guild.ID {
+		return botDb.PermNone
+	}
+	if guild.OwnerID == member.User.ID {
+		return botDb.PermGuildOwner
+	}
+
+	perms := botDb.RoleQueryPermission(member.Roles)
+	highestPerm := botDb.PermAll
+	// Find the highest permission level this user has
+	for _, userPerm := range perms {
+		if userPerm > highestPerm {
+			highestPerm = userPerm
+		}
+	}
+	return highestPerm
 }
 
 func errorResponse(errMessage string) []byte {
