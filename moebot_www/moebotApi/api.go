@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gorilla/mux"
+
 	"github.com/bwmarrin/discordgo"
 
 	botDb "github.com/camd67/moebot/moebot_bot/util/db"
@@ -85,29 +87,17 @@ func (a *MoebotApi) ServerList(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	userID := r.Header.Get("X-UserID")
-	dbUser, err := a.MoeWebDb.Users.SelectByID(userID)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(errorResponse("Cannot read user from Database"))
-		return
-	}
 	responseData := []*guildData{}
 	var response []byte
 
-	if !dbUser.DiscordUID.Valid {
-		response, _ = json.Marshal(responseData)
-		w.WriteHeader(http.StatusOK)
-		w.Write(response)
-		return
-	}
-
-	discordUser, err := a.Session.User(dbUser.DiscordUID.String)
+	discordUser, err := a.getDiscordUser(userID)
 	if err != nil {
-		log.Println("Failed to load Discord user - ", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Failed to load Discord user", err)
+		w.WriteHeader(http.StatusNotFound)
 		w.Write(errorResponse("Cannot find matching Discord User"))
 		return
 	}
+
 	guilds, err := a.Session.UserGuilds(100, "", "")
 	if err != nil {
 		log.Println("Failed to load Guilds - ", err)
@@ -135,6 +125,135 @@ func (a *MoebotApi) ServerList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 	return
+}
+
+func (a *MoebotApi) GetEvents(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json")
+	isMod, err := a.checkGuildPermissions(r.Header.Get("X-UserID"), vars["GuildUID"], botDb.PermMod)
+	if err != nil || !isMod {
+		log.Println("Unknown user or no permissions to complete the request", err)
+		w.WriteHeader(http.StatusForbidden)
+		w.Write(errorResponse("Unable to complete the request"))
+		return
+	}
+	from, err := time.Parse(time.RFC3339, vars["From"])
+	if err != nil {
+		log.Println("Cannot parse FROM date for request", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse("Invalid FROM date"))
+		return
+	}
+	to, err := time.Parse(time.RFC3339, vars["To"])
+	if err != nil {
+		log.Println("Cannot parse TO date for request", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse("Invalid TO date"))
+		return
+	}
+
+	events, err := a.MoeWebDb.GuildEvents.SelectEvents(from, to, vars["GuildUID"])
+	response, _ := json.Marshal(events)
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+}
+
+func (a *MoebotApi) AddEvent(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json")
+	isMod, err := a.checkGuildPermissions(r.Header.Get("X-UserID"), vars["GuildUID"], botDb.PermMod)
+	if err != nil || !isMod {
+		log.Println("Unknown user or no permissions to complete the request", err)
+		w.WriteHeader(http.StatusForbidden)
+		w.Write(errorResponse("Unable to complete the request"))
+		return
+	}
+
+	event := &db.GuildEvent{}
+	if err = json.NewDecoder(r.Body).Decode(event); err != nil {
+		log.Println("Cannot parse request body", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(errorResponse("Cannot parse the request"))
+		return
+	}
+
+	event.GuildUID = vars["GuildUID"]
+	event, err = a.MoeWebDb.GuildEvents.InsertEvent(event)
+	if err != nil {
+		log.Println("Cannot insert new event", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(errorResponse("Cannot insert new event"))
+		return
+	}
+
+	response, _ := json.Marshal(event)
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+}
+
+func (a *MoebotApi) UpdateEvent(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (a *MoebotApi) DeleteEvent(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (a *MoebotApi) checkGuildPermissions(userID string, guildUID string, permLevel botDb.Permission) (bool, error) {
+	isMoeGuild, err := a.checkMoeGuild(guildUID)
+	if !isMoeGuild || err != nil {
+		if err == nil {
+			err = fmt.Errorf("No such guild in moebot database")
+		}
+		return false, err
+	}
+	discordUser, err := a.getDiscordUser(userID)
+	if err != nil {
+		return false, err
+	}
+	guild, err := a.Session.Guild(guildUID)
+	if err != nil {
+		log.Println("Cannot retreive guild - ", err)
+		return false, err
+	}
+	member, err := a.Session.GuildMember(guildUID, discordUser.ID)
+	if err != nil {
+		log.Println("Cannot retreive guild member - ", err)
+		return false, err
+	}
+	return getPermissionLevel(member, guild) >= permLevel, nil
+}
+
+func (a *MoebotApi) checkMoeGuild(guildUID string) (bool, error) {
+	moeGuilds, err := a.Session.UserGuilds(100, "", "")
+	if err != nil {
+		log.Println("Cannot retreive moebot guilds - ", err)
+		return false, err
+	}
+	for _, g := range moeGuilds {
+		if g.ID == guildUID {
+			return false, nil
+		}
+	}
+	return false, nil
+}
+
+func (a *MoebotApi) getDiscordUser(userID string) (*discordgo.User, error) {
+	dbUser, err := a.MoeWebDb.Users.SelectByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !dbUser.DiscordUID.Valid {
+		return nil, fmt.Errorf("No discord user informations available")
+	}
+
+	discordUser, err := a.Session.User(dbUser.DiscordUID.String)
+	if err != nil {
+		log.Println("Cannot retreive discord User - ", err)
+		return nil, err
+	}
+	return discordUser, nil
 }
 
 func getPermissionLevel(member *discordgo.Member, guild *discordgo.Guild) botDb.Permission {
