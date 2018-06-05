@@ -3,7 +3,7 @@
     <v-spacer/>
     <v-btn dark color="grey darken-3" v-on:click="discordLogin">
       <v-avatar size="32px">
-        <img src="https://discordapp.com/assets/28174a34e77bb5e5310ced9f95cb480b.png"/>
+        <img src="https://discordapp.com/assets/28174a34e77bb5e5310ced9f95cb480b.png" alt="" />
       </v-avatar>
       Login with Discord
     </v-btn>

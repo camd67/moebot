@@ -15,6 +15,7 @@ import (
 	"github.com/camd67/moebot/moebot_www/db"
 	"github.com/camd67/moebot/moebot_www/moebotApi"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -73,12 +74,12 @@ func main() {
 	router.HandleFunc("/auth/register", authManager.PasswordRegister).Methods("POST")
 	router.HandleFunc("/auth/discord", authManager.DiscordBeginOAuth).Methods("GET")
 	router.HandleFunc("/auth/discordOAuth", authManager.DiscordCompleteOAuth).Methods("POST")
-	router.PathPrefix("/static").Handler(http.FileServer(http.Dir("./dist/")))
+	router.PathPrefix("/static").Handler(handlers.CompressHandler(cacheControlWrapper(http.FileServer(http.Dir("./dist/")))))
 	router.PathPrefix("/").HandlerFunc(vueHandler)
 
 	log.Println("Starting MoeBot API on address " + config.Address + "...")
 
-	http.ListenAndServe(config.Address, router)
+	log.Fatal(http.ListenAndServe(config.Address, router))
 }
 
 func readConfig(path string) (*config, error) {
@@ -98,4 +99,11 @@ func readConfig(path string) (*config, error) {
 
 func vueHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./dist/index.html")
+}
+
+func cacheControlWrapper(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "max-age=2592000")
+		h.ServeHTTP(w, r)
+	})
 }

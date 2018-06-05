@@ -12,12 +12,14 @@ module.exports = {
     assetsPublicPath: '/',
     proxyTable: {
       '/api': {
-        target: 'http://localhost:8081',
-        changeOrigin: true
+        target: 'https://localhost:8081',
+        changeOrigin: true,
+        secure: false
       },
       '/auth': {
-        target: 'http://localhost:8081',
-        changeOrigin: true
+        target: 'https://localhost:8081',
+        changeOrigin: true,
+        secure: false
       }
     },
     // Various Dev Server settings

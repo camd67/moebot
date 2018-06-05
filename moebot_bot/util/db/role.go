@@ -77,6 +77,7 @@ var (
 		`ALTER TABLE role ADD CONSTRAINT role_confirmation_security_answer_length CHECK(char_length(ConfirmationSecurityAnswer) <= 1900)`,
 		`ALTER TABLE role ADD COLUMN IF NOT EXISTS GroupId INTEGER REFERENCES role_group(Id) ON DELETE CASCADE`,
 		`ALTER TABLE role ALTER COLUMN Permission SET DEFAULT 2`,
+		`ALTER TABLE role ADD COLUMN IF NOT EXISTS Points INTEGER NOT NULL DEFAULT 0`,
 	}
 )
 

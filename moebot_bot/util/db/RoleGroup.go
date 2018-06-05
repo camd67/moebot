@@ -10,12 +10,14 @@ import (
 type GroupType int
 
 const (
-	// Group type where any role can be selected, and multiple can be selected
+	//GroupTypeAny Group type where any role can be selected, and multiple can be selected
 	GroupTypeAny = 1
-	// Group type where only one role can be selected
+	//GroupTypeExclusive Group type where only one role can be selected
 	GroupTypeExclusive = 2
-	// Same as the exclusive group, but can't be removed
+	//GroupTypeExclusiveNoRemove Same as the exclusive group, but can't be removed
 	GroupTypeExclusiveNoRemove = 3
+	//GroupTypeEvent Role is assigned through event points
+	GroupTypeEvent = 4
 
 	OptionsForGroupType = "ANY, EXC, ENR"
 )
