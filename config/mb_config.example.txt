@@ -1,11 +1,10 @@
-secret~your bot's secret (find it on discord's developer page for your bot)
+token~your bot's token (find it on discord's developer page for your bot)
 prefix~prefix the needs to be typed to run commands on this bot
 dbPass~password to access root DB (see pg_pass.secret / pg_pass.example.txt)
 moeDataPass~password to access moebot's user in postgres
 masterId~ID of the master of this bot
 debugChannel~channel ID to send error reports to
-loadPins~0 = don't load any pins, 1 = load pins. Can technically be 0 but pin loading has been optimized so this is a legacy config
-redditClientID~(To use commands that make use of reddit commands, you must have a registered script app here: https://www.reddit.com/prefs/apps) client ID of your app
+redditClientID~(To use commands that make use of reddit commands, you must have a registered SCRIPT app here: https://www.reddit.com/prefs/apps) app client ID
 redditClientSecret~secret for your app
 redditUserName~login username for your bot's reddit account
 redditPassword~login password for your bot's reddit account

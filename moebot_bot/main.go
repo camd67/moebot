@@ -38,15 +38,17 @@ func main() {
 	}
 	bot.ComPrefix = bot.Config["prefix"]
 	// setup discord with that information
-	discord, err := discordgo.New("Bot " + bot.Config["secret"])
+	discord, err := discordgo.New("Bot " + bot.Config["token"])
 	if err != nil {
 		log.Fatal("Error starting discord...", err)
 	}
 
-	redditHandle, err := reddit.NewHandle(bot.Config["redditClientID"], bot.Config["redditClientSecret"], bot.Config["redditUserName"], bot.Config["redditPassword"])
+	redditHandle, err := reddit.NewHandle(bot.Config["redditClientID"], bot.Config["redditClientSecret"], bot.Config["redditUserName"],
+		bot.Config["redditPassword"])
 	if err != nil {
-		log.Println("Error getting reddit session, related functionality won't work")
+		log.Println("Error getting reddit session, related functionality won't work", err)
 	}
+	log.Println("Sucessfully connected to reddit...")
 
 	bot.SetupMoebot(discord, redditHandle)
 	defer db.DisconnectAll()

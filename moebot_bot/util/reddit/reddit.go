@@ -54,6 +54,7 @@ func NewHandle(clientID, clientSecret, username, password string) (*Handle, erro
 
 	err = session.LoginAuth(username, password)
 	if err != nil {
+		log.Println("Error logging into reddit", err)
 		return &Handle{}, err
 	}
 

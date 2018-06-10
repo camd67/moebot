@@ -18,7 +18,6 @@ import (
 )
 
 type PinMoveCommand struct {
-	ShouldLoadPins bool
 	pinnedMessages util.SyncUIDByChannelMap
 	ready          bool
 }
@@ -140,20 +139,16 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 }
 
 func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
-	if pc.ShouldLoadPins {
-		pc.pinnedMessages = util.SyncUIDByChannelMap{
-			RWMutex: sync.RWMutex{},
-			M:       make(map[string][]string),
-		}
-		guilds, err := session.UserGuilds(100, "", "")
-		if err != nil {
-			log.Println("Error loading guilds, some functions may not work correctly.", err)
-			return
-		}
-		go pc.loadGuilds(session, guilds)
-	} else {
-		log.Println("!!! WARNING !!! Skipping loading pins. NOTE: this will break the ability to use the pin move command")
+	pc.pinnedMessages = util.SyncUIDByChannelMap{
+		RWMutex: sync.RWMutex{},
+		M:       make(map[string][]string),
 	}
+	guilds, err := session.UserGuilds(100, "", "")
+	if err != nil {
+		log.Println("Error loading guilds, some functions may not work correctly.", err)
+		return
+	}
+	go pc.loadGuilds(session, guilds)
 }
 
 func (pc *PinMoveCommand) EventHandlers() []interface{} {

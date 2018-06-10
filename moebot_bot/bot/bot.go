@@ -66,7 +66,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.MentionCommand{},
 		&commands.ServerCommand{ComPrefix: ComPrefix},
 		&commands.ProfileCommand{MasterId: masterId},
-		&commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"},
+		&commands.PinMoveCommand{},
 		&commands.SubCommand{RedditHandle: redditHandle},
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
 	}
@@ -77,7 +77,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 }
 
 func getCommands() []commands.Command {
-	result := []commands.Command{}
+	var result []commands.Command
 	for _, o := range operations {
 		if command, ok := o.(commands.Command); ok {
 			result = append(result, command)
