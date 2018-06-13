@@ -9,15 +9,20 @@ import (
 )
 
 type TimerCommand struct {
-	StartTime time.Time
+	chTimers map[string]time.Time
 }
 
 func (tc *TimerCommand) Execute(pack *CommPackage) {
+	channelID := pack.message.ChannelID
 	if len(pack.params) > 0 && strings.EqualFold(pack.params[0], "start") {
-		tc.StartTime = time.Now()
+		tc.chTimers[channelID] = time.Now()
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started OwO")
 	} else {
-		pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(tc.StartTime)))
+		if v, ok := tc.chTimers[channelID]; ok {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(v)))
+		} else {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel -w-")
+		}
 	}
 }
 
