@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -12,7 +13,12 @@ type TimerCommand struct {
 }
 
 func (tc *TimerCommand) Execute(pack *CommPackage) {
-	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(tc.StartTime)))
+	if len(pack.params) > 0 && strings.EqualFold(pack.params[0], "start") {
+		tc.StartTime = time.Now()
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started")
+	} else {
+		pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(tc.StartTime)))
+	}
 }
 
 func fmtDuration(dur time.Duration) string {
