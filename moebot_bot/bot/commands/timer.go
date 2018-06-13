@@ -2,14 +2,17 @@ package commands
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
 type TimerCommand struct {
+	StartTime time.Time
 }
 
 func (tc *TimerCommand) Execute(pack *CommPackage) {
+	pack.session.ChannelMessageSend(pack.message.ChannelID, time.Since(tc.StartTime).Round(time.Second).String())
 }
 
 func (tc *TimerCommand) GetPermLevel() db.Permission {

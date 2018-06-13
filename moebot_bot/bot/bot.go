@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/camd67/moebot/moebot_bot/bot/commands"
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
@@ -68,6 +69,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{},
 		&commands.SubCommand{RedditHandle: redditHandle},
+		&commands.TimerCommand{StartTime: time.Now()},
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
 	}
 
