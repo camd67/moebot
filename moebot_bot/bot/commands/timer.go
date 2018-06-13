@@ -3,14 +3,13 @@ package commands
 import (
 	"fmt"
 
-	"github.com/camd67/moebot/moebot_bot/bot/permissions"
-
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
 type TimerCommand struct {
-	ComPrefix string
-	Checker   permissions.PermissionChecker
+}
+
+func (tc *TimerCommand) Execute(pack *CommPackage) {
 }
 
 func (tc *TimerCommand) GetPermLevel() db.Permission {
