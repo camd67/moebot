@@ -12,6 +12,12 @@ type TimerCommand struct {
 	chTimers map[string]time.Time
 }
 
+func NewTimerCommand() *TimerCommand {
+	tc := &TimerCommand{}
+	tc.chTimers = map[string]time.Time{}
+	return tc
+}
+
 func (tc *TimerCommand) Execute(pack *CommPackage) {
 	channelID := pack.message.ChannelID
 	if len(pack.params) > 0 && strings.EqualFold(pack.params[0], "start") {
