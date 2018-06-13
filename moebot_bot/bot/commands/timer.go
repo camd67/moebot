@@ -15,7 +15,7 @@ type TimerCommand struct {
 func (tc *TimerCommand) Execute(pack *CommPackage) {
 	if len(pack.params) > 0 && strings.EqualFold(pack.params[0], "start") {
 		tc.StartTime = time.Now()
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started")
+		pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started OwO")
 	} else {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(tc.StartTime)))
 	}
