@@ -12,7 +12,17 @@ type TimerCommand struct {
 }
 
 func (tc *TimerCommand) Execute(pack *CommPackage) {
-	pack.session.ChannelMessageSend(pack.message.ChannelID, time.Since(tc.StartTime).Round(time.Second).String())
+	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(tc.StartTime)))
+}
+
+func fmtDuration(dur time.Duration) string {
+	remainingDur := dur.Round(time.Second)
+	hours := remainingDur / time.Hour
+	remainingDur -= hours * time.Hour
+	minutes := remainingDur / time.Minute
+	remainingDur -= minutes * time.Minute
+	seconds := remainingDur / time.Second
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
 
 func (tc *TimerCommand) GetPermLevel() db.Permission {
