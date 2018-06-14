@@ -5,11 +5,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
 type TimerCommand struct {
 	chTimers map[string]time.Time
+	Checker  permissions.PermissionChecker
 }
 
 func NewTimerCommand() *TimerCommand {
@@ -21,8 +23,12 @@ func NewTimerCommand() *TimerCommand {
 func (tc *TimerCommand) Execute(pack *CommPackage) {
 	channelID := pack.message.ChannelID
 	if len(pack.params) > 0 && strings.EqualFold(pack.params[0], "start") {
-		tc.chTimers[channelID] = time.Now()
-		pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started OwO")
+		if tc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, db.PermMod) {
+			tc.chTimers[channelID] = time.Now()
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started OwO")
+		} else {
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "You... you don't have permission to do that! ( ≧Д≦)")
+		}
 	} else {
 		if v, ok := tc.chTimers[channelID]; ok {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(v)))
