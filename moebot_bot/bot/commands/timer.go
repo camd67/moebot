@@ -25,15 +25,15 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	if len(pack.params) > 0 && strings.EqualFold(pack.params[0], "start") {
 		if tc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, db.PermMod) {
 			tc.chTimers[channelID] = time.Now()
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started OwO")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started! OwO")
 		} else {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "You... you don't have permission to do that! ( ≧Д≦)")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+", you... you don't have permission to do that! ( ≧Д≦)")
 		}
 	} else {
 		if v, ok := tc.chTimers[channelID]; ok {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(v)))
 		} else {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel -w-")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel... -w-")
 		}
 	}
 }
