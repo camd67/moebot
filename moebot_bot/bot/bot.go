@@ -141,7 +141,7 @@ func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd
 		return
 	}
 	server, err := db.ServerQueryOrInsert(guild.ID)
-	if !server.Enabled {
+	if err != nil || !server.Enabled {
 		return
 	}
 	// only send out a welcome message is the server has one

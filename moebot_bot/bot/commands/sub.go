@@ -49,10 +49,10 @@ func getSubredditFromParams(params []string) (string, error) {
 }
 
 func getRandomWhitelistedSubreddit() string {
-	rand := rand.Intn(len(whitelistedSubreddits) - 1)
+	r := rand.Intn(len(whitelistedSubreddits) - 1)
 	i := 0
 	for _, v := range whitelistedSubreddits {
-		if i == rand {
+		if i == r {
 			return v
 		}
 		i++

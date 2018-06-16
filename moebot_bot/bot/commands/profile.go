@@ -26,7 +26,15 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 
 	// technically we'll already have a user + server at this point, but may not have a usr. Still create if necessary
 	server, err := db.ServerQueryOrInsert(pack.guild.ID)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the server. This is an issue with moebot and not Discord.")
+		return
+	}
 	_, err = db.UserQueryOrInsert(pack.message.Author.ID)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching your user. This is an issue with moebot and not Discord.")
+		return
+	}
 	usr, err := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -34,6 +42,7 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 			return
 		} else {
 			// ErrNoRows. Overwrite the usr value, so we don't accidentally get an NPE later
+			// We don't want to bail out here since this just means the user doesn't exist
 			usr = nil
 		}
 	}

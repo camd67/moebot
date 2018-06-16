@@ -175,7 +175,7 @@ func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo
 		return
 	}
 	dbChannels, err := db.ChannelQueryByServer(server)
-	if len(dbChannels) == 0 {
+	if err != nil || len(dbChannels) == 0 {
 		// If we've got no channels in the database there's no way we will have channels that are configured for pin moving
 		return
 	}

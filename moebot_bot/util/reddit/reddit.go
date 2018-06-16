@@ -1,3 +1,4 @@
+// Processing and retrieving information from reddit's API
 package reddit
 
 import (
@@ -119,7 +120,8 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 		removeBadSubmission(posts, i)
 	}
 
-	log.Printf("Sending image %s with content type %s", subreddit+fileExtension, contentType)
+	// Disabled till we get debug logging added in
+	// log.Printf("Sending image %s with content type %s", subreddit+fileExtension, contentType)
 	return &discordgo.MessageSend{
 		File: &discordgo.File{
 			Name:        subreddit + fileExtension,

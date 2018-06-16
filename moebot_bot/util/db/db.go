@@ -30,7 +30,7 @@ func SetupDatabase(dbPass string, moeDataPass string) {
 	// actually connect with moebot now
 	moeDb = openDb(createConnString("moebot", moeDataPass, "moebot"))
 	createTables()
-	log.Println("Finished initalizing the DB and creating tables")
+	log.Println("Finished initializing the DB and creating tables")
 }
 
 func DisconnectAll() {
