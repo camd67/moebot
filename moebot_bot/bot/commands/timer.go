@@ -37,13 +37,13 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+", you... you don't have permission to do that!")
 		}
 	} else {
-		tc.chTimers.Lock()
+		tc.chTimers.RLock()
 		if v, ok := tc.chTimers.M[channelID]; ok {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(v)))
 		} else {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel...")
 		}
-		tc.chTimers.Unlock()
+		tc.chTimers.RUnlock()
 	}
 }
 
