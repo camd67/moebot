@@ -32,16 +32,16 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 			tc.chTimers.Lock()
 			tc.chTimers.M[channelID] = time.Now()
 			tc.chTimers.Unlock()
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started! OwO")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started!")
 		} else {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+", you... you don't have permission to do that! ( ≧Д≦)")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+", you... you don't have permission to do that!")
 		}
 	} else {
 		tc.chTimers.Lock()
 		if v, ok := tc.chTimers.M[channelID]; ok {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(v)))
 		} else {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel... -w-")
+			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel...")
 		}
 		tc.chTimers.Unlock()
 	}
