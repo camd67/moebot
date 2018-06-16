@@ -77,8 +77,9 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 		return nil, err
 	}
 
-	var resp *http.Response
-	var ext string
+	var contentType string
+	var body []byte
+	var fileExtension string
 	tryCount := 0
 
 	// Keep looking until you find an acceptable image
@@ -86,17 +87,29 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 		i := rand.Intn(len(posts) - 1)
 		randPost := posts[i]
 
-		resp, err = http.Get(randPost.URL)
+		resp, err := http.Get(randPost.URL)
 		if err != nil {
-			log.Printf("Error requesting image: " + randPost.URL)
+			log.Println("Error requesting image: " + randPost.URL)
 			return nil, err
 		}
-		defer resp.Body.Close()
+		contentType = resp.Header.Get("Content-Type")
 
-		if whitelistedExt, ok := whitelistedContentTypes[resp.Header.Get("Content-Type")]; ok {
-			ext = whitelistedExt
+		if whitelistedExt, ok := whitelistedContentTypes[contentType]; ok {
+			// We found a valid content type, get it's body and file type extension and bail out
+			fileExtension = whitelistedExt
+
+			body, err = ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("Error preparing repsonse body")
+				resp.Body.Close()
+				return nil, err
+			}
+			resp.Body.Close()
 			break
 		}
+
+		// Didn't find a valid post type. Close our request and try again
+		resp.Body.Close()
 
 		tryCount++
 		if tryCount > randImgRetryLimit {
@@ -106,17 +119,11 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 		removeBadSubmission(posts, i)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Error preparing repsonse body")
-		return nil, err
-	}
-
-	log.Printf("Sending image %s with content type %s", subreddit+ext, resp.Header.Get("Content-Type"))
+	log.Printf("Sending image %s with content type %s", subreddit+fileExtension, contentType)
 	return &discordgo.MessageSend{
 		File: &discordgo.File{
-			Name:        subreddit + ext,
-			ContentType: resp.Header.Get("Content-Type"),
+			Name:        subreddit + fileExtension,
+			ContentType: contentType,
 			Reader:      bytes.NewReader(body),
 		},
 	}, err
