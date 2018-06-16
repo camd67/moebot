@@ -68,6 +68,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{},
 		&commands.SubCommand{RedditHandle: redditHandle},
+		commands.NewTimerCommand(),
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
 	}
 

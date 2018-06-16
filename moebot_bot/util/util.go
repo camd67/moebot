@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -28,6 +29,11 @@ type SyncUIDByChannelMap struct {
 type SyncCooldownMap struct {
 	sync.RWMutex
 	M map[string]int64
+}
+
+type SyncChannelTimerMap struct {
+	sync.RWMutex
+	M map[string]time.Time
 }
 
 func IntContains(s []int, e int) bool {
