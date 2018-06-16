@@ -11,16 +11,10 @@
       <option name="name" value="goimports" />
       <option name="output" value="$FilePath$" />
       <option name="outputFilters">
-        <array>
-          <FilterInfo>
-            <option name="description" value="" />
-            <option name="name" value="" />
-            <option name="regExp" value="" />
-          </FilterInfo>
-        </array>
+        <array />
       </option>
       <option name="outputFromStdout" value="false" />
-      <option name="program" value="goimports.exe" />
+      <option name="program" value="$PROJECT_DIR$/../../../../bin/goimports" />
       <option name="runOnExternalChanges" value="false" />
       <option name="scopeName" value="Project Files" />
       <option name="trackOnlyRoot" value="true" />
