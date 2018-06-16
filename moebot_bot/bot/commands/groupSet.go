@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
@@ -38,7 +38,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 			return
 		}
 		// print all the group names
-		var message bytes.Buffer
+		var message strings.Builder
 		message.WriteString("Groups in this server: ")
 		for _, g := range groups {
 			message.WriteString("`")

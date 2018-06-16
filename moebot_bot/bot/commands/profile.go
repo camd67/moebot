@@ -1,10 +1,10 @@
 package commands
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
@@ -37,7 +37,7 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 			usr = nil
 		}
 	}
-	var message bytes.Buffer
+	var message strings.Builder
 	message.WriteString(pack.message.Author.Mention())
 	message.WriteString("'s profile:")
 	message.WriteString("\nRank: ")

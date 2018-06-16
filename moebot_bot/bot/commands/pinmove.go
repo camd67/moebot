@@ -113,7 +113,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	}
 	pc.pinnedMessages.Unlock()
 
-	var message bytes.Buffer
+	var message strings.Builder
 	message.WriteString("Message move on pin has been ")
 	if dbChannel.MovePins {
 		message.WriteString("enabled")

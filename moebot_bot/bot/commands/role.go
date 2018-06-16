@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
@@ -76,7 +75,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 			}
 		} else {
 			// load up the trigger to see if it exists, stripping out anything prefixed with - (our security text)
-			var roleNameBuf bytes.Buffer
+			var roleNameBuf strings.Builder
 			for _, param := range pack.params {
 				if !strings.HasPrefix(param, "-") {
 					roleNameBuf.WriteString(param)
@@ -146,7 +145,7 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 			}
 			// we'll always be adding a role here
 			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
-			var message bytes.Buffer
+			var message strings.Builder
 			message.WriteString("Added role `")
 			message.WriteString(role.Name)
 			message.WriteString("` for ")
@@ -281,7 +280,7 @@ func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage)
 			triggersByGroup["uncategorized"] = append(triggersByGroup["uncategorized"], role.Trigger.String)
 		}
 	}
-	var message bytes.Buffer
+	var message strings.Builder
 	if len(triggersByGroup) == 0 {
 		message.WriteString("Looks like there aren't any roles I can assign to you in this server!")
 	} else {
