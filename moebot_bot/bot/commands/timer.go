@@ -56,7 +56,9 @@ func (tc *TimerCommand) writeTimesToChannel(pack *CommPackage, startTime time.Ti
 		case <-time.After(time.Second * 1):
 			// Increment the duration by one second, post the time
 			duration += time.Duration(1 * time.Second)
-			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
+			go func() {
+				pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime))+" vs. "+fmtDuration(duration))
+			}()
 		}
 	}
 }
