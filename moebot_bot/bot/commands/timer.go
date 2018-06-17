@@ -39,11 +39,27 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	} else {
 		tc.chTimers.RLock()
 		if v, ok := tc.chTimers.M[channelID]; ok {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(v)))
+			go tc.writeTimesToChannel(pack, v)
 		} else {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel...")
 		}
 		tc.chTimers.RUnlock()
+	}
+}
+
+func (tc *TimerCommand) writeTimesToChannel(pack *CommPackage, startTime time.Time) {
+	//Write the time once right away
+	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime)))
+
+	addedSeconds := 0
+	for {
+		select {
+		case <-time.After(time.Second * 1):
+			// Increment the duration by one second, post the time
+			addedSeconds++
+			// pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime.Add(time.Second*time.Duration(addedSeconds)))))
+			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime)+time.Duration(addedSeconds)))
+		}
 	}
 }
 
