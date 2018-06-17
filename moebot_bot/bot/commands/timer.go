@@ -50,15 +50,13 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 func (tc *TimerCommand) writeTimesToChannel(pack *CommPackage, startTime time.Time) {
 	//Write the time once right away
 	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime)))
-
-	addedSeconds := 0
+	duration := time.Since(startTime)
 	for {
 		select {
 		case <-time.After(time.Second * 1):
 			// Increment the duration by one second, post the time
-			addedSeconds++
-			// pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime.Add(time.Second*time.Duration(addedSeconds)))))
-			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime)+time.Duration(addedSeconds)))
+			duration += time.Duration(1 * time.Second)
+			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 		}
 	}
 }
