@@ -11,6 +11,10 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
+const (
+	maxWrites = 5 // Number of times to write out the time
+)
+
 type TimerCommand struct {
 	chTimers util.SyncChannelTimerMap
 	Checker  permissions.PermissionChecker
@@ -39,7 +43,7 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	} else {
 		tc.chTimers.RLock()
 		if v, ok := tc.chTimers.M[channelID]; ok {
-			go tc.writeTimesToChannel(pack, v)
+			go tc.writeTimesToChannel(pack, time.Since(v))
 		} else {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel...")
 		}
@@ -47,18 +51,24 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (tc *TimerCommand) writeTimesToChannel(pack *CommPackage, startTime time.Time) {
+func (tc *TimerCommand) writeTimesToChannel(pack *CommPackage, startDuration time.Duration) {
 	//Write the time once right away
-	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime)))
-	duration := time.Since(startTime)
+	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(startDuration))
+	duration := startDuration
+	writes := 1
 	for {
 		select {
 		case <-time.After(time.Second * 1):
-			// Increment the duration by one second, post the time
-			duration += time.Duration(1 * time.Second)
+			duration += time.Duration(time.Second)
 			go func() {
-				pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(time.Since(startTime))+" vs. "+fmtDuration(duration))
+				pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 			}()
+
+			// Exit once we've reached the max write count
+			writes++
+			if writes >= maxWrites {
+				return
+			}
 		}
 	}
 }
