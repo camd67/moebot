@@ -7,24 +7,24 @@ import (
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
-	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
 const (
-	maxWrites = 5 // Number of times to write out the time
+	maxWrites     = 4 // Number of times to write out the time
+	writeInterval = 5 // Number of seconds between each write
 )
 
 type TimerCommand struct {
-	chTimers util.SyncChannelTimerMap
+	chTimers SyncChannelTimerMap
 	Checker  permissions.PermissionChecker
 }
 
 func NewTimerCommand() *TimerCommand {
 	tc := &TimerCommand{}
-	tc.chTimers = util.SyncChannelTimerMap{
+	tc.chTimers = SyncChannelTimerMap{
 		RWMutex: sync.RWMutex{},
-		M:       make(map[string]time.Time),
+		M:       make(map[string]*ChannelTimer),
 	}
 	return tc
 }
@@ -32,9 +32,27 @@ func NewTimerCommand() *TimerCommand {
 func (tc *TimerCommand) Execute(pack *CommPackage) {
 	channelID := pack.message.ChannelID
 	if len(pack.params) > 0 && strings.EqualFold(pack.params[0], "start") {
+		// Make sure the user has at least mod-level permissions before starting the timer
 		if tc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, db.PermMod) {
 			tc.chTimers.Lock()
-			tc.chTimers.M[channelID] = time.Now()
+
+			// If this channel timer is currently writing out, tell it to stop
+			if chTimer, ok := tc.chTimers.M[channelID]; ok {
+				chTimer.Lock()
+				if chTimer.isWriting {
+					close(chTimer.requestCh)
+				}
+				chTimer.Unlock()
+			}
+
+			// Create a new timer
+			tc.chTimers.M[channelID] = &ChannelTimer{
+				time:      time.Now(),
+				writes:    0,
+				isWriting: false,
+				requestCh: make(chan string, 10),
+			}
+
 			tc.chTimers.Unlock()
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started!")
 		} else {
@@ -42,8 +60,17 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 		}
 	} else {
 		tc.chTimers.RLock()
-		if v, ok := tc.chTimers.M[channelID]; ok {
-			go tc.writeTimesToChannel(pack, time.Since(v))
+		if chTimer, ok := tc.chTimers.M[channelID]; ok {
+			chTimer.Lock()
+			// Reset the number of writes
+			chTimer.writes = 0
+
+			// If the time is not writing, start it
+			if !chTimer.isWriting {
+				go chTimer.writeTimes(pack)
+				chTimer.isWriting = true
+			}
+			chTimer.Unlock()
 		} else {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel...")
 		}
@@ -51,24 +78,38 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (tc *TimerCommand) writeTimesToChannel(pack *CommPackage, startDuration time.Duration) {
-	//Write the time once right away
-	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(startDuration))
-	duration := startDuration
-	writes := 1
+func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
+	duration := time.Since(ct.time)
+
+	// Write the time once right away
+	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
+	ct.writes = 1
+
+TimerWriting:
 	for {
 		select {
-		case <-time.After(time.Second * 1):
-			duration += time.Duration(time.Second)
+		case msg, chOpen := <-ct.requestCh:
+			// Break out of this loop if the channel was closed (probably shouldn't be closed since there are multiple writeres) or a "stop" was issued
+			if !chOpen || msg == "stop" {
+				break TimerWriting
+			}
+
+		case <-time.After(time.Second * writeInterval):
+			// Increment the duration and write time to the channel
+			duration += (time.Second * time.Duration(writeInterval))
 			go func() {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 			}()
 
 			// Exit once we've reached the max write count
-			writes++
-			if writes >= maxWrites {
-				return
+			ct.Lock()
+			ct.writes++
+			if ct.writes >= maxWrites {
+				ct.isWriting = false
+				ct.Unlock()
+				break TimerWriting
 			}
+			ct.Unlock()
 		}
 	}
 }
@@ -94,4 +135,17 @@ func (tc *TimerCommand) GetCommandKeys() []string {
 
 func (tc *TimerCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s timer` - Checks the timestamp. Moderators may provide the `--start` option to begin start or restart the timer.", commPrefix)
+}
+
+type SyncChannelTimerMap struct {
+	sync.RWMutex
+	M map[string]*ChannelTimer
+}
+
+type ChannelTimer struct {
+	sync.Mutex
+	time      time.Time
+	writes    int
+	isWriting bool
+	requestCh chan string
 }
