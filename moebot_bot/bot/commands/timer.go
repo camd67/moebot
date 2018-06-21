@@ -85,13 +85,12 @@ func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 	ct.writes = 1
 
-TimerWriting:
 	for {
 		select {
 		case msg, chOpen := <-ct.requestCh:
 			// Break out of this loop if the channel was closed (probably shouldn't be closed since there are multiple writeres) or a "stop" was issued
 			if !chOpen || msg == "stop" {
-				break TimerWriting
+				return
 			}
 
 		case <-time.After(time.Second * writeInterval):
@@ -107,7 +106,7 @@ TimerWriting:
 			if ct.writes >= maxWrites {
 				ct.isWriting = false
 				ct.Unlock()
-				break TimerWriting
+				return
 			}
 			ct.Unlock()
 		}
