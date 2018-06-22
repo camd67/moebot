@@ -133,7 +133,7 @@ func (tc *TimerCommand) GetCommandKeys() []string {
 }
 
 func (tc *TimerCommand) GetCommandHelp(commPrefix string) string {
-	return fmt.Sprintf("`%[1]s timer` - Checks the timestamp. Moderators may provide the `--start` option to begin start or restart the timer.", commPrefix)
+	return fmt.Sprintf("`%[1]s timer` - Checks the timer. Moderators may provide the `start` option to start (or restart) the timer.", commPrefix)
 }
 
 type SyncChannelTimerMap struct {
