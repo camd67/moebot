@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -81,7 +80,6 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 
 func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
 	duration := time.Since(ct.time)
-	log.Println(duration)
 
 	// Write the time once right away
 	go func() {
@@ -95,7 +93,6 @@ func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
 	timeToSync := writeInterval - (duration % writeInterval)
 	time.Sleep(timeToSync)
 	duration += timeToSync
-	log.Println(duration)
 
 	// Write again if we spent a sufficient time syncing, otherwise just wait until the next write interval
 	go func() {
