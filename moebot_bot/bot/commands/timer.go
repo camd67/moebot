@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	maxWrites     = 4 // Number of times to write out the time
-	writeInterval = 5 // Number of seconds between each write
+	maxWrites     = 4               // Number of times to write out the time
+	writeInterval = 5 * time.Second // Time between each write
 )
 
 type TimerCommand struct {
@@ -79,12 +79,26 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 }
 
 func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
-	duration := time.Since(ct.time)
+	duration := time.Since(ct.time).Truncate(time.Second)
 
 	// Write the time once right away
 	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
-	ct.writes = 1
+	ct.Lock()
+	ct.writes++
+	ct.Unlock()
 
+	// Synchronize the writes to be divisible by the interval (works well when interval is 5 so we get writes at times like 0:30, 0:35, 0:40, etc.)
+	if duration%writeInterval != 0 {
+		timeUntilSync := writeInterval - (duration % writeInterval)
+		time.Sleep(timeUntilSync)
+		duration += timeUntilSync
+		pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
+		ct.Lock()
+		ct.writes++
+		ct.Unlock()
+	}
+
+	// Start writing until we reach the max number of writes or get a message to stop
 	for {
 		select {
 		case msg, chOpen := <-ct.requestCh:
@@ -93,9 +107,9 @@ func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
 				return
 			}
 
-		case <-time.After(time.Second * writeInterval):
+		case <-time.After(writeInterval):
 			// Increment the duration and write time to the channel
-			duration += (time.Second * time.Duration(writeInterval))
+			duration += (writeInterval)
 			go func() {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 			}()
