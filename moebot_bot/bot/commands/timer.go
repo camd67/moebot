@@ -81,6 +81,7 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 
 func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
 	duration := time.Since(ct.time)
+	log.Println(duration)
 
 	// Write the time once right away
 	pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
@@ -89,13 +90,15 @@ func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
 	ct.Unlock()
 
 	// Synchronize the writes to be divisible by the interval (works well when interval is 5 so we get writes at times like 0:30, 0:35, 0:40, etc.)
-	if duration%writeInterval != 0 {
-		timeUntilSync := writeInterval - (duration % writeInterval)
-		time.Sleep(timeUntilSync)
-		duration += timeUntilSync
-		log.Println(duration)
-		pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
+	timeToSync := writeInterval - (duration % writeInterval)
+	time.Sleep(timeToSync)
+	duration += timeToSync
+	log.Println(duration)
+
+	// Write again if we spent a sufficient time syncing, otherwise just wait until the next write interval
+	if timeToSync > time.Second {
 		ct.Lock()
+		pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 		ct.writes++
 		ct.Unlock()
 	}
