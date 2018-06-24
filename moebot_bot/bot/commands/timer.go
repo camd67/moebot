@@ -110,6 +110,9 @@ func (ct *channelTimer) writeTimes(pack *CommPackage) {
 		case msg, chOpen := <-ct.requestCh:
 			// Break out of this loop if the channel was closed or a "stop" was issued
 			if !chOpen || msg == "stop" {
+				ct.Lock()
+				ct.isWriting = false
+				ct.Unlock()
 				return
 			}
 
