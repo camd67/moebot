@@ -16,15 +16,15 @@ const (
 )
 
 type TimerCommand struct {
-	chTimers SyncChannelTimerMap
+	chTimers syncChannelTimerMap
 	Checker  permissions.PermissionChecker
 }
 
 func NewTimerCommand() *TimerCommand {
 	tc := &TimerCommand{}
-	tc.chTimers = SyncChannelTimerMap{
+	tc.chTimers = syncChannelTimerMap{
 		RWMutex: sync.RWMutex{},
-		M:       make(map[string]*ChannelTimer),
+		M:       make(map[string]*channelTimer),
 	}
 	return tc
 }
@@ -46,7 +46,7 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 			}
 
 			// Create a new timer
-			tc.chTimers.M[channelID] = &ChannelTimer{
+			tc.chTimers.M[channelID] = &channelTimer{
 				time:      time.Now(),
 				writes:    0,
 				isWriting: false,
@@ -78,7 +78,7 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (ct *ChannelTimer) writeTimes(pack *CommPackage) {
+func (ct *channelTimer) writeTimes(pack *CommPackage) {
 	duration := time.Since(ct.time)
 
 	// Write the time once right away
@@ -156,12 +156,12 @@ func (tc *TimerCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s timer` - Checks the timer. Moderators may provide the `start` option to start (or restart) the timer.", commPrefix)
 }
 
-type SyncChannelTimerMap struct {
+type syncChannelTimerMap struct {
 	sync.RWMutex
-	M map[string]*ChannelTimer
+	M map[string]*channelTimer
 }
 
-type ChannelTimer struct {
+type channelTimer struct {
 	sync.Mutex
 	time      time.Time
 	writes    int
