@@ -118,7 +118,7 @@ func (ct *channelTimer) writeTimes(pack *CommPackage) {
 
 		case <-time.After(writeInterval):
 			// Increment the duration and write time to the channel
-			duration += (writeInterval)
+			duration += writeInterval
 			go func() {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 			}()
