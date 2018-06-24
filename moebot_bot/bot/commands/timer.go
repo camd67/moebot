@@ -108,7 +108,7 @@ func (ct *channelTimer) writeTimes(pack *CommPackage) {
 	for {
 		select {
 		case msg, chOpen := <-ct.requestCh:
-			// Break out of this loop if the channel was closed (probably shouldn't be closed since there are multiple writeres) or a "stop" was issued
+			// Break out of this loop if the channel was closed or a "stop" was issued
 			if !chOpen || msg == "stop" {
 				return
 			}
