@@ -107,9 +107,9 @@ func (ct *channelTimer) writeTimes(pack *CommPackage) {
 	// Start writing until we reach the max number of writes or get a message to stop
 	for {
 		select {
-		case msg, chOpen := <-ct.requestCh:
-			// Break out of this loop if the channel was closed or a "stop" was issued
-			if !chOpen || msg == "stop" {
+		case _, chOpen := <-ct.requestCh:
+			// Break out of this loop if the channel was closed
+			if !chOpen {
 				ct.Lock()
 				ct.isWriting = false
 				ct.Unlock()
