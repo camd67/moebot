@@ -1,3 +1,6 @@
+/*
+All database interactions and database tables within moebot's database
+*/
 package db
 
 import (
@@ -27,7 +30,7 @@ func SetupDatabase(host string, dbPass string, moeDataPass string) {
 	// actually connect with moebot now
 	moeDb = openDb(createConnString(host, "moebot", moeDataPass, "moebot"))
 	createTables()
-	log.Println("Finished initalizing the DB and creating tables")
+	log.Println("Finished initializing the DB and creating tables")
 }
 
 func DisconnectAll() {
@@ -59,6 +62,8 @@ func createTables() {
 	//POLL
 	moeDb.Exec(pollTable)
 	moeDb.Exec(pollOptionTable)
+	// METRIC
+	metricCreateTable()
 }
 
 /*

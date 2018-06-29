@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -61,7 +62,7 @@ func (handler *PollsHandler) openPoll(pack *CommPackage) {
 		UserUid:   pack.message.Author.ID,
 		ChannelId: channel.Id,
 		Open:      true,
-		Options:   util.CreatePollOptions(options),
+		Options:   createPollOptions(options),
 	}
 	err = db.PollAdd(poll)
 	if err != nil {
@@ -73,7 +74,7 @@ func (handler *PollsHandler) openPoll(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return
 	}
-	message, _ := pack.session.ChannelMessageSend(pack.channel.ID, util.OpenPollMessage(poll, pack.message.Author))
+	message, _ := pack.session.ChannelMessageSend(pack.channel.ID, openPollMessage(poll, pack.message.Author))
 	for _, o := range poll.Options {
 		err = pack.session.MessageReactionAdd(pack.channel.ID, message.ID, o.ReactionId)
 		if err != nil {
@@ -138,10 +139,10 @@ func (handler *PollsHandler) closePoll(pack *CommPackage) {
 		return
 	}
 	if !poll.Open {
-		pack.session.ChannelMessageSend(pack.channel.ID, util.ClosePollMessage(poll, pack.message.Author))
+		pack.session.ChannelMessageSend(pack.channel.ID, closePollMessage(poll, pack.message.Author))
 		return
 	}
-	err = util.UpdatePollVotes(poll, pack.session)
+	err = updatePollVotes(poll, pack.session)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem retrieving the votes count for the given Poll")
 		return
@@ -152,7 +153,7 @@ func (handler *PollsHandler) closePoll(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem closing the poll.")
 		return
 	}
-	pack.session.ChannelMessageSend(pack.channel.ID, util.ClosePollMessage(poll, pack.message.Author))
+	pack.session.ChannelMessageSend(pack.channel.ID, closePollMessage(poll, pack.message.Author))
 	poll.Open = false
 }
 
@@ -222,4 +223,160 @@ func reactionIsOption(options []*db.PollOption, emojiID string) bool {
 		}
 	}
 	return false
+}
+
+func updatePollVotes(poll *db.Poll, session *discordgo.Session) error {
+	channel, err := db.ChannelQueryById(poll.ChannelId)
+	if err != nil {
+		return err
+	}
+	message, err := session.ChannelMessage(channel.ChannelUid, poll.MessageUid)
+	if err != nil {
+		return err
+	}
+	for _, o := range poll.Options {
+		r := moeDiscord.GetReactionByName(message, o.ReactionId)
+		if r != nil {
+			o.Votes = r.Count - 1
+		}
+	}
+	return nil
+}
+
+func openPollMessage(poll *db.Poll, user *discordgo.User) string {
+	message := user.Mention() + " created "
+	if poll.Title != "" {
+		message += "the poll **" + poll.Title + "**!\n"
+	} else {
+		message += "a poll!\n"
+	}
+	for _, o := range poll.Options {
+		message += ":" + o.ReactionName + ":  " + o.Description + "\n"
+	}
+	message += "Poll ID: " + strconv.Itoa(poll.Id)
+	return message
+}
+
+func closePollMessage(poll *db.Poll, user *discordgo.User) string {
+	var message string
+	if poll.Open {
+		if user.ID == poll.UserUid {
+			message = user.Mention() + " closed their poll"
+		} else {
+			message = user.Mention() + " closed " + util.UserIdToMention(poll.UserUid) + "'s poll"
+		}
+		if poll.Title != "" {
+			message += " **" + poll.Title + "**!\n"
+		} else {
+			message += "!\n"
+		}
+	} else {
+		if poll.Title != "" {
+			message = "Poll **" + poll.Title + "** is already closed!\n"
+		} else {
+			message = "This poll is already closed!"
+		}
+	}
+	winners := pollWinners(poll)
+	if len(winners) == 0 || winners[0].Votes == 0 {
+		message += "There are no winners!"
+		return message
+	}
+	if len(winners) > 1 {
+		message += "Tied for first place:\n"
+	} else {
+		message += "Poll winner:\n"
+	}
+	for _, o := range winners {
+		message += ":" + o.ReactionName + ":  " + o.Description + "\n"
+	}
+	message += "With " + strconv.Itoa(winners[0].Votes) + " votes!"
+	return message
+}
+
+func pollWinners(poll *db.Poll) []*db.PollOption {
+	var winningOptions []*db.PollOption
+	maxVotes := 0
+	for _, option := range poll.Options {
+		if option.Votes > maxVotes {
+			maxVotes = option.Votes
+		}
+	}
+
+	for _, option := range poll.Options {
+		if option.Votes == maxVotes {
+			winningOptions = append(winningOptions, option)
+		}
+	}
+
+	return winningOptions
+}
+
+func createPollOptions(options []string) []*db.PollOption {
+	//TODO: Move to a database table?
+	optionNames := []string{
+		"regional_indicator_a",
+		"regional_indicator_b",
+		"regional_indicator_c",
+		"regional_indicator_d",
+		"regional_indicator_e",
+		"regional_indicator_f",
+		"regional_indicator_g",
+		"regional_indicator_h",
+		"regional_indicator_i",
+		"regional_indicator_j",
+		"regional_indicator_k",
+		"regional_indicator_l",
+		"regional_indicator_m",
+		"regional_indicator_n",
+		"regional_indicator_o",
+		"regional_indicator_p",
+		"regional_indicator_q",
+		"regional_indicator_r",
+		"regional_indicator_s",
+		"regional_indicator_t",
+		"regional_indicator_u",
+		"regional_indicator_v",
+		"regional_indicator_w",
+		"regional_indicator_x",
+		"regional_indicator_y",
+		"regional_indicator_z",
+	}
+	optionIds := []string{
+		"🇦",
+		"🇧",
+		"🇨",
+		"🇩",
+		"🇪",
+		"🇫",
+		"🇬",
+		"🇭",
+		"🇮",
+		"🇯",
+		"🇰",
+		"🇱",
+		"🇲",
+		"🇳",
+		"🇴",
+		"🇵",
+		"🇶",
+		"🇷",
+		"🇸",
+		"🇹",
+		"🇺",
+		"🇻",
+		"🇼",
+		"🇽",
+		"🇾",
+		"🇿",
+	}
+	var result []*db.PollOption
+	for i, s := range options {
+		result = append(result, &db.PollOption{
+			Description:  strings.Trim(s, " "),
+			ReactionId:   optionIds[i],
+			ReactionName: optionNames[i],
+		})
+	}
+	return result
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/util"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
 
@@ -62,7 +63,7 @@ func (vh *VeteranHandler) EventHandlers() []interface{} {
 func (vh *VeteranHandler) veteranMessageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
 	// todo: Another place where we need to update to prevent network failure due to hokago-tea-time. Perhaps we could group these together somehow?
 	// 1 entry point for all handlers perhaps?
-	channel, err := session.State.Channel(message.ChannelID)
+	channel, err := moeDiscord.GetChannel(message.ChannelID, session)
 	if err != nil {
 		// missing channel
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, channel)
@@ -107,9 +108,9 @@ func (vh *VeteranHandler) handleVeteranMessage(userUid string, guildUid string) 
 
 func (vh *VeteranHandler) veteranReactionAdd(session *discordgo.Session, reactionAdd *discordgo.MessageReactionAdd) {
 	// should make some local caches for channels and guilds...
-	channel, err := session.Channel(reactionAdd.ChannelID)
+	channel, err := moeDiscord.GetChannel(reactionAdd.ChannelID, session)
 	if err != nil {
-		log.Println("Error trying to get channel", err)
+		// already logged, and no channel to send to.
 		return
 	}
 

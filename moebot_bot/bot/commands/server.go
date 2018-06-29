@@ -9,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 const serverPossibleCommands = "Possible configs: {WelcomeMessage -> string; max length " + db.MaxMessageLengthString + "} " +
@@ -86,7 +87,7 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 		} else if shouldClear {
 			s.BotChannel.Scan(nil)
 		} else {
-			c, err := pack.session.Channel(configValue)
+			c, err := moeDiscord.GetChannel(configValue, pack.session)
 			if err != nil || c.Type != discordgo.ChannelTypeGuildText || c.GuildID != pack.guild.ID {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid text channel ID")
 				return false
@@ -115,7 +116,7 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 		} else if shouldClear {
 			s.WelcomeChannel.Scan(nil)
 		} else {
-			c, err := pack.session.Channel(configValue)
+			c, err := moeDiscord.GetChannel(configValue, pack.session)
 			if err != nil || c.Type != discordgo.ChannelTypeGuildText || c.GuildID != pack.guild.ID {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid text channel ID")
 				return false
@@ -176,7 +177,7 @@ func (sc *ServerCommand) defaultServerRoleSet(pack *CommPackage, configValue str
 	} else if shouldClear {
 		toSet.Scan(nil)
 	} else {
-		role := util.FindRoleByName(pack.guild.Roles, configValue)
+		role := moeDiscord.FindRoleByName(pack.guild.Roles, configValue)
 		if role == nil {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a valid role and make sure it's the full role name")
 			return false

@@ -1,4 +1,4 @@
-FROM golang
+FROM golang:1.10
 
 COPY . /go/src/github.com/camd67/moebot/api
 

@@ -4,18 +4,23 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/bot"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/reddit"
 )
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	// read in configuration information
 	configPath := os.Getenv("MOEBOT_CONFIG_PATH")
 	configFile, err := ioutil.ReadFile(configPath)
@@ -33,12 +38,19 @@ func main() {
 	}
 	bot.ComPrefix = bot.Config["prefix"]
 	// setup discord with that information
-	discord, err := discordgo.New("Bot " + bot.Config["secret"])
+	discord, err := discordgo.New("Bot " + bot.Config["token"])
 	if err != nil {
 		log.Fatal("Error starting discord...", err)
 	}
 
-	bot.SetupMoebot(discord)
+	redditHandle, err := reddit.NewHandle(bot.Config["redditClientID"], bot.Config["redditClientSecret"], bot.Config["redditUserName"],
+		bot.Config["redditPassword"])
+	if err != nil {
+		log.Println("Error getting reddit session, related functionality won't work", err)
+	}
+	log.Println("Sucessfully connected to reddit...")
+
+	bot.SetupMoebot(discord, redditHandle)
 	defer db.DisconnectAll()
 
 	// start up a connection with discord

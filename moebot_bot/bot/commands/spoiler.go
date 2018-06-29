@@ -3,6 +3,8 @@ package commands
 import (
 	"bytes"
 	"log"
+	"regexp"
+	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
 
@@ -22,7 +24,7 @@ func (sc *SpoilerCommand) Execute(pack *CommPackage) {
 		log.Println("Error while deleting message", err)
 	}
 
-	spoilerTitle, spoilerText := util.GetSpoilerContents(pack.params)
+	spoilerTitle, spoilerText := getSpoilerContents(pack.params)
 	if spoilerTitle != "" {
 		content += ": **" + spoilerTitle + "**"
 	}
@@ -47,4 +49,12 @@ func (sc *SpoilerCommand) GetCommandKeys() []string {
 
 func (sc *SpoilerCommand) GetCommandHelp(commPrefix string) string {
 	return ""
+}
+
+func getSpoilerContents(messageParams []string) (title string, text string) {
+	if messageParams == nil {
+		return "", ""
+	}
+	reg := regexp.MustCompile("^(\\[.+?\\])")
+	return strings.Replace(strings.Replace(reg.FindString(strings.Join(messageParams, " ")), "]", "", 1), "[", "", 1), reg.ReplaceAllString(strings.Join(messageParams, " "), "")
 }

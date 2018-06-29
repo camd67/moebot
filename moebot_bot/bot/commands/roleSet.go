@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type RoleSetCommand struct {
@@ -33,13 +33,13 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 		// empty command (or just really bad one)
 		var vetRole *discordgo.Role
 		if server.VeteranRole.Valid {
-			vetRole = util.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
+			vetRole = moeDiscord.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
 		}
 		if len(pack.params) == 0 {
 			printAllRoles(server, vetRole, pack)
 		}
 	} else if hasDelete {
-		role := util.FindRoleByName(pack.guild.Roles, deleteName)
+		role := moeDiscord.FindRoleByName(pack.guild.Roles, deleteName)
 		// we don't really care about the role itself here, just if we got a row back or not (could use a row count check but oh well)
 		_, err := db.RoleQueryRoleUid(role.ID, server.Id)
 		if err != nil {
@@ -67,7 +67,7 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			return
 		}
 
-		r := util.FindRoleByName(pack.guild.Roles, roleName)
+		r := moeDiscord.FindRoleByName(pack.guild.Roles, roleName)
 		if r == nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, it doesn't seem like that role exists on this server.")
 			return

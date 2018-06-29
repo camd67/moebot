@@ -1,8 +1,12 @@
+/*
+Specific command functionality for moebot. Each command should be in its own file.
+*/
 package commands
 
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/event"
 )
 
 type CommPackage struct {
@@ -11,6 +15,8 @@ type CommPackage struct {
 	guild   *discordgo.Guild
 	member  *discordgo.Member
 	channel *discordgo.Channel
+	user    *db.UserProfile
+	timer   *event.Timer
 	params  []string
 }
 
@@ -29,13 +35,16 @@ type SetupHandler interface {
 	Setup(session *discordgo.Session)
 }
 
-func NewCommPackage(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, member *discordgo.Member, channel *discordgo.Channel, params []string) CommPackage {
+func NewCommPackage(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, member *discordgo.Member, channel *discordgo.Channel,
+	params []string, user *db.UserProfile, timer *event.Timer) CommPackage {
 	return CommPackage{
 		session: session,
 		message: message,
 		guild:   guild,
 		member:  member,
 		channel: channel,
+		user:    user,
+		timer:   timer,
 		params:  params,
 	}
 }

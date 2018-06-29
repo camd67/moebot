@@ -1,3 +1,6 @@
+/*
+The main entry point and handling of discord events.
+*/
 package bot
 
 import (
@@ -9,6 +12,9 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/event"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
+	"github.com/camd67/moebot/moebot_bot/util/reddit"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -30,25 +36,25 @@ var (
 /*
 Run through initial setup steps for Moebot. This is all that's necessary to setup Moebot for use
 */
-func SetupMoebot(session *discordgo.Session) {
+func SetupMoebot(session *discordgo.Session, redditHandle *reddit.Handle) {
 	masterId = Config["masterId"]
 	checker = permissions.PermissionChecker{MasterId: masterId}
 	masterDebugChannel = Config["debugChannel"]
 	db.SetupDatabase(Config["host"], Config["dbPass"], Config["moeDataPass"])
 	addGlobalHandlers(session)
-	setupOperations(session)
+	setupOperations(session, redditHandle)
 }
 
 /*
 Create all the operations to handle commands and events within moebot.
 Whenever a new operation, command, or event is added it should be added to this list
 */
-func setupOperations(session *discordgo.Session) {
+func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 	operations = []interface{}{
 		&commands.RoleCommand{},
 		&commands.RoleSetCommand{ComPrefix: ComPrefix},
 		&commands.GroupSetCommand{ComPrefix: ComPrefix},
-		&commands.HelpCommand{ComPrefix: ComPrefix, CommandsMap: commandsMap, Checker: checker},
+		&commands.HelpCommand{ComPrefix: ComPrefix, Commands: getCommands, Checker: checker}, //using a delegate here because it will remain accurate regardless of what gets added to operations
 		&commands.ChangelogCommand{Version: version},
 		&commands.RaffleCommand{MasterId: masterId, DebugChannel: masterDebugChannel},
 		&commands.SubmitCommand{ComPrefix: ComPrefix},
@@ -60,7 +66,9 @@ func setupOperations(session *discordgo.Session) {
 		&commands.MentionCommand{},
 		&commands.ServerCommand{ComPrefix: ComPrefix},
 		&commands.ProfileCommand{MasterId: masterId},
-		&commands.PinMoveCommand{ShouldLoadPins: Config["loadPins"] == "1"},
+		&commands.PinMoveCommand{},
+		&commands.SubCommand{RedditHandle: redditHandle},
+		commands.NewTimerCommand(),
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
 	}
 
@@ -69,15 +77,23 @@ func setupOperations(session *discordgo.Session) {
 	setupEvents(session)
 }
 
+func getCommands() []commands.Command {
+	var result []commands.Command
+	for _, o := range operations {
+		if command, ok := o.(commands.Command); ok {
+			result = append(result, command)
+		}
+	}
+	return result
+}
+
 /*
 Run through each operation and place each command into the command map (including any aliases)
 */
 func setupCommands() {
-	for _, o := range operations {
-		if command, ok := o.(commands.Command); ok {
-			for _, key := range command.GetCommandKeys() {
-				commandsMap[key] = command
-			}
+	for _, command := range getCommands() {
+		for _, key := range command.GetCommandKeys() {
+			commandsMap[key] = command
 		}
 	}
 }
@@ -119,14 +135,13 @@ func addGlobalHandlers(discord *discordgo.Session) {
 Global handler for when new guild members join a discord guild. Typically used to welcome them if the server has enabled it.
 */
 func guildMemberAdd(session *discordgo.Session, member *discordgo.GuildMemberAdd) {
-	guild, err := session.Guild(member.GuildID)
+	guild, err := moeDiscord.GetGuild(member.GuildID, session)
 	if err != nil {
-		log.Println("Error fetching guild during guild member add", err)
 		session.ChannelMessageSend(masterDebugChannel, fmt.Sprint("Error fetching guild during guild member add", err, member))
 		return
 	}
 	server, err := db.ServerQueryOrInsert(guild.ID)
-	if !server.Enabled {
+	if err != nil || !server.Enabled {
 		return
 	}
 	// only send out a welcome message is the server has one
@@ -181,29 +196,40 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
-	//I'm guessing this block of code is the cause of our hokago-tea-time issues. Some of these are used just for their IDs while some are used for role checks.
-	// Perhaps we could cache some of the information. Maybe timeout the role cache after 1 minute?
-	channel, err := session.State.Channel(message.ChannelID)
+	timer := event.StartNamedTimer("channel_start")
+	channel, err := moeDiscord.GetChannel(message.ChannelID, session)
 	if err != nil {
 		// missing channel
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, channel)
 		return
 	}
+	timer.AddMark("end_channel")
 
-	guild, err := session.Guild(channel.GuildID)
+	guild, err := moeDiscord.GetGuild(channel.GuildID, session)
 	if err != nil {
 		log.Println("ERROR! Unable to get guild in messageCreate ", err, guild)
 		return
 	}
 
+	timer.AddMark("db_server_start")
 	server, err := db.ServerQueryOrInsert(guild.ID)
 	if err != nil {
 		session.ChannelMessageSend(channel.ID, "Sorry, there was an error fetching this server. This is an issue with moebot not discord. "+
 			"Please contact a moebot developer/admin.")
 		return
 	}
+	timer.AddMark("db_server_end")
 
-	member, err := session.GuildMember(guild.ID, message.Author.ID)
+	timer.AddMark(event.TimerMarkDbBegin + "user_profile")
+	userProfile, err := db.UserQueryOrInsert(message.Author.ID)
+	if err != nil {
+		session.ChannelMessageSend(channel.ID, "Sorry, there was an error fetching your user profile. This is an issue with moebot not discord. "+
+			"Please contact a moebot developer/admin.")
+		return
+	}
+	timer.AddMark(event.TimerMarkDbEnd + "user_profile")
+
+	member, err := moeDiscord.GetMember(message.Author.ID, guild.ID, session)
 	if err != nil {
 		log.Println("ERROR! Unable to get member in messageCreate ", err, message)
 		return
@@ -243,8 +269,11 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			// We don't need to process anything else since by typing a bot command they couldn't type a rule confirmation
 			return
 		}
-		runCommand(session, message.Message, guild, channel, member)
+		runCommand(session, message.Message, guild, channel, member, &userProfile, &timer)
 	}
+	// In this case we don't care about the error state as the user doesn't need to know we failed to serialize the metric and we already logged it
+	db.MetricInsertTimer(timer, userProfile)
+
 	// make sure to also check if they agreed to the rules
 	if isNewUser {
 		sanitizedMessage := util.MakeAlphaOnly(message.Content)
@@ -283,7 +312,8 @@ func ready(session *discordgo.Session, event *discordgo.Ready) {
 /*
 Helper handler to check if the message provided is a command and if so, executes the command
 */
-func runCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member) {
+func runCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member,
+	userProfile *db.UserProfile, timer *event.Timer) {
 	messageParts := strings.Split(message.Content, " ")
 	if len(messageParts) <= 1 {
 		// bad command, missing command after prefix
@@ -292,6 +322,7 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 	commandKey := strings.ToUpper(messageParts[1])
 
 	if command, commPresent := commandsMap[commandKey]; commPresent {
+		timer.AddMark(event.TimerMarkCommandBegin + commandKey)
 		params := messageParts[2:]
 		if !checker.HasPermission(message.Author.ID, member.Roles, guild, command.GetPermLevel()) {
 			session.ChannelMessageSend(channel.ID, "Sorry, you don't have a high enough permission level to access this command.")
@@ -301,7 +332,8 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 		}
 		log.Println("Processing command: " + commandKey + " from user: {" + message.Author.String() + "}| With Params:{" + strings.Join(params, ",") + "}")
 		session.ChannelTyping(message.ChannelID)
-		pack := commands.NewCommPackage(session, message, guild, member, channel, params)
+		pack := commands.NewCommPackage(session, message, guild, member, channel, params, userProfile, timer)
 		command.Execute(&pack)
+		timer.AddMark(event.TimerMarkCommandEnd + commandKey)
 	}
 }

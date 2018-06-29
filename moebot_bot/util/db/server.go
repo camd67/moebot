@@ -1,10 +1,10 @@
 package db
 
 import (
-	"bytes"
 	"database/sql"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -111,7 +111,7 @@ func serverScan(row *sql.Row, s *Server) error {
 }
 
 func ServerSprint(s Server) (out string) {
-	var buf bytes.Buffer
+	var buf strings.Builder
 	buf.WriteString("Server: ")
 	if s.WelcomeMessage.Valid {
 		buf.WriteString("{WelcomeMessage: `")
