@@ -46,40 +46,58 @@ func main() {
 		log.Println("Invalid token generation key")
 		return
 	}
+	router := mux.NewRouter()
 	moeWebDb := db.NewDatabase(config.DbHost, config.DbRootPwd, config.DbUsername, config.DbPassword)
 	moeWebDb.Initialize()
 
 	botDb.SetupDatabase(config.DbHost, config.DbRootPwd, config.DbPassword)
 
-	routeAuthMap := map[*mux.Route]botDb.Permission{}
-
-	amw := auth.NewAuthMiddleware(key)
-	authManager := auth.NewAuthManager(amw, moeWebDb, config.ClientID, config.ClientSecret, config.RedirectURI, config.OAuthLoginURI)
 	session, err := discordgo.New("Bot " + config.MoeBotToken)
 	if err != nil {
 		log.Fatal("Error starting discord...", err)
 	}
+	amw := auth.NewAuthMiddleware(key)
+	pmw := auth.NewPermissionsMiddleware(session, moeWebDb)
 
-	api := &moebotApi.MoebotApi{Amw: amw, Session: session, MoeWebDb: moeWebDb}
+	configureAuthEndpoints(router, amw, moeWebDb, config)
 
-	router := mux.NewRouter()
-	apiRouter := router.PathPrefix("/api").Subrouter()
-	routeAuthMap[apiRouter.HandleFunc("/user", api.UserInfo).Methods("GET")] = botDb.PermAll
-	routeAuthMap[apiRouter.HandleFunc("/heartbeat", api.Heartbeat).Methods("GET")] = botDb.PermAll
-	routeAuthMap[apiRouter.HandleFunc("/serverlist", api.ServerList).Methods("GET")] = botDb.PermAll
-	routeAuthMap[apiRouter.HandleFunc("/{guildUID}/events", api.Heartbeat).Methods("GET")] = botDb.PermMod
-	apiRouter.Use(amw.Middleware)
+	configureAPIEndpoints(router, amw, pmw, session, moeWebDb)
 
-	router.HandleFunc("/auth/password", authManager.PasswordLoginHandler).Methods("POST")
-	router.HandleFunc("/auth/register", authManager.PasswordRegister).Methods("POST")
-	router.HandleFunc("/auth/discord", authManager.DiscordBeginOAuth).Methods("GET")
-	router.HandleFunc("/auth/discordOAuth", authManager.DiscordCompleteOAuth).Methods("POST")
 	router.PathPrefix("/static").Handler(handlers.CompressHandler(cacheControlWrapper(http.FileServer(http.Dir("./dist/")))))
 	router.PathPrefix("/").HandlerFunc(vueHandler)
 
 	log.Println("Starting MoeBot API on address " + config.Address + "...")
 
 	log.Fatal(http.ListenAndServe(config.Address, router))
+}
+
+func configureAuthEndpoints(router *mux.Router, amw *auth.AuthenticationMiddleware, moeWebDb *db.MoeWebDb, config *config) {
+	authManager := auth.NewAuthManager(amw, moeWebDb, config.ClientID, config.ClientSecret, config.RedirectURI, config.OAuthLoginURI)
+	router.HandleFunc("/auth/password", authManager.PasswordLoginHandler).Methods("POST")
+	router.HandleFunc("/auth/register", authManager.PasswordRegister).Methods("POST")
+	router.HandleFunc("/auth/discord", authManager.DiscordBeginOAuth).Methods("GET")
+	router.HandleFunc("/auth/discordOAuth", authManager.DiscordCompleteOAuth).Methods("POST")
+}
+
+func configureAPIEndpoints(router *mux.Router, amw *auth.AuthenticationMiddleware, pmw *auth.PermissionsMiddleware, session *discordgo.Session, moeWebDb *db.MoeWebDb) {
+	apiList := createAPIEndpoints(amw, pmw, session, moeWebDb)
+
+	apiRouter := router.PathPrefix("/api").Subrouter()
+	for _, a := range apiList {
+		for _, bind := range a.Binds() {
+			pmw.AddRoute(apiRouter.HandleFunc(bind.Path, bind.Handler).Methods(bind.Methods...), bind.PermissionLevel)
+		}
+	}
+	apiRouter.Use(amw.Middleware)
+	apiRouter.Use(pmw.Middleware)
+}
+
+func createAPIEndpoints(amw *auth.AuthenticationMiddleware, pmw *auth.PermissionsMiddleware, session *discordgo.Session, moeWebDb *db.MoeWebDb) []moebotApi.MoebotBindableApi {
+	return []moebotApi.MoebotBindableApi{
+		moebotApi.NewUserApi(pmw, moeWebDb, session),
+		moebotApi.NewHeartbeatApi(amw, moeWebDb),
+		moebotApi.NewEventsApi(moeWebDb, session),
+	}
 }
 
 func readConfig(path string) (*config, error) {
