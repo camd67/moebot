@@ -40,7 +40,7 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 			// post all the raffle entries
 			allRaffles, err := db.RaffleEntryQueryAny(pack.guild.ID)
 			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, an error occured when fetching raffles!")
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, an error occurred when fetching raffles!")
 				return
 			}
 			const sleepTime = time.Second

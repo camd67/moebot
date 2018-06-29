@@ -71,6 +71,7 @@ func UserServerRankUpdateOrInsert(userId int, serverId int, points int) (id int,
 			log.Println("Error updating userServerRank", err)
 			return
 		}
+		return
 	}
 	return u.Id, u.Rank, u.MessageSent, nil
 }

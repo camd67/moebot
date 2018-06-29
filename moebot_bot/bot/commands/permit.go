@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type PermitCommand struct {
@@ -28,7 +28,7 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 	}
 
 	// find the correct role
-	r := util.FindRoleByName(pack.guild.Roles, roleName)
+	r := moeDiscord.FindRoleByName(pack.guild.Roles, roleName)
 	if r == nil {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a role that exists in this server")
 	}

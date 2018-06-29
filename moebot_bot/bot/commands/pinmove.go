@@ -3,8 +3,10 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"mime"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -12,10 +14,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type PinMoveCommand struct {
-	ShouldLoadPins bool
 	pinnedMessages util.SyncUIDByChannelMap
 	ready          bool
 }
@@ -111,7 +113,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	}
 	pc.pinnedMessages.Unlock()
 
-	var message bytes.Buffer
+	var message strings.Builder
 	message.WriteString("Message move on pin has been ")
 	if dbChannel.MovePins {
 		message.WriteString("enabled")
@@ -137,20 +139,16 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 }
 
 func (pc *PinMoveCommand) Setup(session *discordgo.Session) {
-	if pc.ShouldLoadPins {
-		pc.pinnedMessages = util.SyncUIDByChannelMap{
-			RWMutex: sync.RWMutex{},
-			M:       make(map[string][]string),
-		}
-		guilds, err := session.UserGuilds(100, "", "")
-		if err != nil {
-			log.Println("Error loading guilds, some functions may not work correctly.", err)
-			return
-		}
-		go pc.loadGuilds(session, guilds)
-	} else {
-		log.Println("!!! WARNING !!! Skipping loading pins. NOTE: this will break the ability to use the pin move command")
+	pc.pinnedMessages = util.SyncUIDByChannelMap{
+		RWMutex: sync.RWMutex{},
+		M:       make(map[string][]string),
 	}
+	guilds, err := session.UserGuilds(100, "", "")
+	if err != nil {
+		log.Println("Error loading guilds, some functions may not work correctly.", err)
+		return
+	}
+	go pc.loadGuilds(session, guilds)
 }
 
 func (pc *PinMoveCommand) EventHandlers() []interface{} {
@@ -177,7 +175,7 @@ func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo
 		return
 	}
 	dbChannels, err := db.ChannelQueryByServer(server)
-	if len(dbChannels) == 0 {
+	if err != nil || len(dbChannels) == 0 {
 		// If we've got no channels in the database there's no way we will have channels that are configured for pin moving
 		return
 	}
@@ -222,7 +220,7 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		log.Println("Pinmove is still loading, exiting pin handler")
 		return
 	}
-	channel, err := session.Channel(pinsUpdate.ChannelID)
+	channel, err := moeDiscord.GetChannel(pinsUpdate.ChannelID, session)
 	if err != nil {
 		log.Println("Error while retrieving channel by UID", err)
 		return
@@ -249,24 +247,24 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		return //removed pin or the bot is not in sync with the server, abort pinning operation
 	}
 	newPinnedMessage := newPinnedMessages[0]
-	moveMessage := false
+	shouldMoveMessage := false
 	for _, a := range newPinnedMessage.Attachments { //image from direct upload
 		if strings.Contains(mime.TypeByExtension(filepath.Ext(a.Filename)), "image") {
-			moveMessage = true
+			shouldMoveMessage = true
 			break
 		}
 	}
 
-	if !moveMessage && len(newPinnedMessage.Embeds) == 1 { //image from link
+	if !shouldMoveMessage && len(newPinnedMessage.Embeds) == 1 { //image from link
 		if newPinnedMessage.Embeds[0].Type == "image" {
-			moveMessage = true
+			shouldMoveMessage = true
 		}
 	}
 	if len(newPinnedMessage.Attachments) == 0 && len(newPinnedMessage.Embeds) == 0 && dbChannel.MoveTextPins {
-		moveMessage = true
+		shouldMoveMessage = true
 	}
-	if moveMessage {
-		util.MoveMessage(session, newPinnedMessage, dbChannel.MoveChannelUid.String, dbChannel.DeletePin)
+	if shouldMoveMessage {
+		moveMessage(session, newPinnedMessage, dbChannel.MoveChannelUid.String, dbChannel.DeletePin)
 	}
 }
 
@@ -311,4 +309,36 @@ func (pc *PinMoveCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s pinmove -channel <#sourceChannel> -dest <#destChannel> [-text -delete]` - Enables moving pinned messages from one channel to "+
 		"another. The `-dest` option sets/changes the destination channel. The `-text` option enables moving text as well as images on pin. The `-delete` "+
 		"option will delete the message before moving.", commPrefix)
+}
+
+func moveMessage(session *discordgo.Session, message *discordgo.Message, destChannelUid string, deleteOldPin bool) {
+	if deleteOldPin {
+		session.ChannelMessageDelete(message.ChannelID, message.ID)
+	}
+	var files []*discordgo.File
+	for _, a := range message.Attachments {
+		func() {
+			response, err := http.Get(a.URL)
+			if err != nil {
+				return
+			}
+			defer response.Body.Close()
+			b, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				log.Println("Error reading from attachment response", err)
+				return
+			}
+			files = append(files, &discordgo.File{
+				Name:        a.Filename,
+				Reader:      bytes.NewReader(b),
+				ContentType: mime.TypeByExtension(filepath.Ext(a.Filename)),
+			})
+		}()
+	}
+	content := message.Author.Mention() + " posted the following message in <#" + message.ChannelID + ">:\n" + message.Content
+
+	session.ChannelMessageSendComplex(destChannelUid, &discordgo.MessageSend{
+		Content: content,
+		Files:   files,
+	})
 }

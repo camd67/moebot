@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type RoleCommand struct {
@@ -27,7 +27,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 	}
 	var vetRole *discordgo.Role
 	if server.VeteranRole.Valid {
-		vetRole = util.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
+		vetRole = moeDiscord.FindRoleById(pack.guild.Roles, server.VeteranRole.String)
 	}
 	if len(pack.params) == 0 {
 		printAllRoles(server, vetRole, pack)
@@ -75,7 +75,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 			}
 		} else {
 			// load up the trigger to see if it exists, stripping out anything prefixed with - (our security text)
-			var roleNameBuf bytes.Buffer
+			var roleNameBuf strings.Builder
 			for _, param := range pack.params {
 				if !strings.HasPrefix(param, "-") {
 					roleNameBuf.WriteString(param)
@@ -96,7 +96,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 					rc.ComPrefix+" role` to list all roles for this server.")
 				return
 			}
-			role = util.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
+			role = moeDiscord.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
 			if role == nil {
 				log.Println("Nil dbRole when searching for dbRole id:" + dbRole.RoleUid)
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server. It may have been deleted.")
@@ -145,7 +145,7 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 			}
 			// we'll always be adding a role here
 			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
-			var message bytes.Buffer
+			var message strings.Builder
 			message.WriteString("Added role `")
 			message.WriteString(role.Name)
 			message.WriteString("` for ")
@@ -154,7 +154,7 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 			foundOtherRole := false
 			for _, dbGroupRole := range fullGroupRoles {
 				if util.StrContains(pack.member.Roles, dbGroupRole.RoleUid, util.CaseSensitive) {
-					roleToRemove := util.FindRoleById(pack.guild.Roles, dbGroupRole.RoleUid)
+					roleToRemove := moeDiscord.FindRoleById(pack.guild.Roles, dbGroupRole.RoleUid)
 					// The user already has this role, remove it and tell them
 					if !foundOtherRole {
 						message.WriteString("\nAlso removed:")
@@ -280,7 +280,7 @@ func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage)
 			triggersByGroup["uncategorized"] = append(triggersByGroup["uncategorized"], role.Trigger.String)
 		}
 	}
-	var message bytes.Buffer
+	var message strings.Builder
 	if len(triggersByGroup) == 0 {
 		message.WriteString("Looks like there aren't any roles I can assign to you in this server!")
 	} else {
