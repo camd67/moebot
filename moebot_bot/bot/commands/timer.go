@@ -38,19 +38,16 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 
 			// If this channel timer is currently writing out, tell it to stop
 			if chTimer, ok := tc.chTimers.M[channelID]; ok {
-				chTimer.Lock()
-				if chTimer.isWriting {
+				// Close existing writer
+				if chTimer.requestCh != nil {
 					close(chTimer.requestCh)
 				}
-				chTimer.Unlock()
 			}
 
 			// Create a new timer
 			tc.chTimers.M[channelID] = &channelTimer{
 				time:      time.Now(),
-				writes:    0,
-				isWriting: false,
-				requestCh: make(chan string, 10),
+				requestCh: nil,
 			}
 
 			tc.chTimers.Unlock()
@@ -61,16 +58,12 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	} else {
 		tc.chTimers.RLock()
 		if chTimer, ok := tc.chTimers.M[channelID]; ok {
-			chTimer.Lock()
-			// Reset the number of writes
-			chTimer.writes = 0
-
-			// If the time is not writing, start it
-			if !chTimer.isWriting {
-				go chTimer.writeTimes(pack)
-				chTimer.isWriting = true
+			// Close existing writer, then start a new one
+			if chTimer.requestCh != nil {
+				close(chTimer.requestCh)
 			}
-			chTimer.Unlock()
+			chTimer.requestCh = make(chan string, 10)
+			go writeTimes(pack, chTimer.time, chTimer.requestCh)
 		} else {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel...")
 		}
@@ -78,16 +71,15 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (ct *channelTimer) writeTimes(pack *CommPackage) {
-	duration := time.Since(ct.time)
+func writeTimes(pack *CommPackage, startTime time.Time, reqCh <-chan string) {
+	duration := time.Since(startTime)
+	writes := 0
 
 	// Write the time once right away
 	go func() {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
-		ct.Lock()
-		ct.writes++
-		ct.Unlock()
 	}()
+	writes++
 
 	// Synchronize the writes to be divisible by the interval (works well when interval is 5 so we get writes at times like 0:30, 0:35, 0:40, etc.)
 	timeToSync := writeInterval - (duration % writeInterval)
@@ -95,24 +87,19 @@ func (ct *channelTimer) writeTimes(pack *CommPackage) {
 	duration += timeToSync
 
 	// Write again if we spent a sufficient time syncing, otherwise just wait until the next write interval
-	go func() {
-		if timeToSync > time.Second {
-			ct.Lock()
+	if timeToSync > time.Second {
+		go func() {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
-			ct.writes++
-			ct.Unlock()
-		}
-	}()
+		}()
+		writes++
+	}
 
 	// Start writing until we reach the max number of writes or get a message to stop
 	for {
 		select {
-		case _, chOpen := <-ct.requestCh:
+		case _, chOpen := <-reqCh:
 			// Break out of this loop if the channel was closed
 			if !chOpen {
-				ct.Lock()
-				ct.isWriting = false
-				ct.Unlock()
 				return
 			}
 
@@ -122,16 +109,12 @@ func (ct *channelTimer) writeTimes(pack *CommPackage) {
 			go func() {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 			}()
+			writes++
 
 			// Exit once we've reached the max write count
-			ct.Lock()
-			ct.writes++
-			if ct.writes >= maxWrites {
-				ct.isWriting = false
-				ct.Unlock()
+			if writes >= maxWrites {
 				return
 			}
-			ct.Unlock()
 		}
 	}
 }
@@ -165,9 +148,6 @@ type syncChannelTimerMap struct {
 }
 
 type channelTimer struct {
-	sync.Mutex
 	time      time.Time
-	writes    int
-	isWriting bool
 	requestCh chan string
 }
