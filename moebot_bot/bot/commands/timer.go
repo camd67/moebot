@@ -23,8 +23,8 @@ type TimerCommand struct {
 func NewTimerCommand() *TimerCommand {
 	tc := &TimerCommand{}
 	tc.chTimers = syncChannelTimerMap{
-		RWMutex: sync.RWMutex{},
-		M:       make(map[string]*channelTimer),
+		Mutex: sync.Mutex{},
+		M:     make(map[string]*channelTimer),
 	}
 	return tc
 }
@@ -56,7 +56,7 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+", you... you don't have permission to do that!")
 		}
 	} else {
-		tc.chTimers.RLock()
+		tc.chTimers.Lock()
 		if chTimer, ok := tc.chTimers.M[channelID]; ok {
 			// Close existing writer, then start a new one
 			if chTimer.requestCh != nil {
@@ -67,7 +67,7 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 		} else {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer started for this channel...")
 		}
-		tc.chTimers.RUnlock()
+		tc.chTimers.Unlock()
 	}
 }
 
@@ -143,7 +143,7 @@ func (tc *TimerCommand) GetCommandHelp(commPrefix string) string {
 }
 
 type syncChannelTimerMap struct {
-	sync.RWMutex
+	sync.Mutex
 	M map[string]*channelTimer
 }
 
