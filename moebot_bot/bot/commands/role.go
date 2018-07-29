@@ -153,7 +153,8 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 			// we should only find one other role, but just in case
 			foundOtherRole := false
 			for _, dbGroupRole := range fullGroupRoles {
-				if util.StrContains(pack.member.Roles, dbGroupRole.RoleUid, util.CaseSensitive) {
+				// only send a message that we removed the role if they actually have it and it's not the one we just added
+				if dbGroupRole.RoleUid != role.ID && util.StrContains(pack.member.Roles, dbGroupRole.RoleUid, util.CaseSensitive) {
 					roleToRemove := moeDiscord.FindRoleById(pack.guild.Roles, dbGroupRole.RoleUid)
 					// The user already has this role, remove it and tell them
 					if !foundOtherRole {
