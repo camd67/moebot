@@ -1,18 +1,10 @@
 # moebot [![CodeFactor](https://www.codefactor.io/repository/github/camd67/moebot/badge)](https://www.codefactor.io/repository/github/camd67/moebot) [![Go Report Card](https://goreportcard.com/badge/github.com/camd67/moebot)](https://goreportcard.com/report/github.com/camd67/moebot)
 The bot for discord, but with moe!
 
-## Setup (discord bot)
-* Install docker
-* Duplicate `config/mb_config.example.txt` and rename it to `mb_config.secret`
-    * Remove all the example text and replace with your information in the new file
-* Duplicate `config/pg_pass.example.txt` and rename it to `pg_pass.secret`
-    * Replace the whole file with your default postgres password. This must match `dbPass` in `mb_config.secret`
-    * __Note:__ this file should have exactly 1 line! Any trailing newlines will break the login process
-* Create a docker volume: `docker volume create moebot-data`
-* Run `docker-compose up --build -d` to run moebot in the background
-* Invite moebot to your server!
+Moebot is a general purpose bot for discord that can do a wide variety of tasks such as role assignment automation, image posting, pin management, and multiple other features.
+If you have a feature you want to see implemented in moebot [let us know!](https://github.com/camd67/moebot/issues/new?template=feature_request.md)
+We're always happy to find out what users want and add more functionality.
 
-## Setup (website)
-* Follow setup for discord bot
-* Edit your hosts file to include `127.0.0.1 local.moebot.moe`
-* Go into your browser and go to `local.moebot.moe`
+Commands and features can be seen [on our wiki](https://github.com/camd67/moebot/wiki) which lists out details on every command along with details on how to use it and what they do.
+
+Check out our [wiki page on development](https://github.com/camd67/moebot/wiki/developer) for details on how to get setup with moebot.
