@@ -14,6 +14,9 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
+const roleCodeSearchText = "[code]"
+const roleCodeLength = 6
+
 type RoleCommand struct {
 	ComPrefix   string
 	PermChecker permissions.PermissionChecker
@@ -84,16 +87,17 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 					confirmCodes = append(confirmCodes, param)
 				}
 			}
-			roleNameString := strings.Trim(roleNameBuf.String(), " ")
+			roleNameString := strings.TrimSpace(roleNameBuf.String())
 			if len(roleNameString) == 0 {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must provide a valid role name")
 				return
 			}
 			dbRole, err = db.RoleQueryTrigger(roleNameString, server.Id)
 			// an invalid trigger should pretty much never happen, but checking for it anyways
+			// however an error may indicate that there were simply no roles in the result set
 			if err != nil || !dbRole.Trigger.Valid {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role. `"+
-					rc.ComPrefix+" role` to list all roles for this server.")
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role, or the role you provided doesn't exist. "+
+					"Please provide a valid role. `"+rc.ComPrefix+" role` to list all roles for this server.")
 				return
 			}
 			role = moeDiscord.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
@@ -222,15 +226,25 @@ func (rc *RoleCommand) sendConfirmationMessage(session *discordgo.Session, chann
 		// could log error creating user channel, but seems like it'll clutter the logs for a valid scenario..
 		return err
 	}
-	message := role.ConfirmationMessage.String + "\nYour confirmation code: `-" + rc.getRoleCode(role.RoleUid, user.ID) + "`"
-	_, err = session.ChannelMessageSend(userChannel.ID, message)
+	roleCode := rc.getRoleCode(role.RoleUid, user.ID)
+	var messageText string
+	if strings.Contains(strings.ToLower(role.ConfirmationMessage.String), roleCodeSearchText) {
+		messageText = strings.Replace(role.ConfirmationMessage.String, roleCodeSearchText, roleCode, -1)
+	} else {
+		messageText = role.ConfirmationMessage.String + "\nYour confirmation code: `-" + roleCode + "`"
+	}
+	_, err = session.ChannelMessageSend(userChannel.ID, messageText)
 	return err
 }
 
+/*
+Returns a 6 character role code string that is unique per user and per role.
+This should NOT be used for security features as it is not a secure algorithm.
+*/
 func (rc *RoleCommand) getRoleCode(roleUID, userUID string) string {
 	hash := sha256.New()
 	hash.Write([]byte(roleUID + userUID))
-	return string(fmt.Sprintf("%x", hash.Sum(nil))[0:6])
+	return string(fmt.Sprintf("%x", hash.Sum(nil))[0:roleCodeLength])
 }
 
 func (rc *RoleCommand) GetPermLevel() db.Permission {

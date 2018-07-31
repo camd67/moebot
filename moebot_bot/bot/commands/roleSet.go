@@ -3,6 +3,7 @@ package commands
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -39,24 +40,8 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			printAllRoles(server, vetRole, pack)
 		}
 	} else if hasDelete {
-		role := moeDiscord.FindRoleByName(pack.guild.Roles, deleteName)
-		// we don't really care about the role itself here, just if we got a row back or not (could use a row count check but oh well)
-		_, err := db.RoleQueryRoleUid(role.ID, server.Id)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				pack.session.ChannelMessageSend(pack.channel.ID, "It doesn't look like that's a role you can delete! Please provide a role that was "+
-					"previously set up")
-			} else {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error finding that role. This is an error with moebot not discord!")
-			}
-			return
-		}
-		err = db.RoleDelete(role.ID, pack.guild.ID)
-		if err != nil {
-			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error deleting that role. This is an error with moebot not discord!")
-			return
-		}
-		pack.session.ChannelMessageSend(pack.channel.ID, "Deleted "+deleteName+"!")
+		rc.deleteRole(deleteName, pack, server)
+		return
 	} else {
 		if !hasRole {
 			pack.session.ChannelMessageSend(pack.channel.ID, "This command requires a role (supplied with -role)")
@@ -102,19 +87,32 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 					db.RoleMaxTriggerLengthString+". The role was not updated.")
 				return
 			}
-			oldRole.Trigger.Scan(triggerName)
+			oldRole.Trigger.Scan(strings.TrimSpace(triggerName))
 		}
 		if hasConfirm {
 			if len(confirmText) < 0 || len(confirmText) > db.MaxMessageLength {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a trigger greater than 0 characters and less than "+
+				pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a confirmation text greater than 0 characters and less than "+
 					db.MaxMessageLengthString+". The role was not updated.")
 				return
+			}
+
+			// Make a dummy string that is as long as a role code for testing the length, plus one more for the hyphen
+			exampleRoleCode := strings.Repeat("#", roleCodeLength+1)
+			if strings.Contains(strings.ToLower(confirmText), roleCodeSearchText) {
+				postReplacementLength := len(strings.Replace(confirmText, roleCodeSearchText, exampleRoleCode, -1))
+				if postReplacementLength > moeDiscord.MaxMessageLength {
+					charactersOver := postReplacementLength - moeDiscord.MaxMessageLength
+					pack.session.ChannelMessageSend(pack.channel.ID, "When replacing every instance of "+roleCodeSearchText+" with a "+
+						strconv.Itoa(roleCodeLength+1)+" character role code your confirmation message went over the discord max message length. "+
+						"Please shorten it by "+strconv.Itoa(charactersOver))
+					return
+				}
 			}
 			oldRole.ConfirmationMessage.Scan(confirmText)
 		}
 		if hasSecurity {
 			if len(securityText) < 0 || len(securityText) > db.MaxMessageLength {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a trigger greater than 0 characters and less than "+
+				pack.session.ChannelMessageSend(pack.channel.ID, "Please provide a security text greater than 0 characters and less than "+
 					db.MaxMessageLengthString+". The role was not updated.")
 				return
 			}
@@ -159,4 +157,25 @@ func (rc *RoleSetCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s roleset -role <role name> [-trigger <trigger> -confirm <confirmation message> -security <security code> "+
 		"-group <group name>]` - Master/Mod. Provide roleName plus at least one other option. Security code must be prefixed with `-` in your "+
 		"confirmation message if you want to include it.", commPrefix)
+}
+
+func (rc *RoleSetCommand) deleteRole(roleName string, pack *CommPackage, server db.Server) {
+	role := moeDiscord.FindRoleByName(pack.guild.Roles, roleName)
+	// we don't really care about the role itself here, just if we got a row back or not (could use a row count check but oh well)
+	_, err := db.RoleQueryRoleUid(role.ID, server.Id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			pack.session.ChannelMessageSend(pack.channel.ID, "It doesn't look like that's a role you can delete! Please provide a role that was "+
+				"previously set up")
+		} else {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error finding that role. This is an error with moebot not discord!")
+		}
+		return
+	}
+	err = db.RoleDelete(role.ID, pack.guild.ID)
+	if err != nil {
+		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error deleting that role. This is an error with moebot not discord!")
+		return
+	}
+	pack.session.ChannelMessageSend(pack.channel.ID, "Deleted "+roleName+"!")
 }
