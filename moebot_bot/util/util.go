@@ -93,7 +93,7 @@ func ExtractChannelIdFromString(message string) (id string, valid bool) {
 		return "", false
 	}
 	id = message[2 : len(message)-1]
-	_, err := strconv.Atoi(id)
+	_, err := strconv.ParseInt(id, 10, 64)
 	return id, err == nil
 }
 

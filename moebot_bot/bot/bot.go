@@ -46,6 +46,17 @@ func SetupMoebot(session *discordgo.Session, redditHandle *reddit.Handle) {
 }
 
 /*
+Runs through commands that need closing
+*/
+func CloseMoebot(session *discordgo.Session) {
+	for _, o := range operations {
+		if close, ok := o.(commands.ClosingHandler); ok {
+			close.Close(session)
+		}
+	}
+}
+
+/*
 Create all the operations to handle commands and events within moebot.
 Whenever a new operation, command, or event is added it should be added to this list
 */
@@ -70,6 +81,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.SubCommand{RedditHandle: redditHandle},
 		commands.NewTimerCommand(),
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
+		commands.NewRatelimitCommand(),
 	}
 
 	setupCommands()
@@ -93,6 +105,7 @@ Run through each operation and place each command into the command map (includin
 func setupCommands() {
 	for _, command := range getCommands() {
 		for _, key := range command.GetCommandKeys() {
+			log.Println("Mapping command " + key)
 			commandsMap[key] = command
 		}
 	}

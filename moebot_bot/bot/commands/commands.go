@@ -35,6 +35,10 @@ type SetupHandler interface {
 	Setup(session *discordgo.Session)
 }
 
+type ClosingHandler interface {
+	Close(session *discordgo.Session)
+}
+
 func NewCommPackage(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, member *discordgo.Member, channel *discordgo.Channel,
 	params []string, user *db.UserProfile, timer *event.Timer) CommPackage {
 	return CommPackage{

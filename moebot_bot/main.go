@@ -66,6 +66,6 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-
+	bot.CloseMoebot(discord)
 	fmt.Println("Exited moebot! Seeya later!")
 }
