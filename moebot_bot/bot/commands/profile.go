@@ -19,7 +19,7 @@ type ProfileCommand struct {
 
 func (pc *ProfileCommand) Execute(pack *CommPackage) {
 	// special stuff for master rank
-	if pc.MasterId == pack.message.Author.ID || (len(pack.params) > 1 && pack.params[0] != "-a") {
+	if pc.MasterId == pack.message.Author.ID && len(pack.params) == 0 {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+"'s profile:\nMy favorite user! ❤️")
 		return
 	}
