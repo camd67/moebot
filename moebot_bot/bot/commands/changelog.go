@@ -19,7 +19,7 @@ const changeLogPrefix = "\n`->` "
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
 
-	"0.4.4": changeLogPrefix + "Added `sub` command (Credit: Imbajoe)" +
+	"0.4.5": changeLogPrefix + "Added `sub` command (Credit: Imbajoe)" +
 		changeLogPrefix + "Added `timer` command (Credit: Imbajoe)" +
 		changeLogPrefix + "Fixed various bugs",
 
