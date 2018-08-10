@@ -3,6 +3,7 @@ package commands
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -61,6 +62,7 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 	t, err := time.Parse(time.RFC3339Nano, pack.member.JoinedAt)
 	if err != nil {
 		message.WriteString(util.MakeStringCode("Unknown"))
+		log.Println("Problem converting server join date to time. Joined at time: "+pack.member.JoinedAt+" error: ", err)
 	} else {
 		message.WriteString(util.MakeStringCode(t.Format(time.UnixDate)))
 	}
