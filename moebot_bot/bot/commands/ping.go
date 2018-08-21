@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -25,5 +26,5 @@ func (pc *PingCommand) GetCommandKeys() []string {
 }
 
 func (pc *PingCommand) GetCommandHelp(commPrefix string) string {
-	return ""
+	return fmt.Sprintf("`%[1]s ping` - Checks the current latency to moebot's server and discord", commPrefix)
 }
