@@ -64,7 +64,7 @@ func NewHandle(clientID, clientSecret, username, password string) (*Handle, erro
 
 func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, error) {
 	if handle.session == nil {
-		return nil, errors.New("Handle's session was not setup")
+		return nil, errors.New("handle's session was not setup")
 	}
 
 	err := handle.renewTokenIfNecessary()
@@ -74,7 +74,7 @@ func (handle *Handle) GetRandomImage(subreddit string) (*discordgo.MessageSend, 
 
 	posts, err := handle.getListing(subreddit)
 	if err != nil {
-		log.Println("Error getting listing from subreddit %s", subreddit)
+		log.Println("error getting listing from subreddit ", subreddit)
 		return nil, err
 	}
 
