@@ -292,7 +292,7 @@ func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage)
 	if vetRole != nil {
 		// triggers = append(triggers, vetRole.Name)
 		// TODO: this should be the name of the role, but role is restricted to one word right now...
-		triggersByGroup["veteran"] = append(triggersByGroup["veteran"], "veteran")
+		triggersByGroup["Veteran"] = append(triggersByGroup["Veteran"], "veteran")
 	}
 	for _, role := range roles {
 		if !role.Trigger.Valid {
@@ -309,7 +309,7 @@ func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage)
 		}
 		if !foundGroup {
 			log.Println("!!! WARNING !!! Failed to find group for a role! This is most likely a programming error")
-			triggersByGroup["uncategorized"] = append(triggersByGroup["uncategorized"], role.Trigger.String)
+			triggersByGroup["Uncategorized"] = append(triggersByGroup["Uncategorized"], role.Trigger.String)
 		}
 	}
 	var message strings.Builder
