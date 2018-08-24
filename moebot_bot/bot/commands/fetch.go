@@ -60,7 +60,7 @@ func (fc *FetchCommand) Execute(pack *CommPackage) {
 		message.WriteString(guildMember.User.Discriminator)
 		message.WriteString(")\n")
 		message.WriteString("JoinedAt: `")
-		message.WriteString(guildMember.JoinedAt)
+		message.WriteString(string(guildMember.JoinedAt))
 		if guildMember.Nick != "" {
 			message.WriteString("`\nNickname: `")
 			message.WriteString(guildMember.Nick)

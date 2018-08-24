@@ -22,7 +22,7 @@
 
 [[constraint]]
   name = "github.com/bwmarrin/discordgo"
-  version = "0.18.0"
+  branch = "develop"
 
 [[constraint]]
   branch = "master"
@@ -31,12 +31,11 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/image"
-  
+
 [[constraint]]
   branch = "master"
   name = "github.com/golang/freetype"
-  
+
 [[constraint]]
   branch = "master"
   name = "github.com/jzelinskie/geddit"
-  

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -59,11 +58,11 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 	message.WriteString("\nPermission Level: ")
 	message.WriteString(util.MakeStringCode(pc.getPermissionLevel(pack)))
 	message.WriteString("\nServer join date: ")
-	log.Println("Timestamp: " + pack.member.JoinedAt)
-	t, err := discordgo.Timestamp(pack.member.JoinedAt).Parse()
+	t, err := pack.member.JoinedAt.Parse()
 	if err != nil {
 		message.WriteString(util.MakeStringCode("Unknown"))
-		log.Println("Problem converting server join date to time. User ID {"+pack.message.Author.ID+"}, Joined at time: {"+pack.member.JoinedAt+"} error: ", err)
+		log.Println("Problem converting server join date to time. User ID {"+pack.message.Author.ID+"}, Joined at time: {"+
+			string(pack.member.JoinedAt)+"} error: ", err)
 	} else {
 		message.WriteString(util.MakeStringCode(t.Format(time.ANSIC)))
 	}
