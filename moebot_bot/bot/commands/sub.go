@@ -45,7 +45,7 @@ func getSubredditFromParams(params []string) (string, error) {
 	} else if v, ok := whitelistedSubreddits[params[0]]; ok {
 		return v, nil
 	}
-	return defaultSubreddit, fmt.Errorf("Couldn't get subreddit from params, sending $s as default", defaultSubreddit)
+	return defaultSubreddit, fmt.Errorf("couldn't get subreddit from params, sending %s as default", defaultSubreddit)
 }
 
 func getRandomWhitelistedSubreddit() string {
