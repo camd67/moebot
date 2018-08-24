@@ -2,6 +2,8 @@ sudo: false
 language: go
 go:
   - 1.10.x
+git:
+  depth: 3
 env:
   - DEP_VERSION=0.5.0
 matrix:
@@ -14,9 +16,10 @@ before_install:
 install:
   - # Do nothing. This is needed to prevent default install action "go get -t -v ./..." from happening here (we want it to happen inside script step).
 script:
+  # Diff fmt and vet before we dep ensure so that it doesn't touch any of the vendor files
+  - diff -u <(echo -n) <(gofmt -d -s ./moebot_bot)
+  - go tool vet ./moebot_bot
   # dep only likes being run in the root directory...
   - cd ./moebot_bot && dep ensure && cd ..
   - go install github.com/camd67/moebot/moebot_bot
-  - diff -u <(echo -n) <(gofmt -d -s ./moebot_bot)
-  - go tool vet ./moebot_bot
   - go test -v -race ./moebot_bot/...
