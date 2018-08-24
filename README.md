@@ -1,4 +1,4 @@
-# moebot [![CodeFactor](https://www.codefactor.io/repository/github/camd67/moebot/badge)](https://www.codefactor.io/repository/github/camd67/moebot) [![Go Report Card](https://goreportcard.com/badge/github.com/camd67/moebot)](https://goreportcard.com/report/github.com/camd67/moebot)
+# moebot [![CodeFactor](https://www.codefactor.io/repository/github/camd67/moebot/badge)](https://www.codefactor.io/repository/github/camd67/moebot) [![Go Report Card](https://goreportcard.com/badge/github.com/camd67/moebot)](https://goreportcard.com/report/github.com/camd67/moebot) [![Build Status](https://travis-ci.com/camd67/moebot.svg?branch=dev)](https://travis-ci.com/camd67/moebot)
 The bot for discord, but with moe!
 
 Moebot is a general purpose bot for discord that can do a wide variety of tasks such as role assignment automation, image posting, pin management, and multiple other features.
