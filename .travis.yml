@@ -1,0 +1,25 @@
+sudo: false
+language: go
+go:
+  - 1.10.x
+git:
+  depth: 3
+env:
+  - DEP_VERSION=0.5.0
+matrix:
+  allow_failures:
+    - go: master
+  fast_finish: true
+before_install:
+  - curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o $GOPATH/bin/dep
+  - chmod +x $GOPATH/bin/dep
+install:
+  - # Do nothing. This is needed to prevent default install action "go get -t -v ./..." from happening here (we want it to happen inside script step).
+script:
+  # Diff fmt and vet before we dep ensure so that it doesn't touch any of the vendor files
+  - diff -u <(echo -n) <(gofmt -d -s ./moebot_bot)
+  - go tool vet ./moebot_bot
+  # dep only likes being run in the root directory...
+  - cd ./moebot_bot && dep ensure && cd ..
+  - go install ./moebot_bot/...
+  - go test -race ./moebot_bot/...

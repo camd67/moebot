@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	version = "0.4.2"
+	version = "0.4.6"
 )
 
 var (
@@ -68,6 +68,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{},
 		&commands.SubCommand{RedditHandle: redditHandle},
+		&commands.FetchCommand{MasterId: masterId},
 		commands.NewTimerCommand(),
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
 	}

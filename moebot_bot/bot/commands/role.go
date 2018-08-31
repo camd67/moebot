@@ -14,6 +14,9 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
+const roleCodeSearchText = "[code]"
+const roleCodeLength = 6
+
 type RoleCommand struct {
 	ComPrefix   string
 	PermChecker permissions.PermissionChecker
@@ -84,16 +87,17 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 					confirmCodes = append(confirmCodes, param)
 				}
 			}
-			roleNameString := strings.Trim(roleNameBuf.String(), " ")
+			roleNameString := strings.TrimSpace(roleNameBuf.String())
 			if len(roleNameString) == 0 {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must provide a valid role name")
 				return
 			}
 			dbRole, err = db.RoleQueryTrigger(roleNameString, server.Id)
 			// an invalid trigger should pretty much never happen, but checking for it anyways
+			// however an error may indicate that there were simply no roles in the result set
 			if err != nil || !dbRole.Trigger.Valid {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role. Please provide a valid role. `"+
-					rc.ComPrefix+" role` to list all roles for this server.")
+				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role, or the role you provided doesn't exist. "+
+					"Please provide a valid role. `"+rc.ComPrefix+" role` to list all roles for this server.")
 				return
 			}
 			role = moeDiscord.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
@@ -144,7 +148,14 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 				return
 			}
 			// we'll always be adding a role here
-			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
+			err = pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
+			if err != nil {
+				// We can add better handling here for what kind of error we got and notify the server appropriately
+				log.Println("error adding role to user "+pack.message.Author.ID+" with role "+role.ID+" with error: ", err)
+				pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry there was an error adding your new role! Make sure moebot has "+
+					"permission to edit roles")
+				return
+			}
 			var message strings.Builder
 			message.WriteString("Added role `")
 			message.WriteString(role.Name)
@@ -153,8 +164,20 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 			// we should only find one other role, but just in case
 			foundOtherRole := false
 			for _, dbGroupRole := range fullGroupRoles {
-				if util.StrContains(pack.member.Roles, dbGroupRole.RoleUid, util.CaseSensitive) {
+				// only send a message that we removed the role if they actually have it and it's not the one we just added
+				if dbGroupRole.RoleUid != role.ID && util.StrContains(pack.member.Roles, dbGroupRole.RoleUid, util.CaseSensitive) {
 					roleToRemove := moeDiscord.FindRoleById(pack.guild.Roles, dbGroupRole.RoleUid)
+
+					// Check for an error first
+					err = pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, dbGroupRole.RoleUid)
+					if err != nil {
+						message.WriteString("\nFailed to remove: `")
+						message.WriteString(roleToRemove.Name)
+						message.WriteString("`")
+						log.Println("error removing role from "+pack.message.Author.ID+" with role "+role.ID+" with error: ", err)
+						continue
+					}
+
 					// The user already has this role, remove it and tell them
 					if !foundOtherRole {
 						message.WriteString("\nAlso removed:")
@@ -163,7 +186,6 @@ func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, 
 					message.WriteString(" `")
 					message.WriteString(roleToRemove.Name)
 					message.WriteString("`")
-					pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, dbGroupRole.RoleUid)
 				}
 			}
 			pack.session.ChannelMessageSend(pack.channel.ID, message.String())
@@ -221,15 +243,25 @@ func (rc *RoleCommand) sendConfirmationMessage(session *discordgo.Session, chann
 		// could log error creating user channel, but seems like it'll clutter the logs for a valid scenario..
 		return err
 	}
-	message := role.ConfirmationMessage.String + "\nYour confirmation code: `-" + rc.getRoleCode(role.RoleUid, user.ID) + "`"
-	_, err = session.ChannelMessageSend(userChannel.ID, message)
+	roleCode := rc.getRoleCode(role.RoleUid, user.ID)
+	var messageText string
+	if strings.Contains(strings.ToLower(role.ConfirmationMessage.String), roleCodeSearchText) {
+		messageText = strings.Replace(role.ConfirmationMessage.String, roleCodeSearchText, roleCode, -1)
+	} else {
+		messageText = role.ConfirmationMessage.String + "\nYour confirmation code: `-" + roleCode + "`"
+	}
+	_, err = session.ChannelMessageSend(userChannel.ID, messageText)
 	return err
 }
 
+/*
+Returns a 6 character role code string that is unique per user and per role.
+This should NOT be used for security features as it is not a secure algorithm.
+*/
 func (rc *RoleCommand) getRoleCode(roleUID, userUID string) string {
 	hash := sha256.New()
 	hash.Write([]byte(roleUID + userUID))
-	return string(fmt.Sprintf("%x", hash.Sum(nil))[0:6])
+	return string(fmt.Sprintf("%x", hash.Sum(nil))[0:roleCodeLength])
 }
 
 func (rc *RoleCommand) GetPermLevel() db.Permission {
@@ -260,7 +292,7 @@ func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage)
 	if vetRole != nil {
 		// triggers = append(triggers, vetRole.Name)
 		// TODO: this should be the name of the role, but role is restricted to one word right now...
-		triggersByGroup["veteran"] = append(triggersByGroup["veteran"], "veteran")
+		triggersByGroup["Veteran"] = append(triggersByGroup["Veteran"], "veteran")
 	}
 	for _, role := range roles {
 		if !role.Trigger.Valid {
@@ -277,7 +309,7 @@ func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage)
 		}
 		if !foundGroup {
 			log.Println("!!! WARNING !!! Failed to find group for a role! This is most likely a programming error")
-			triggersByGroup["uncategorized"] = append(triggersByGroup["uncategorized"], role.Trigger.String)
+			triggersByGroup["Uncategorized"] = append(triggersByGroup["Uncategorized"], role.Trigger.String)
 		}
 	}
 	var message strings.Builder

@@ -8,10 +8,10 @@
   revision = "efa7637bb9b6433f47eb73dde68902abda87f352"
 
 [[projects]]
+  branch = "develop"
   name = "github.com/bwmarrin/discordgo"
   packages = ["."]
-  revision = "4a33b9bc7c56cfdb9bb244e33e83cb3941fe2bdc"
-  version = "v0.18.0"
+  revision = "56e4d6a57b7768be42eac014a840c75236a4e7e8"
 
 [[projects]]
   branch = "master"
@@ -110,6 +110,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1fd1ee0b184c1014fb818fed4d7358576bb0922636218124414befb3a6195edb"
+  inputs-digest = "b94ad83c64c83c8616a059d4b61e2e3c090855e093b67f80d89517045dba69b9"
   solver-name = "gps-cdcl"
   solver-version = 1

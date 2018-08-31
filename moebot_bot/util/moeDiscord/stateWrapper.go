@@ -15,7 +15,7 @@ func GetGuild(guildUid string, session *discordgo.Session) (*discordgo.Guild, er
 func GetChannel(channelUid string, session *discordgo.Session) (channel *discordgo.Channel, err error) {
 	channel, err = session.State.Channel(channelUid)
 	// we only want to fetch the channel when we can't find it
-	if err != nil && err != discordgo.ErrStateNotFound {
+	if err != nil && err == discordgo.ErrStateNotFound {
 		channel, err = session.Channel(channelUid)
 		if err != nil {
 			log.Println("Error getting channel: "+channelUid, err)
@@ -32,7 +32,7 @@ func GetChannel(channelUid string, session *discordgo.Session) (channel *discord
 func GetMember(memberUid string, guildUid string, session *discordgo.Session) (member *discordgo.Member, err error) {
 	member, err = session.State.Member(guildUid, memberUid)
 	// we only want to fetch the member when we can't find it
-	if err != nil && err != discordgo.ErrStateNotFound {
+	if err != nil && err == discordgo.ErrStateNotFound {
 		member, err = session.GuildMember(guildUid, memberUid)
 		if err != nil {
 			log.Println("Error getting member/guild: "+memberUid+"/"+guildUid, err)

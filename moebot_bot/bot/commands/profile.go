@@ -3,13 +3,13 @@ package commands
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
-
 	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
@@ -19,7 +19,7 @@ type ProfileCommand struct {
 
 func (pc *ProfileCommand) Execute(pack *CommPackage) {
 	// special stuff for master rank
-	if pc.MasterId == pack.message.Author.ID || (len(pack.params) > 1 && pack.params[0] != "-a") {
+	if pc.MasterId == pack.message.Author.ID && len(pack.params) == 0 {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+"'s profile:\nMy favorite user! ❤️")
 		return
 	}
@@ -58,11 +58,13 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 	message.WriteString("\nPermission Level: ")
 	message.WriteString(util.MakeStringCode(pc.getPermissionLevel(pack)))
 	message.WriteString("\nServer join date: ")
-	t, err := time.Parse(time.RFC3339Nano, pack.member.JoinedAt)
+	t, err := pack.member.JoinedAt.Parse()
 	if err != nil {
 		message.WriteString(util.MakeStringCode("Unknown"))
+		log.Println("Problem converting server join date to time. User ID {"+pack.message.Author.ID+"}, Joined at time: {"+
+			string(pack.member.JoinedAt)+"} error: ", err)
 	} else {
-		message.WriteString(util.MakeStringCode(t.Format(time.UnixDate)))
+		message.WriteString(util.MakeStringCode(t.Format(time.ANSIC)))
 	}
 	pack.session.ChannelMessageSend(pack.message.ChannelID, message.String())
 }

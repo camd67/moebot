@@ -19,6 +19,11 @@ const changeLogPrefix = "\n`->` "
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
 
+	"0.4.6": changeLogPrefix + "Added `sub` command (Credit: Imbajoe)" +
+		changeLogPrefix + "Added `timer` command (Credit: Imbajoe)" +
+		changeLogPrefix + "Added `fetch` command for master only" +
+		changeLogPrefix + "Fixed various bugs",
+
 	"0.4.2": changeLogPrefix + "Improved profile command" +
 		changeLogPrefix + "Fix bug with permission checking" +
 		changeLogPrefix + "Fix bug with help command displaying too much" +
