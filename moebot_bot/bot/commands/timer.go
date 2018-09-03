@@ -31,27 +31,41 @@ func NewTimerCommand() *TimerCommand {
 
 func (tc *TimerCommand) Execute(pack *CommPackage) {
 	channelID := pack.message.ChannelID
-	if len(pack.params) > 0 && strings.EqualFold(pack.params[0], "start") {
+	if len(pack.params) > 0 {
 		// Make sure the user has at least mod-level permissions before starting the timer
 		if tc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, db.PermMod) {
 			tc.chTimers.Lock()
 
-			// If this channel timer is currently writing out, tell it to stop
-			if chTimer, ok := tc.chTimers.M[channelID]; ok {
-				// Close existing writer
-				if chTimer.requestCh != nil {
-					close(chTimer.requestCh)
+			if strings.EqualFold(pack.params[0], "start") {
+				// If this channel timer is currently writing out, tell it to stop
+				if chTimer, ok := tc.chTimers.M[channelID]; ok {
+					// Stop existing writer
+					if chTimer.requestCh != nil {
+						close(chTimer.requestCh)
+					}
+				}
+
+				// Create a new timer
+				tc.chTimers.M[channelID] = &channelTimer{
+					time:      time.Now(),
+					requestCh: nil,
+				}
+
+				pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started!")
+			} else if strings.EqualFold(pack.params[0], "stop") {
+				if chTimer, ok := tc.chTimers.M[channelID]; ok {
+					// Stop existing writer
+					if chTimer.requestCh != nil {
+						close(chTimer.requestCh)
+					}
+					delete(tc.chTimers.M, channelID)
+					pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer stopped.")
+				} else {
+					pack.session.ChannelMessageSend(pack.message.ChannelID, "No timer running.")
 				}
 			}
 
-			// Create a new timer
-			tc.chTimers.M[channelID] = &channelTimer{
-				time:      time.Now(),
-				requestCh: nil,
-			}
-
 			tc.chTimers.Unlock()
-			pack.session.ChannelMessageSend(pack.message.ChannelID, "Timer started!")
 		} else {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, pack.message.Author.Mention()+", you... you don't have permission to do that!")
 		}
