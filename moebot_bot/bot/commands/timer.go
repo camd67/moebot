@@ -88,6 +88,7 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 func writeTimes(pack *CommPackage, startTime time.Time, reqCh <-chan string) {
 	duration := time.Since(startTime)
 	writes := 0
+	currentWriteInterval := writeInterval
 
 	// Write the time once right away
 	go func() {
@@ -100,12 +101,9 @@ func writeTimes(pack *CommPackage, startTime time.Time, reqCh <-chan string) {
 	time.Sleep(timeToSync)
 	duration += timeToSync
 
-	// Write again if we spent a sufficient time syncing, otherwise just wait until the next write interval
+	// Set the interval to a short duration if we are going to do an "after-sync" write so that messages sent to the receiver will be handled first, and then do the write shortly afterwards.
 	if timeToSync > time.Second {
-		go func() {
-			pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
-		}()
-		writes++
+		currentWriteInterval = 50 * time.Millisecond
 	}
 
 	// Start writing until we reach the max number of writes or get a message to stop
@@ -117,9 +115,9 @@ func writeTimes(pack *CommPackage, startTime time.Time, reqCh <-chan string) {
 				return
 			}
 
-		case <-time.After(writeInterval):
+		case <-time.After(currentWriteInterval):
 			// Increment the duration and write time to the channel
-			duration += writeInterval
+			duration += currentWriteInterval
 			go func() {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, fmtDuration(duration))
 			}()
@@ -129,6 +127,9 @@ func writeTimes(pack *CommPackage, startTime time.Time, reqCh <-chan string) {
 			if writes >= maxWrites {
 				return
 			}
+
+			// Reset write interval in case it was changed to do an "after-sync" write
+			currentWriteInterval = writeInterval
 		}
 	}
 }
