@@ -13,6 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 const (
@@ -126,5 +130,63 @@ func GetInt64OrDefault(i sql.NullInt64) int64 {
 		return i.Int64
 	} else {
 		return -1
+	}
+}
+
+func StringIndexOf(s []string, search string) int {
+	for i, v := range s {
+		if v == search {
+			return i
+		}
+	}
+	return -1
+}
+
+func RetrieveBasePermissions(session *discordgo.Session, channel *discordgo.Channel, role *discordgo.Role, flags []int) map[int]bool {
+	result := make(map[int]bool)
+	permission, ok := moeDiscord.FindPermissionByRoleID(channel.PermissionOverwrites, role.ID)
+	if ok {
+		mapPermissions(result, permission, flags)
+	}
+	if !ok || unsetFlags(permission, flags) { //no overwrite defined for the channel, looking in parent category
+		parent, _ := session.Channel(channel.ParentID)
+		permission, ok = moeDiscord.FindPermissionByRoleID(parent.PermissionOverwrites, role.ID)
+		if ok {
+			mapPermissions(result, permission, flags)
+		}
+		if !ok || unsetFlags(permission, flags) { //no overwrite defined for the channel, using role permissions
+			permission = &discordgo.PermissionOverwrite{
+				ID:   role.ID,
+				Type: "role",
+			}
+			for _, f := range flags {
+				if role.Permissions&f != 0 {
+					permission.Allow = permission.Allow | f
+				} else {
+					permission.Deny = permission.Deny | f
+				}
+			}
+			mapPermissions(result, permission, flags)
+		}
+	}
+	return result
+}
+
+func unsetFlags(permission *discordgo.PermissionOverwrite, flags []int) bool {
+	for _, f := range flags {
+		if permission.Allow&f == 0 && permission.Deny&f == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func mapPermissions(base map[int]bool, permission *discordgo.PermissionOverwrite, flags []int) {
+	for _, f := range flags {
+		if _, ok := base[f]; !ok { //only do this if the flag is unset, to allow hierarchy assignations
+			if permission.Allow&f != 0 || permission.Deny&f != 0 {
+				base[f] = permission.Allow&f != 0
+			}
+		}
 	}
 }
