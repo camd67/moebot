@@ -96,7 +96,8 @@ func writeTimes(pack *CommPackage, startTime time.Time, reqCh <-chan string) {
 	}()
 	writes++
 
-	// Synchronize the writes to be divisible by the interval (works well when interval is 5 so we get writes at times like 0:30, 0:35, 0:40, etc.)
+	// Synchronize the writes to be divisible by the interval
+	// (works well when interval is 5 so we get writes at times like 0:30, 0:35, 0:40, etc.)
 	timeToSync := writeInterval - (duration % writeInterval)
 	time.Sleep(timeToSync)
 	duration += timeToSync
