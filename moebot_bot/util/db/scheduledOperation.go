@@ -45,7 +45,7 @@ func scheduledOperationCreateTable() {
 func ScheduledOperationQueryNow() ([]*ScheduledOperation, error) {
 	rows, err := moeDb.Query(scheduledOperationQueryNow)
 	if err != nil {
-		log.Println("Error querying for scheduled operations", err)
+		log.Println("Error querying for current scheduled operations", err)
 		return nil, err
 	}
 	result := []*ScheduledOperation{}
@@ -53,7 +53,7 @@ func ScheduledOperationQueryNow() ([]*ScheduledOperation, error) {
 		operation := new(ScheduledOperation)
 		err = rows.Scan(&operation.ID, &operation.ServerID, &operation.PlannedExecutionTime)
 		if err != nil {
-			log.Println("Error querying for scheduled operations", err)
+			log.Println("Error querying for current scheduled operations", err)
 			return nil, err
 		}
 		result = append(result, operation)
@@ -64,7 +64,7 @@ func ScheduledOperationQueryNow() ([]*ScheduledOperation, error) {
 func ScheduledOperationQueryServer(serverID int) ([]*ScheduledOperation, error) {
 	rows, err := moeDb.Query(scheduledOperationQueryServer, serverID)
 	if err != nil {
-		log.Println("Error querying for scheduled operations", err)
+		log.Println("Error querying for server scheduled operations", err)
 		return nil, err
 	}
 	result := []*ScheduledOperation{}
@@ -72,7 +72,7 @@ func ScheduledOperationQueryServer(serverID int) ([]*ScheduledOperation, error) 
 		operation := new(ScheduledOperation)
 		err = rows.Scan(&operation.ID, &operation.ServerID, &operation.PlannedExecutionTime)
 		if err != nil {
-			log.Println("Error querying for scheduled operations", err)
+			log.Println("Error querying for server scheduled operations", err)
 			return nil, err
 		}
 		result = append(result, operation)
