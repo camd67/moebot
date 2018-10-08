@@ -1,1 +1,5 @@
 vendor/
+
+#Local Configuration files for debugging
+mb_config.txt
+pg_pass.txt

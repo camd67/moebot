@@ -9,6 +9,10 @@ type SchedulerFactory struct {
 	session *discordgo.Session
 }
 
+func NewSchedulerFactory(session *discordgo.Session) *SchedulerFactory {
+	return &SchedulerFactory{session: session}
+}
+
 func (f *SchedulerFactory) CreateScheduler(t db.SchedulerType) Scheduler {
 	return NewChannelRotationScheduler(t, f.session)
 }
