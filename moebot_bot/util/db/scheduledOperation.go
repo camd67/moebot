@@ -31,11 +31,11 @@ const (
 
 	scheduledOperationQueryServer = `SELECT id, server_id, planned_execution_time FROM scheduled_operation WHERE server_id = $1`
 
-	scheduledOperationUpdate = `UPDATE scheduled_operation SET planned_execution_time = planned_execution_time + execution_interval WHERE id = $1`
+	scheduledOperationUpdate = `UPDATE scheduled_operation SET planned_execution_time = CURRENT_TIMESTAMP + execution_interval WHERE id = $1 RETURNING planned_execution_time`
 
 	scheduledOperationDelete = `DELETE FROM scheduled_operation WHERE id = $1 AND server_id = $2`
 
-	scheduledOperationInsert = `INSERT INTO scheduled_operation (server_id, type, execution_interval) VALUES ($1, $2, $3) RETURNING id, CURRENT_TIME + execution_interval`
+	scheduledOperationInsert = `INSERT INTO scheduled_operation (server_id, type, execution_interval) VALUES ($1, $2, $3) RETURNING id`
 )
 
 func scheduledOperationCreateTable() {
@@ -80,13 +80,14 @@ func ScheduledOperationQueryServer(serverID int) ([]*ScheduledOperation, error) 
 	return result, nil
 }
 
-func ScheduledOperationUpdateTime(operationID int64) error {
-	_, err := moeDb.Exec(scheduledOperationUpdate, operationID)
+func ScheduledOperationUpdateTime(operationID int64) (time.Time, error) {
+	var nextExecution time.Time
+	err := moeDb.QueryRow(scheduledOperationUpdate, operationID).Scan(&nextExecution)
 	if err != nil {
 		log.Println("Error updating scheduled operations", err)
-		return err
+		return nextExecution, err
 	}
-	return nil
+	return nextExecution, nil
 }
 
 func ScheduledOperationDelete(operationID int64, serverID int) (bool, error) {
@@ -101,13 +102,12 @@ func ScheduledOperationDelete(operationID int64, serverID int) (bool, error) {
 
 func scheduledOperationInsertNew(serverID int, operationType SchedulerType, interval string) (*ScheduledOperation, error) {
 	var insertID int64
-	var nextExecution time.Time
-	err := moeDb.QueryRow(scheduledOperationInsert, serverID, operationType, interval).Scan(&insertID, &nextExecution)
+	err := moeDb.QueryRow(scheduledOperationInsert, serverID, operationType, interval).Scan(&insertID)
 	if err != nil {
 		log.Println("Error creating scheduled operation", err)
 		return nil, err
 	}
-	err = ScheduledOperationUpdateTime(insertID)
+	nextExecution, err := ScheduledOperationUpdateTime(insertID)
 	if err != nil {
 		return nil, err
 	}

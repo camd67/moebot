@@ -75,7 +75,7 @@ func (c *ChannelRotation) NextChannelUID() string {
 	var nextIndex int
 	for i := 0; i < len(c.ChannelUIDList); i++ {
 		if c.CurrentChannelUID == c.ChannelUIDList[i] {
-			nextIndex = i
+			nextIndex = i + 1
 			break
 		}
 	}

@@ -61,7 +61,7 @@ func (s *ChannelRotationScheduler) hideChannel(role *discordgo.Role, channelUID 
 		log.Println("Error while hiding channel, failed to get permissions for Role UID: " + role.ID + ".")
 		return err
 	}
-	if permissions.Deny&discordgo.PermissionReadMessages == 0 {
+	if permissions.Deny&discordgo.PermissionReadMessages != 0 {
 		return nil //no need to do anything, channel is already hidden
 	}
 	permissions.Allow = permissions.Allow &^ discordgo.PermissionReadMessages
@@ -79,7 +79,7 @@ func (s *ChannelRotationScheduler) showChannel(role *discordgo.Role, channelUID 
 		log.Println("Error while showing channel, failed to get permissions for Role UID: " + role.ID + ".")
 		return err
 	}
-	if permissions.Allow&discordgo.PermissionReadMessages == 0 {
+	if permissions.Allow&discordgo.PermissionReadMessages != 0 {
 		return nil //no need to do anything, channel is already visible
 	}
 	permissions.Allow = permissions.Allow | discordgo.PermissionReadMessages
@@ -97,7 +97,7 @@ func (s *ChannelRotationScheduler) updateChannelRotationOperation(channelRotatio
 		log.Println(fmt.Sprintf("Failed to update current channel in Operation ID: %v. ", channelRotation.ID), err)
 		return false
 	}
-	err = db.ScheduledOperationUpdateTime(channelRotation.ID)
+	_, err = db.ScheduledOperationUpdateTime(channelRotation.ID)
 	if err != nil {
 		log.Println(fmt.Sprintf("Failed to update operation time in Operation ID: %v. ", channelRotation.ID), err)
 		return false
