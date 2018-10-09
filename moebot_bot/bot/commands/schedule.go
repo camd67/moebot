@@ -50,14 +50,14 @@ func (c *ScheduleCommand) GetCommandHelp(commPrefix string) string {
 }
 
 func (c *ScheduleCommand) listSchedulers(pack *CommPackage) {
-	message := "List of available schedulers:"
+	var b strings.Builder
+	b.WriteString("List of available schedulers:")
 	for _, sch := range c.schedulers {
-		message += "\r\n"
-		message += sch.Help()
+		fmt.Fprintf(&b, "\n%s", sch.Help())
 	}
-	message += "\r\nList - lists all active operations on the server"
-	message += "\r\nRemove <operation number> - removes the operation"
-	pack.session.ChannelMessageSend(pack.channel.ID, message)
+	b.WriteString("\nList - lists all active operations on the server")
+	b.WriteString("\nRemove <operation number> - removes the operation")
+	pack.session.ChannelMessageSend(pack.channel.ID, b.String())
 }
 
 func (c *ScheduleCommand) listOperations(pack *CommPackage) {
@@ -75,12 +75,12 @@ func (c *ScheduleCommand) listOperations(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "There are no operations scheduled for this server.")
 		return
 	}
-	message := "List of active operations for the server:"
+	var b strings.Builder
+	b.WriteString("List of active operations for the server:")
 	for _, o := range operations {
-		message += "\r\n"
-		message += fmt.Sprintf("`%d` %s - Planned Execution: %s", o.ID, c.schedulers[o.Type].OperationDescription(o.ID), o.PlannedExecutionTime.Format(time.Stamp))
+		fmt.Fprintf(&b, "\n`%d` %s - Planned Execution: %s", o.ID, c.schedulers[o.Type].OperationDescription(o.ID), o.PlannedExecutionTime.Format(time.Stamp))
 	}
-	pack.session.ChannelMessageSend(pack.channel.ID, message)
+	pack.session.ChannelMessageSend(pack.channel.ID, b.String())
 }
 
 func (c *ScheduleCommand) removeOperation(pack *CommPackage) {

@@ -350,7 +350,7 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 func startOperationsTimer(factory *commands.SchedulerFactory) {
 	ticker := time.NewTicker(timerPeriod * time.Second)
 	go func() {
-		for true {
+		for {
 			<-ticker.C
 			operations, err := db.ScheduledOperationQueryNow()
 			if err != nil {

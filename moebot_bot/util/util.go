@@ -9,11 +9,13 @@ package util
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/camd67/moebot/moebot_bot/util/db"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 
 	"github.com/bwmarrin/discordgo"
@@ -142,6 +144,36 @@ func StringIndexOf(s []string, search string) int {
 	return -1
 }
 
+func ParseIntervalToISO(interval string) (string, error) {
+	intervalsOrder := []string{"Y", "M", "W", "D", "h", "m"}
+	//this regex is parsing interval strings in the format of nYnMnWnDnhnm, for example 1Y2M3W4D5h6m.
+	//later, the string is converted into ISO interval format, so (same example input) P1Y2M3W4DT5H6M
+	rx, _ := regexp.Compile("^(\\d+Y){0,1}(\\d+M){0,1}(\\d+W){0,1}(\\d+D){0,1}(\\d+h){0,1}(\\d+m){0,1}$")
+	if !rx.MatchString(interval) {
+		return "", fmt.Errorf("Invalid interval string")
+	}
+
+	matches := rx.FindAllStringSubmatch(interval, -1)[0][1:]
+	var b strings.Builder
+	b.WriteString("P")
+	for _, indicator := range intervalsOrder {
+		for _, match := range matches {
+			if strings.Contains(match, indicator) {
+				b.WriteString(strings.ToUpper(match))
+			}
+		}
+		if indicator == "D" { //Adds time separator after day segment
+			if b.Len() != 1 {
+				b.WriteString("T")
+			} else {
+				b.WriteString("0DT")
+			}
+		}
+	}
+	intervalString := strings.Trim(b.String(), "T")
+	return intervalString, nil
+}
+
 func RetrieveBasePermissions(session *discordgo.Session, channel *discordgo.Channel, role *discordgo.Role, flags []int) map[int]bool {
 	result := make(map[int]bool)
 	permission, ok := moeDiscord.FindPermissionByRoleID(channel.PermissionOverwrites, role.ID)
@@ -170,6 +202,35 @@ func RetrieveBasePermissions(session *discordgo.Session, channel *discordgo.Chan
 		}
 	}
 	return result
+}
+
+func GetEveryoneRoleForServer(session *discordgo.Session, serverID int) *discordgo.Role {
+	server, err := db.ServerQueryById(serverID)
+	if err != nil {
+		log.Println(fmt.Sprintf("Failed to retrieve server informations for Server ID: %v. ", serverID), err)
+		return nil
+	}
+	roles, err := session.GuildRoles(server.GuildUid)
+	if err != nil {
+		log.Println("Failed to retrieve roles informations for Guild UID: "+server.GuildUid+". ", err)
+		return nil
+	}
+	return moeDiscord.FindRoleByName(roles, "@everyone")
+}
+
+func GetCurrentRolePermissionsForChannel(session *discordgo.Session, channelUID string, roleUID string) (*discordgo.PermissionOverwrite, error) {
+	channel, err := session.Channel(channelUID)
+	if err != nil {
+		return nil, err
+	}
+	if p, ok := moeDiscord.FindPermissionByRoleID(channel.PermissionOverwrites, roleUID); !ok {
+		return &discordgo.PermissionOverwrite{
+			ID:   roleUID,
+			Type: "role",
+		}, nil
+	} else {
+		return p, nil
+	}
 }
 
 func unsetFlags(permission *discordgo.PermissionOverwrite, flags []int) bool {

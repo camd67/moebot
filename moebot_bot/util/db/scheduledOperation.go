@@ -8,7 +8,7 @@ import (
 type SchedulerType int
 
 const (
-	SchedulerChannelRotation SchedulerType = iota
+	SchedulerChannelRotation SchedulerType = 1
 )
 
 type ScheduledOperation struct {
@@ -48,7 +48,7 @@ func ScheduledOperationQueryNow() ([]*ScheduledOperation, error) {
 		log.Println("Error querying for current scheduled operations", err)
 		return nil, err
 	}
-	result := []*ScheduledOperation{}
+	var result []*ScheduledOperation
 	for rows.Next() {
 		operation := new(ScheduledOperation)
 		err = rows.Scan(&operation.ID, &operation.ServerID, &operation.PlannedExecutionTime)
@@ -67,7 +67,7 @@ func ScheduledOperationQueryServer(serverID int) ([]*ScheduledOperation, error) 
 		log.Println("Error querying for server scheduled operations", err)
 		return nil, err
 	}
-	result := []*ScheduledOperation{}
+	var result []*ScheduledOperation
 	for rows.Next() {
 		operation := new(ScheduledOperation)
 		err = rows.Scan(&operation.ID, &operation.ServerID, &operation.PlannedExecutionTime)
