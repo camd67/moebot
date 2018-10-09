@@ -110,7 +110,7 @@ func (s *ChannelRotationScheduler) Keyword() string {
 }
 
 func (s *ChannelRotationScheduler) Help() string {
-	return "`" + s.Keyword() + " -channels <channels> -interval <interval>`: Rotates through the specified channels, making them visible one at a time. \r\n " +
+	return "`" + s.Keyword() + " -channels <channels> -interval <interval>`: Rotates through the specified channels, making them visible one at a time. \n " +
 		"The command doesn't edit already existing permissions, so when using this command make sure that only the first channel in the list is currently visible."
 }
 
