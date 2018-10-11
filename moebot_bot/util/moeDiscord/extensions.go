@@ -43,3 +43,12 @@ func FindRoleById(roles []*discordgo.Role, toFind string) *discordgo.Role {
 	}
 	return nil
 }
+
+func FindPermissionByRoleID(overwrites []*discordgo.PermissionOverwrite, toFind string) (*discordgo.PermissionOverwrite, bool) {
+	for _, p := range overwrites {
+		if p.Type == "role" && p.ID == toFind {
+			return p, true
+		}
+	}
+	return nil, false
+}
