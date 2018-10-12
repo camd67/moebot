@@ -105,6 +105,15 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 	return
 }
 
+func ServerQueryById(id int) (s Server, e error) {
+	row := moeDb.QueryRow(serverQuery, id)
+	if e = serverScan(row, &s); e != nil {
+		log.Println("Error retrieving the server from db", e)
+		return Server{}, e
+	}
+	return s, e
+}
+
 func serverScan(row *sql.Row, s *Server) error {
 	return row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.BotChannel, &s.Enabled,
 		&s.WelcomeChannel, &s.StarterRole, &s.BaseRole)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/camd67/moebot/moebot_bot/bot/commands"
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
@@ -20,7 +21,8 @@ import (
 )
 
 const (
-	version = "0.4.7"
+	version     = "0.5.0"
+	timerPeriod = 60
 )
 
 var (
@@ -40,9 +42,14 @@ func SetupMoebot(session *discordgo.Session, redditHandle *reddit.Handle) {
 	masterId = Config["masterId"]
 	checker = permissions.PermissionChecker{MasterId: masterId}
 	masterDebugChannel = Config["debugChannel"]
-	db.SetupDatabase(Config["dbPass"], Config["moeDataPass"])
+	dbHost := Config["dbHost"]
+	if dbHost == "" {
+		dbHost = "database"
+	}
+	db.SetupDatabase(dbHost, Config["dbPass"], Config["moeDataPass"])
 	addGlobalHandlers(session)
 	setupOperations(session, redditHandle)
+	startOperationsTimer(commands.NewSchedulerFactory(session))
 }
 
 /*
@@ -71,6 +78,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.FetchCommand{MasterId: masterId},
 		commands.NewTimerCommand(),
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
+		commands.NewScheduleCommand(commands.NewSchedulerFactory(session)),
 	}
 
 	setupCommands()
@@ -337,4 +345,21 @@ func runCommand(session *discordgo.Session, message *discordgo.Message, guild *d
 		command.Execute(&pack)
 		timer.AddMark(event.TimerMarkCommandEnd + commandKey)
 	}
+}
+
+func startOperationsTimer(factory *commands.SchedulerFactory) {
+	ticker := time.NewTicker(timerPeriod * time.Second)
+	go func() {
+		for {
+			<-ticker.C
+			operations, err := db.ScheduledOperationQueryNow()
+			if err != nil {
+				continue
+			}
+			for _, o := range operations {
+				scheduler := factory.CreateScheduler(o.Type)
+				scheduler.Execute(o.ID)
+			}
+		}
+	}()
 }
