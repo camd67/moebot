@@ -19,7 +19,7 @@ const changeLogPrefix = "\n`->` "
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
 
-	"0.5.1": changeLogPrefix + "Added automatic rotating channels (Credit: Shadran)" +
+	"0.5.2": changeLogPrefix + "Added automatic rotating channels (Credit: Shadran)" +
 		changeLogPrefix + "Refactor timer command (Credit: Imbajoe)" +
 		changeLogPrefix + "Fixed various bugs",
 
