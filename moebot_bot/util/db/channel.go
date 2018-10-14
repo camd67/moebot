@@ -95,7 +95,7 @@ func ChannelQueryByServer(server Server) (channels []Channel, err error) {
 func ChannelQueryById(channelId int) (c *Channel, e error) {
 	c = new(Channel)
 	row := moeDb.QueryRow(channelQueryId, channelId)
-	if e = row.Scan(&c.Id, &c.serverId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.MoveChannelUid); e != nil {
+	if e = row.Scan(&c.Id, &c.serverId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.DeletePin, &c.MoveChannelUid); e != nil {
 		log.Println("Error querying channel", e)
 		return nil, e
 	}
