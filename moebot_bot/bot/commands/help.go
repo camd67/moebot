@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
@@ -17,14 +18,18 @@ type HelpCommand struct {
 func (hc *HelpCommand) Execute(pack *CommPackage) {
 	if len(pack.params) == 0 {
 		var message strings.Builder
-		message.WriteString("For details on each command, check out the wiki! <https://github.com/camd67/moebot/wiki> \nMoebot has the following commands:\n")
+		message.WriteString("For details on each command, check out the wiki! <https://github.com/camd67/moebot/wiki>\nMoebot has the following commands:\n")
 		for _, v := range hc.Commands() {
 			if hc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, v.GetPermLevel()) && v.GetCommandHelp(hc.ComPrefix) != "" {
 				message.WriteString(v.GetCommandHelp(hc.ComPrefix))
 				message.WriteString("\n")
 			}
 		}
-		pack.session.ChannelMessageSend(pack.channel.ID, message.String())
+		_, err := pack.session.ChannelMessageSend(pack.channel.ID, message.String())
+		if err != nil {
+			log.Println("An error occurred sending help message to channel: "+pack.channel.ID+" with error: ", err)
+			return
+		}
 	}
 }
 
