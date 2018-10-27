@@ -83,5 +83,5 @@ func (fc *FetchCommand) GetCommandKeys() []string {
 	return []string{"FETCH"}
 }
 func (fc *FetchCommand) GetCommandHelp(commPrefix string) string {
-	return "`" + commPrefix + " fetch` - Fetches information on something within discord."
+	return "`" + commPrefix + " fetch` - Fetches information on something within discord. Wait... how'd you see this help message...?"
 }

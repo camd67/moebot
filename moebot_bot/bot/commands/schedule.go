@@ -46,7 +46,7 @@ func (c *ScheduleCommand) GetCommandKeys() []string {
 	return []string{"SCHEDULE"}
 }
 func (c *ScheduleCommand) GetCommandHelp(commPrefix string) string {
-	return fmt.Sprintf("`%[1]s schedule <schedule type> <options>` - Master/Mod Creates a new scheduler with the given type and options. `%[1]s schedule` to list available schedulers.", commPrefix)
+	return fmt.Sprintf("`%[1]s schedule <schedule type> <options>` - Master/Mod Creates a new scheduler", commPrefix)
 }
 
 func (c *ScheduleCommand) listSchedulers(pack *CommPackage) {

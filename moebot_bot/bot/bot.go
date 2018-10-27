@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	version     = "0.5.0"
+	version     = "0.5.2"
 	timerPeriod = 60
 )
 
@@ -281,7 +281,8 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		runCommand(session, message.Message, guild, channel, member, &userProfile, &timer)
 	}
 	// In this case we don't care about the error state as the user doesn't need to know we failed to serialize the metric and we already logged it
-	db.MetricInsertTimer(timer, userProfile)
+	// Disabled for now as we're getting incorrect information in the db...
+	//db.MetricInsertTimer(timer, userProfile)
 
 	// make sure to also check if they agreed to the rules
 	if isNewUser {

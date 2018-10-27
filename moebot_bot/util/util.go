@@ -127,6 +127,11 @@ func GetStringOrDefault(s sql.NullString) string {
 	}
 }
 
+// Forces title case for the given string. This is necessary when your string may contain upper case characters
+func ForceTitleCase(s string) string {
+	return strings.Title(strings.ToLower(s))
+}
+
 func GetInt64OrDefault(i sql.NullInt64) int64 {
 	if i.Valid {
 		return i.Int64

@@ -307,8 +307,7 @@ func (pc *PinMoveCommand) GetCommandKeys() []string {
 
 func (pc *PinMoveCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s pinmove -channel <#sourceChannel> -dest <#destChannel> [-text -delete]` - Enables moving pinned messages from one channel to "+
-		"another. The `-dest` option sets/changes the destination channel. The `-text` option enables moving text as well as images on pin. The `-delete` "+
-		"option will delete the message before moving.", commPrefix)
+		"another", commPrefix)
 }
 
 func moveMessage(session *discordgo.Session, message *discordgo.Message, destChannelUid string, deleteOldPin bool) {

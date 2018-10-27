@@ -23,7 +23,7 @@ const (
 		id SERIAL NOT NULL PRIMARY KEY,
 		server_id INTEGER NOT NULL REFERENCES server(id) ON DELETE CASCADE,
 		type INTEGER NOT NULL,
-		planned_execution_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIME,
+		planned_execution_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		execution_interval INTERVAL NOT NULL
 	)`
 

@@ -67,5 +67,5 @@ func (sc *SubCommand) GetCommandKeys() []string {
 	return []string{"SUB"}
 }
 func (sc *SubCommand) GetCommandHelp(commPrefix string) string {
-	return fmt.Sprintf("`%[1]s sub [type]` - Posts a random image. `type` is optional, and can be one of the following: `random`, `irl`, `meme`", commPrefix)
+	return fmt.Sprintf("`%[1]s sub [type]` - Posts a random image. `type` is optionally one of: `random`, `irl`, `meme`", commPrefix)
 }
