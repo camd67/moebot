@@ -5,27 +5,9 @@ import (
 	"log"
 	"strconv"
 	"strings"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
-
-type GroupType int
-
-const (
-	// Group type where any role can be selected, and multiple can be selected
-	GroupTypeAny = 1
-	// Group type where only one role can be selected
-	GroupTypeExclusive = 2
-	// Same as the exclusive group, but can't be removed
-	GroupTypeExclusiveNoRemove = 3
-
-	OptionsForGroupType = "ANY, EXC, ENR"
-)
-
-type RoleGroup struct {
-	Id       int
-	ServerId int
-	Name     string
-	Type     GroupType
-}
 
 const (
 	roleGroupTable = `CREATE TABLE IF NOT EXISTS role_group(
@@ -48,14 +30,14 @@ const (
 	UncategorizedGroup = "Uncategorized"
 )
 
-func RoleGroupInsertOrUpdate(rg RoleGroup, s Server) (newId int, err error) {
+func RoleGroupInsertOrUpdate(rg types.RoleGroup, s types.Server) (newId int, err error) {
 	row := moeDb.QueryRow(roleGroupQueryById, rg.Id)
-	var dbRg RoleGroup
+	var dbRg types.RoleGroup
 	if err := row.Scan(&dbRg.Id, &dbRg.ServerId, &dbRg.Name, &dbRg.Type); err != nil {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			if rg.Type <= 0 {
-				rg.Type = GroupTypeAny
+				rg.Type = types.GroupTypeAny
 			}
 			err := moeDb.QueryRow(roleGroupInsert, s.Id, rg.Name, rg.Type).Scan(&newId)
 			if err != nil {
@@ -89,13 +71,13 @@ func RoleGroupInsertOrUpdate(rg RoleGroup, s Server) (newId int, err error) {
 /*
 Returns a RoleGroup matching the id inside the given RoleGroup. If no match is found, the RoleGroup is added to the database
 */
-func RoleGroupQueryOrInsert(rg RoleGroup, s Server) (newRg RoleGroup, err error) {
+func RoleGroupQueryOrInsert(rg types.RoleGroup, s types.Server) (newRg types.RoleGroup, err error) {
 	row := moeDb.QueryRow(roleGroupQueryById, rg.Id)
 	if err = row.Scan(&newRg.Id, &newRg.ServerId, &newRg.Name, &newRg.Type); err != nil {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			if rg.Type <= 0 {
-				rg.Type = GroupTypeAny
+				rg.Type = types.GroupTypeAny
 			}
 			var insertId int
 			err = moeDb.QueryRow(roleGroupInsert, s.Id, rg.Name, rg.Type).Scan(&insertId)
@@ -107,13 +89,13 @@ func RoleGroupQueryOrInsert(rg RoleGroup, s Server) (newRg RoleGroup, err error)
 			newRg.Id = insertId
 		} else {
 			log.Println("Error scanning in roleGroup", err)
-			return RoleGroup{}, err
+			return types.RoleGroup{}, err
 		}
 	}
 	return
 }
 
-func RoleGroupQueryServer(s Server) (roleGroups []RoleGroup, err error) {
+func RoleGroupQueryServer(s types.Server) (roleGroups []types.RoleGroup, err error) {
 	rows, err := moeDb.Query(roleGroupQueryByServer, s.Id)
 	if err != nil {
 		log.Println("Error querying for roleGroup", err)
@@ -121,7 +103,7 @@ func RoleGroupQueryServer(s Server) (roleGroups []RoleGroup, err error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var rg RoleGroup
+		var rg types.RoleGroup
 		if err = rows.Scan(&rg.Id, &rg.ServerId, &rg.Name, &rg.Type); err != nil {
 			log.Println("Error scanning from roleGroup table:", err)
 			return
@@ -131,7 +113,7 @@ func RoleGroupQueryServer(s Server) (roleGroups []RoleGroup, err error) {
 	return
 }
 
-func RoleGroupQueryName(name string, serverId int) (rg RoleGroup, err error) {
+func RoleGroupQueryName(name string, serverId int) (rg types.RoleGroup, err error) {
 	row := moeDb.QueryRow(roleGroupQueryByName, name, serverId)
 	err = row.Scan(&rg.Id, &rg.ServerId, &rg.Name, &rg.Type)
 	if err != nil && err != sql.ErrNoRows {
@@ -141,7 +123,7 @@ func RoleGroupQueryName(name string, serverId int) (rg RoleGroup, err error) {
 	return
 }
 
-func RoleGroupQueryId(id int) (rg RoleGroup, err error) {
+func RoleGroupQueryId(id int) (rg types.RoleGroup, err error) {
 	row := moeDb.QueryRow(roleGroupQueryById, id)
 	err = row.Scan(&rg.Id, &rg.ServerId, &rg.Name, &rg.Type)
 	if err != nil && err != sql.ErrNoRows {
@@ -173,27 +155,31 @@ func roleGroupCreateTable() {
 	//}
 }
 
-func GetGroupTypeFromString(s string) GroupType {
+func GetGroupTypeFromString(s string) types.GroupType {
 	toCheck := strings.ToUpper(s)
 	if toCheck == "ANY" {
-		return GroupTypeAny
+		return types.GroupTypeAny
 	} else if toCheck == "EXCLUSIVE" || toCheck == "EXC" {
-		return GroupTypeExclusive
+		return types.GroupTypeExclusive
 	} else if toCheck == "EXCLUSIVE NO REMOVE" || toCheck == "ENR" {
-		return GroupTypeExclusiveNoRemove
+		return types.GroupTypeExclusiveNoRemove
+	} else if toCheck == "NOT CONTEMPORARY" || toCheck == "NOC" {
+		return types.GroupTypeNoContemporary
 	} else {
 		return -1
 	}
 }
 
-func GetStringFromGroupType(groupType GroupType) string {
+func GetStringFromGroupType(groupType types.GroupType) string {
 	switch groupType {
-	case GroupTypeAny:
+	case types.GroupTypeAny:
 		return "Any (ANY)"
-	case GroupTypeExclusive:
+	case types.GroupTypeExclusive:
 		return "Exclusive (EXC)"
-	case GroupTypeExclusiveNoRemove:
+	case types.GroupTypeExclusiveNoRemove:
 		return "Exclusive No Remove (ENR)"
+	case types.GroupTypeNoContemporary:
+		return "Not Contemporary (NOC)"
 	default:
 		return "Unknown"
 	}

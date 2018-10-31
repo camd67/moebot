@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type SubmitCommand struct {
@@ -68,8 +69,8 @@ func (sc *SubmitCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessagePin(pack.channel.ID, pack.message.ID)
 }
 
-func (sc *SubmitCommand) GetPermLevel() db.Permission {
-	return db.PermNone
+func (sc *SubmitCommand) GetPermLevel() types.Permission {
+	return types.PermNone
 }
 
 func (sc *SubmitCommand) GetCommandKeys() []string {

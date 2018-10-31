@@ -5,14 +5,14 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type RoleHandler struct {
 	ComPrefix string
 }
 
-func (r *RoleHandler) sendConfirmationMessage(session *discordgo.Session, channel *discordgo.Channel, role db.Role, user *discordgo.User) error {
+func (r *RoleHandler) sendConfirmationMessage(session *discordgo.Session, channel *discordgo.Channel, role types.Role, user *discordgo.User) error {
 	userChannel, err := session.UserChannelCreate(user.ID)
 	if err != nil {
 		// could log error creating user channel, but seems like it'll clutter the logs for a valid scenario..

@@ -1,16 +1,10 @@
 package db
 
-import "log"
+import (
+	"log"
 
-type Poll struct {
-	Id         int
-	Options    []*PollOption
-	Title      string
-	Open       bool
-	ChannelId  int
-	UserUid    string
-	MessageUid string
-}
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
+)
 
 const (
 	pollTable = `CREATE TABLE IF NOT EXISTS poll(
@@ -33,10 +27,10 @@ const (
 	pollSetMessageId = `UPDATE poll SET MessageUid = $1 WHERE Id = $2`
 )
 
-func PollQuery(id int) (*Poll, error) {
+func PollQuery(id int) (*types.Poll, error) {
 	var err error
 	row := moeDb.QueryRow(pollSelect, id)
-	result := new(Poll)
+	result := new(types.Poll)
 	if err = row.Scan(&result.Id, &result.Title, &result.ChannelId, &result.UserUid, &result.MessageUid, &result.Open); err != nil {
 		log.Println("Error querying for poll", err)
 		return nil, err
@@ -49,15 +43,15 @@ func PollQuery(id int) (*Poll, error) {
 	return result, nil
 }
 
-func PollsOpenQuery() ([]*Poll, error) {
+func PollsOpenQuery() ([]*types.Poll, error) {
 	rows, err := moeDb.Query(pollSelectOpen)
 	if err != nil {
 		log.Println("Error querying for polls", err)
 		return nil, err
 	}
-	result := []*Poll{}
+	result := []*types.Poll{}
 	for rows.Next() {
-		p := new(Poll)
+		p := new(types.Poll)
 		rows.Scan(&p.Id, &p.Title, &p.ChannelId, &p.UserUid, &p.MessageUid, &p.Open)
 		result = append(result, p)
 	}
@@ -73,7 +67,7 @@ func PollClose(id int) error {
 	return nil
 }
 
-func PollAdd(poll *Poll) error {
+func PollAdd(poll *types.Poll) error {
 	err := moeDb.QueryRow(pollInsert, poll.Title, poll.ChannelId, poll.UserUid).Scan(&poll.Id)
 	if err != nil {
 		log.Println("Error creating the poll", err)
@@ -82,7 +76,7 @@ func PollAdd(poll *Poll) error {
 	return nil
 }
 
-func PollSetMessageId(poll *Poll) error {
+func PollSetMessageId(poll *types.Poll) error {
 	_, err := moeDb.Exec(pollSetMessageId, poll.MessageUid, poll.Id)
 	if err != nil {
 		log.Println("Error updating the message Id for the poll", err)

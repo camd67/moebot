@@ -5,22 +5,9 @@ import (
 	"log"
 	"strconv"
 	"strings"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
-
-type UserServerRank struct {
-	Id          int
-	ServerId    int
-	UserId      int
-	Rank        int
-	MessageSent bool
-}
-
-type UserServerRankWrapper struct {
-	UserUid   string
-	ServerUid string
-	Rank      int
-	SendTo    string
-}
 
 const (
 	userServerRankTable = `CREATE TABLE IF NOT EXISTS user_server_rank(
@@ -41,15 +28,15 @@ const (
 	userServerRankUpdateMessage = `UPDATE user_server_rank SET MessageSent = true WHERE Id = ANY ($1::integer[])`
 )
 
-func UserServerRankQuery(userUid string, guildUid string) (usr *UserServerRank, err error) {
+func UserServerRankQuery(userUid string, guildUid string) (usr *types.UserServerRank, err error) {
 	row := moeDb.QueryRow(userServerRankQuery, guildUid, userUid)
-	u := UserServerRank{}
+	u := types.UserServerRank{}
 	err = row.Scan(&u.Id, &u.ServerId, &u.UserId, &u.Rank, &u.MessageSent)
 	return &u, err
 }
 
 func UserServerRankUpdateOrInsert(userId int, serverId int, points int) (id int, newPoint int, messageSent bool, err error) {
-	u := UserServerRank{
+	u := types.UserServerRank{
 		ServerId: serverId,
 		UserId:   userId,
 	}

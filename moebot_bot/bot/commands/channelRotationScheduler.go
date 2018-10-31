@@ -8,14 +8,15 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type ChannelRotationScheduler struct {
-	schedulerType db.SchedulerType
+	schedulerType types.SchedulerType
 	session       *discordgo.Session
 }
 
-func NewChannelRotationScheduler(schedulerType db.SchedulerType, session *discordgo.Session) *ChannelRotationScheduler {
+func NewChannelRotationScheduler(schedulerType types.SchedulerType, session *discordgo.Session) *ChannelRotationScheduler {
 	return &ChannelRotationScheduler{schedulerType, session}
 }
 
@@ -91,7 +92,7 @@ func (s *ChannelRotationScheduler) showChannel(role *discordgo.Role, channelUID 
 	return err
 }
 
-func (s *ChannelRotationScheduler) updateChannelRotationOperation(channelRotation *db.ChannelRotation) bool {
+func (s *ChannelRotationScheduler) updateChannelRotationOperation(channelRotation *types.ChannelRotation) bool {
 	err := db.ChannelRotationUpdate(channelRotation.ID, channelRotation.NextChannelUID())
 	if err != nil {
 		log.Println(fmt.Sprintf("Failed to update current channel in Operation ID: %v. ", channelRotation.ID), err)

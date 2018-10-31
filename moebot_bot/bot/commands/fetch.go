@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 /*
@@ -75,9 +75,9 @@ func (fc *FetchCommand) Execute(pack *CommPackage) {
 		break
 	}
 }
-func (fc *FetchCommand) GetPermLevel() db.Permission {
+func (fc *FetchCommand) GetPermLevel() types.Permission {
 	// Temporarily only for master until further investigation on if it's not too much information...
-	return db.PermMaster
+	return types.PermMaster
 }
 func (fc *FetchCommand) GetCommandKeys() []string {
 	return []string{"FETCH"}

@@ -6,24 +6,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-)
 
-/*
-A Server (guild in discord terms) that stores information related to what over server settings are.
-*/
-type Server struct {
-	Id             int
-	GuildUid       string
-	WelcomeMessage sql.NullString // Message user gets sent when they first join the server, either via PM or public message depending on WelcomeChannel
-	RuleAgreement  sql.NullString // Message to type when the user agrees to the rules
-	VeteranRank    sql.NullInt64  // Rank at which a user can be promoted to the veteran role
-	VeteranRole    sql.NullString // Role to apply when a user can become a veteran
-	BotChannel     sql.NullString // Where any bot related information or errors get sent to.
-	Enabled        bool           // defaults to true, so that new servers that add moebot can immediately start using her. This can be turned off later
-	WelcomeChannel sql.NullString // Channel to post a welcome message. If null, send via PM's
-	StarterRole    sql.NullString // The role that is added when someone first joins a server
-	BaseRole       sql.NullString // The role that is added when someone types the RuleAgreement message. Should only exist when RuleAgreement isn't null
-}
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
+)
 
 const (
 	serverTable = `CREATE TABLE IF NOT EXISTS server(
@@ -66,11 +51,11 @@ var (
 
 	serverMemoryBuffer = struct {
 		sync.RWMutex
-		m map[string]Server
-	}{m: make(map[string]Server)}
+		m map[string]types.Server
+	}{m: make(map[string]types.Server)}
 )
 
-func ServerQueryOrInsert(guildUid string) (s Server, e error) {
+func ServerQueryOrInsert(guildUid string) (s types.Server, e error) {
 	serverMemoryBuffer.RLock()
 	if memServer, ok := serverMemoryBuffer.m[guildUid]; ok {
 		serverMemoryBuffer.RUnlock()
@@ -81,18 +66,18 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 	if e = serverScan(row, &s); e != nil {
 		if e == sql.ErrNoRows {
 			// no row, so insert it add in default values
-			toInsert := Server{GuildUid: guildUid}
+			toInsert := types.Server{GuildUid: guildUid}
 			var insertId int
 			e = moeDb.QueryRow(serverInsert, &toInsert.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole,
 				&s.BotChannel, &s.WelcomeChannel, &s.StarterRole, &s.BaseRole).Scan(&insertId)
 			if e != nil {
 				log.Println("Error inserting role to db ", e)
-				return Server{}, e
+				return types.Server{}, e
 			}
 			row := moeDb.QueryRow(serverQuery, insertId)
 			if e = serverScan(row, &s); e != nil {
 				log.Println("Failed to read the newly inserted server row. This should pretty much never happen...", e)
-				return Server{}, e
+				return types.Server{}, e
 			}
 			// normal flow of inserting a new row
 			serverMemoryBuffer.Lock()
@@ -105,21 +90,21 @@ func ServerQueryOrInsert(guildUid string) (s Server, e error) {
 	return
 }
 
-func ServerQueryById(id int) (s Server, e error) {
+func ServerQueryById(id int) (s types.Server, e error) {
 	row := moeDb.QueryRow(serverQuery, id)
 	if e = serverScan(row, &s); e != nil {
 		log.Println("Error retrieving the server from db", e)
-		return Server{}, e
+		return types.Server{}, e
 	}
 	return s, e
 }
 
-func serverScan(row *sql.Row, s *Server) error {
+func serverScan(row *sql.Row, s *types.Server) error {
 	return row.Scan(&s.Id, &s.GuildUid, &s.WelcomeMessage, &s.RuleAgreement, &s.VeteranRank, &s.VeteranRole, &s.BotChannel, &s.Enabled,
 		&s.WelcomeChannel, &s.StarterRole, &s.BaseRole)
 }
 
-func ServerSprint(s Server) (out string) {
+func ServerSprint(s types.Server) (out string) {
 	var buf strings.Builder
 	buf.WriteString("Server: ")
 	if s.WelcomeMessage.Valid {
@@ -199,10 +184,10 @@ func ServerSprint(s Server) (out string) {
 func FlushServerCache() {
 	serverMemoryBuffer.Lock()
 	defer serverMemoryBuffer.Unlock()
-	serverMemoryBuffer.m = make(map[string]Server)
+	serverMemoryBuffer.m = make(map[string]types.Server)
 }
 
-func ServerFullUpdate(s Server) (err error) {
+func ServerFullUpdate(s types.Server) (err error) {
 	_, err = moeDb.Exec(serverUpdate, s.Id, s.WelcomeMessage, s.RuleAgreement, s.VeteranRank, s.VeteranRole, s.BotChannel, s.Enabled,
 		s.StarterRole, s.BaseRole, s.WelcomeChannel)
 	if err != nil {

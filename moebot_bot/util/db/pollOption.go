@@ -1,15 +1,10 @@
 package db
 
-import "log"
+import (
+	"log"
 
-type PollOption struct {
-	Id           int
-	PollId       int
-	ReactionId   string
-	ReactionName string
-	Description  string
-	Votes        int
-}
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
+)
 
 const (
 	pollOptionTable = `CREATE TABLE IF NOT EXISTS poll_option(
@@ -28,15 +23,15 @@ const (
 	pollOptionUpdateVotes = `UPDATE poll_option SET Votes = $1 WHERE Id = $2`
 )
 
-func PollOptionQuery(pollId int) ([]*PollOption, error) {
+func PollOptionQuery(pollId int) ([]*types.PollOption, error) {
 	rows, err := moeDb.Query(pollOptionSelectPoll, pollId)
 	if err != nil {
 		log.Println("Error querying for poll options", err)
 		return nil, err
 	}
-	result := []*PollOption{}
+	result := []*types.PollOption{}
 	for rows.Next() {
-		option := new(PollOption)
+		option := new(types.PollOption)
 		err = rows.Scan(&option.Id, &option.PollId, &option.ReactionId, &option.ReactionName, &option.Description, &option.Votes)
 		if err != nil {
 			log.Println("Error querying for poll options", err)
@@ -47,7 +42,7 @@ func PollOptionQuery(pollId int) ([]*PollOption, error) {
 	return result, nil
 }
 
-func PollOptionAdd(poll *Poll) error {
+func PollOptionAdd(poll *types.Poll) error {
 	for _, o := range poll.Options {
 		err := moeDb.QueryRow(pollOptionInsert, poll.Id, o.ReactionId, o.ReactionName, o.Description).Scan(&o.Id)
 		if err != nil {
@@ -58,7 +53,7 @@ func PollOptionAdd(poll *Poll) error {
 	return nil
 }
 
-func PollOptionUpdateVotes(poll *Poll) error {
+func PollOptionUpdateVotes(poll *types.Poll) error {
 	for _, o := range poll.Options {
 		_, err := moeDb.Exec(pollOptionUpdateVotes, o.Votes, o.Id)
 		if err != nil {

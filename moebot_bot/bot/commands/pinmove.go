@@ -14,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
@@ -192,7 +193,7 @@ func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo
 	}
 }
 
-func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *db.Server, channel *discordgo.Channel) {
+func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *types.Server, channel *discordgo.Channel) {
 	_, err := db.ChannelQueryOrInsert(channel.ID, server)
 	if err != nil {
 		log.Println("Error creating/retrieving channel during loading", err)
@@ -297,8 +298,8 @@ func (pc *PinMoveCommand) pinnedMessageAlreadyLoaded(messageId string, channelId
 	return false
 }
 
-func (pc *PinMoveCommand) GetPermLevel() db.Permission {
-	return db.PermMod
+func (pc *PinMoveCommand) GetPermLevel() types.Permission {
+	return types.PermMod
 }
 
 func (pc *PinMoveCommand) GetCommandKeys() []string {

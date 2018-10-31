@@ -9,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
@@ -50,7 +51,22 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 		// We need to go one further than the start index so we can skip over the config key
 		configValue = strings.Join(pack.params[configKeyIndex+1:], " ")
 	}
+	currentVeteranUID := s.VeteranRole //Temporary before switching server veteran to an actual point-based group
 	if sc.processServerConfigKey(configKey, configValue, pack, &s, shouldClear) {
+		if currentVeteranUID != s.VeteranRole && s.VeteranRole.Valid {
+			r, err := db.RoleQueryRoleUid(s.VeteranRole.String, s.Id)
+			if err != nil && err == sql.ErrNoRows {
+				r.ServerId = s.Id
+				r.RoleUid = s.VeteranRole.String
+				r.Permission = types.PermAll
+				r.Trigger.Scan("veteran")
+				err = db.RoleInsertOrUpdate(r)
+				if err != nil {
+					pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the veteran role. Your change was probably not applied.")
+					return
+				}
+			}
+		}
 		err = db.ServerFullUpdate(s)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the server table. Your change was probably not applied.")
@@ -60,7 +76,7 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (sc *ServerCommand) processServerConfigKey(configKey string, configValue string, pack *CommPackage, s *db.Server, shouldClear bool) (success bool) {
+func (sc *ServerCommand) processServerConfigKey(configKey string, configValue string, pack *CommPackage, s *types.Server, shouldClear bool) (success bool) {
 	// todo: This function is starting to become a little cumbersome... Some has been refactored but more can be done
 	// We only have a help command if we got an empty config value and it's not a clear command
 	isHelp := configValue == "" && !shouldClear
@@ -187,8 +203,8 @@ func (sc *ServerCommand) defaultServerRoleSet(pack *CommPackage, configValue str
 	return true
 }
 
-func (sc *ServerCommand) GetPermLevel() db.Permission {
-	return db.PermMod
+func (sc *ServerCommand) GetPermLevel() types.Permission {
+	return types.PermMod
 }
 
 func (sc *ServerCommand) GetCommandKeys() []string {

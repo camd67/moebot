@@ -37,12 +37,24 @@ type SyncCooldownMap struct {
 }
 
 func IntContains(s []int, e int) bool {
-	for _, a := range s {
+	return IntIndexOf(s, e) > -1
+}
+
+func IntRemove(s []int, e int) []int {
+	index := IntIndexOf(s, e)
+	if index > -1 {
+		s = append(s[:index], s[index+1:]...)
+	}
+	return s
+}
+
+func IntIndexOf(s []int, e int) int {
+	for i, a := range s {
 		if a == e {
-			return true
+			return i
 		}
 	}
-	return false
+	return -1
 }
 
 func StrContains(s []string, e string, caseInsensitive int) bool {

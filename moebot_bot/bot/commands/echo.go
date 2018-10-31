@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type EchoCommand struct {
@@ -19,8 +19,8 @@ func (ec *EchoCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.params[0], strings.Join(pack.params[1:], " "))
 }
 
-func (ec *EchoCommand) GetPermLevel() db.Permission {
-	return db.PermMaster
+func (ec *EchoCommand) GetPermLevel() types.Permission {
+	return types.PermMaster
 }
 
 func (ec *EchoCommand) GetCommandKeys() []string {

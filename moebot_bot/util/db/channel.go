@@ -3,18 +3,9 @@ package db
 import (
 	"database/sql"
 	"log"
-)
 
-type Channel struct {
-	Id             int
-	serverId       int
-	ChannelUid     string
-	BotAllowed     bool
-	MovePins       bool
-	MoveTextPins   bool
-	DeletePin      bool
-	MoveChannelUid sql.NullString
-}
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
+)
 
 const (
 	channelTable = `CREATE TABLE IF NOT EXISTS channel(
@@ -47,14 +38,14 @@ var channelUpdateTable = []string{
 	`ALTER TABLE channel ADD COLUMN IF NOT EXISTS delete_pin BOOLEAN NOT NULL DEFAULT FALSE`,
 }
 
-func ChannelQueryOrInsert(channelUid string, server *Server) (c *Channel, e error) {
-	c = new(Channel)
+func ChannelQueryOrInsert(channelUid string, server *types.Server) (c *types.Channel, e error) {
+	c = new(types.Channel)
 	row := moeDb.QueryRow(channelQueryUid, channelUid)
-	if e = row.Scan(&c.Id, &c.serverId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.DeletePin, &c.MoveChannelUid); e != nil {
+	if e = row.Scan(&c.Id, &c.ServerId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.DeletePin, &c.MoveChannelUid); e != nil {
 		if e == sql.ErrNoRows {
 			// no row, so insert it add in default values
-			toInsert := &Channel{ChannelUid: channelUid, serverId: server.Id}
-			e = moeDb.QueryRow(channelInsert, toInsert.serverId, toInsert.ChannelUid).Scan(&c.Id)
+			toInsert := &types.Channel{ChannelUid: channelUid, ServerId: server.Id}
+			e = moeDb.QueryRow(channelInsert, toInsert.ServerId, toInsert.ChannelUid).Scan(&c.Id)
 			if e != nil {
 				log.Println("Error inserting channel to db ", e)
 				return nil, e
@@ -65,7 +56,7 @@ func ChannelQueryOrInsert(channelUid string, server *Server) (c *Channel, e erro
 	return c, nil
 }
 
-func ChannelUpdate(channel *Channel) (err error) {
+func ChannelUpdate(channel *types.Channel) (err error) {
 	_, err = moeDb.Exec(channelUpdate, channel.Id, channel.BotAllowed, channel.MovePins, channel.MoveTextPins, channel.DeletePin, channel.MoveChannelUid)
 	if err != nil {
 		log.Println("Error update channel table", err)
@@ -74,7 +65,7 @@ func ChannelUpdate(channel *Channel) (err error) {
 	return
 }
 
-func ChannelQueryByServer(server Server) (channels []Channel, err error) {
+func ChannelQueryByServer(server types.Server) (channels []types.Channel, err error) {
 	rows, err := moeDb.Query(channelQueryServerId, server.Id)
 	if err != nil {
 		log.Println("Error querying for channels", err)
@@ -82,8 +73,8 @@ func ChannelQueryByServer(server Server) (channels []Channel, err error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var c Channel
-		if err = rows.Scan(&c.Id, &c.serverId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.DeletePin, &c.MoveChannelUid); err != nil {
+		var c types.Channel
+		if err = rows.Scan(&c.Id, &c.ServerId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.DeletePin, &c.MoveChannelUid); err != nil {
 			log.Println("Error scanning from channel table:", err)
 			return
 		}
@@ -92,10 +83,10 @@ func ChannelQueryByServer(server Server) (channels []Channel, err error) {
 	return
 }
 
-func ChannelQueryById(channelId int) (c *Channel, e error) {
-	c = new(Channel)
+func ChannelQueryById(channelId int) (c *types.Channel, e error) {
+	c = new(types.Channel)
 	row := moeDb.QueryRow(channelQueryId, channelId)
-	if e = row.Scan(&c.Id, &c.serverId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.DeletePin, &c.MoveChannelUid); e != nil {
+	if e = row.Scan(&c.Id, &c.ServerId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.DeletePin, &c.MoveChannelUid); e != nil {
 		log.Println("Error querying channel", e)
 		return nil, e
 	}

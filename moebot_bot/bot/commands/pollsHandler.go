@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -14,7 +15,7 @@ import (
 )
 
 type PollsHandler struct {
-	pollsList []*db.Poll
+	pollsList []*types.Poll
 }
 
 func NewPollsHandler() *PollsHandler {
@@ -57,7 +58,7 @@ func (handler *PollsHandler) openPoll(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return
 	}
-	poll := &db.Poll{
+	poll := &types.Poll{
 		Title:     title,
 		UserUid:   pack.message.Author.ID,
 		ChannelId: channel.Id,
@@ -157,7 +158,7 @@ func (handler *PollsHandler) closePoll(pack *CommPackage) {
 	poll.Open = false
 }
 
-func (handler *PollsHandler) pollFromId(id int) *db.Poll {
+func (handler *PollsHandler) pollFromId(id int) *types.Poll {
 	for _, p := range handler.pollsList {
 		if p.Id == id {
 			return p
@@ -182,7 +183,7 @@ func (handler *PollsHandler) checkSingleVote(session *discordgo.Session, reactio
 	}
 }
 
-func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *db.Poll, reactionAdd *discordgo.MessageReactionAdd) {
+func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *types.Poll, reactionAdd *discordgo.MessageReactionAdd) {
 	channel, err := db.ChannelQueryById(poll.ChannelId)
 	if err != nil {
 		log.Println("Cannot retrieve poll channel informations", err)
@@ -216,7 +217,7 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 	}
 }
 
-func reactionIsOption(options []*db.PollOption, emojiID string) bool {
+func reactionIsOption(options []*types.PollOption, emojiID string) bool {
 	for _, o := range options {
 		if o.ReactionId == emojiID {
 			return true
@@ -225,7 +226,7 @@ func reactionIsOption(options []*db.PollOption, emojiID string) bool {
 	return false
 }
 
-func updatePollVotes(poll *db.Poll, session *discordgo.Session) error {
+func updatePollVotes(poll *types.Poll, session *discordgo.Session) error {
 	channel, err := db.ChannelQueryById(poll.ChannelId)
 	if err != nil {
 		return err
@@ -243,7 +244,7 @@ func updatePollVotes(poll *db.Poll, session *discordgo.Session) error {
 	return nil
 }
 
-func openPollMessage(poll *db.Poll, user *discordgo.User) string {
+func openPollMessage(poll *types.Poll, user *discordgo.User) string {
 	message := user.Mention() + " created "
 	if poll.Title != "" {
 		message += "the poll **" + poll.Title + "**!\n"
@@ -257,7 +258,7 @@ func openPollMessage(poll *db.Poll, user *discordgo.User) string {
 	return message
 }
 
-func closePollMessage(poll *db.Poll, user *discordgo.User) string {
+func closePollMessage(poll *types.Poll, user *discordgo.User) string {
 	var message string
 	if poll.Open {
 		if user.ID == poll.UserUid {
@@ -294,8 +295,8 @@ func closePollMessage(poll *db.Poll, user *discordgo.User) string {
 	return message
 }
 
-func pollWinners(poll *db.Poll) []*db.PollOption {
-	var winningOptions []*db.PollOption
+func pollWinners(poll *types.Poll) []*types.PollOption {
+	var winningOptions []*types.PollOption
 	maxVotes := 0
 	for _, option := range poll.Options {
 		if option.Votes > maxVotes {
@@ -312,7 +313,7 @@ func pollWinners(poll *db.Poll) []*db.PollOption {
 	return winningOptions
 }
 
-func createPollOptions(options []string) []*db.PollOption {
+func createPollOptions(options []string) []*types.PollOption {
 	//TODO: Move to a database table?
 	optionNames := []string{
 		"regional_indicator_a",
@@ -370,9 +371,9 @@ func createPollOptions(options []string) []*db.PollOption {
 		"🇾",
 		"🇿",
 	}
-	var result []*db.PollOption
+	var result []*types.PollOption
 	for i, s := range options {
-		result = append(result, &db.PollOption{
+		result = append(result, &types.PollOption{
 			Description:  strings.Trim(s, " "),
 			ReactionId:   optionIds[i],
 			ReactionName: optionNames[i],

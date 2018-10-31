@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type ChangelogCommand struct {
@@ -86,8 +86,8 @@ func (cc *ChangelogCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (cc *ChangelogCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+func (cc *ChangelogCommand) GetPermLevel() types.Permission {
+	return types.PermAll
 }
 
 func (cc *ChangelogCommand) GetCommandKeys() []string {

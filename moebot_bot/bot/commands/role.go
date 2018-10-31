@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"crypto/sha256"
-	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -11,11 +9,10 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
+	"github.com/camd67/moebot/moebot_bot/util/rolerules"
 )
-
-const roleCodeSearchText = "[code]"
-const roleCodeLength = 6
 
 type RoleCommand struct {
 	ComPrefix   string
@@ -36,236 +33,93 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 		printAllRoles(server, vetRole, pack)
 	} else {
 		var role *discordgo.Role
-		var roleGroup db.RoleGroup
-		var dbRole db.Role
-		var confirmCodes []string
-		// TODO: convert this to use the actual veteran name
-		if strings.EqualFold(pack.params[0], "veteran") {
-			// before anything, if the server doesn't have a rank or role bail out
-			if !server.VeteranRank.Valid || !server.VeteranRole.Valid {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, this server isn't setup to handle veteran role yet! Contact the server admins.")
-				return
-			}
+		var dbRole types.Role
 
-			// make some placeholder veteran role tables
-			roleGroup = db.RoleGroup{
-				Name: "Veteran",
-				Type: db.GroupTypeExclusive,
-			}
-			dbRole = db.Role{
-				RoleUid: server.VeteranRole.String,
-				Trigger: sql.NullString{
-					String: "veteran",
-					Valid:  true,
-				},
-			}
-			usr, err := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
-			var pointCountMessage string
-			if usr != nil {
-				pointCountMessage = fmt.Sprintf("%.2f%% of the way to veteran", float64(usr.Rank)/float64(server.VeteranRank.Int64)*100)
-			} else {
-				pointCountMessage = "Unranked"
-			}
-			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! You're currently: "+pointCountMessage)
-				return
-			}
-			if int64(usr.Rank) >= server.VeteranRank.Int64 {
-				role = vetRole
-			} else {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you don't have enough veteran points yet! You're currently: "+pointCountMessage)
-				return
-			}
-		} else {
-			// load up the trigger to see if it exists, stripping out anything prefixed with - (our security text)
-			var roleNameBuf strings.Builder
-			for _, param := range pack.params {
-				if !strings.HasPrefix(param, "-") {
-					roleNameBuf.WriteString(param)
-					roleNameBuf.WriteString(" ")
-				} else {
-					confirmCodes = append(confirmCodes, param)
-				}
-			}
-			roleNameString := strings.TrimSpace(roleNameBuf.String())
-			if len(roleNameString) == 0 {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you must provide a valid role name")
-				return
-			}
-			dbRole, err = db.RoleQueryTrigger(roleNameString, server.Id)
-			// an invalid trigger should pretty much never happen, but checking for it anyways
-			// however an error may indicate that there were simply no roles in the result set
-			if err != nil || !dbRole.Trigger.Valid {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role, or the role you provided doesn't exist. "+
-					"Please provide a valid role. `"+rc.ComPrefix+" role` to list all roles for this server.")
-				return
-			}
-			role = moeDiscord.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
-			if role == nil {
-				log.Println("Nil dbRole when searching for dbRole id:" + dbRole.RoleUid)
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server. It may have been deleted.")
-				return
-			}
-			roleGroup, err = db.RoleGroupQueryId(dbRole.GroupId)
-			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, There was an issue finding that role group. This is an issue with moebot "+
-					"and not discord.")
-				return
+		var roleNameBuf strings.Builder
+		for _, param := range pack.params {
+			if !strings.HasPrefix(param, "-") {
+				roleNameBuf.WriteString(param)
+				roleNameBuf.WriteString(" ")
 			}
 		}
-		// process the role to see if it has a confirmation message, then decide if we need to bail out or continue to the role update phase
-		if !rc.processRoleConfirmation(dbRole, role, pack, confirmCodes) {
+		roleNameString := strings.TrimSpace(roleNameBuf.String())
+		dbRole, err = db.RoleQueryTrigger(roleNameString, server.Id)
+		// an invalid trigger should pretty much never happen, but checking for it anyways
+		// however an error may indicate that there were simply no roles in the result set
+		if err != nil || !dbRole.Trigger.Valid {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching the role, or the role you provided doesn't exist. "+
+				"Please provide a valid role. `"+rc.ComPrefix+" role` to list all roles for this server.")
 			return
 		}
-
-		rc.updateUserRoles(pack, role, roleGroup)
-	}
-}
-
-/*
-Actually go through and update the roles for this user based on the given role and role group
-*/
-func (rc *RoleCommand) updateUserRoles(pack *CommPackage, role *discordgo.Role, group db.RoleGroup) {
-	if util.StrContains(pack.member.Roles, role.ID, util.CaseSensitive) {
-		if group.Type == db.GroupTypeExclusiveNoRemove {
-			pack.session.ChannelMessageSend(pack.channel.ID, "You've already got that role! You can change roles but can't remove them in the `"+
-				group.Name+"` group.")
+		role = moeDiscord.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
+		if role == nil {
+			log.Println("Nil dbRole when searching for dbRole id:" + dbRole.RoleUid)
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server. It may have been deleted.")
+			return
+		}
+		rules, err := rolerules.GetRulesForRole(&server, &dbRole, rc.ComPrefix)
+		if err != nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem fetching the apply rules for the given role. Please try again.")
+			return
+		}
+		usrRank, _ := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
+		action := &rolerules.RoleAction{
+			Role:            &dbRole,
+			UserRank:        usrRank,
+			Member:          pack.member,
+			Guild:           pack.guild,
+			Channel:         pack.channel,
+			OriginalMessage: pack.message,
+		}
+		if util.StrContains(pack.member.Roles, role.ID, util.CaseSensitive) {
+			action.Action = rolerules.RoleRemove
 		} else {
+			action.Action = rolerules.RoleAdd
+		}
+		if !checkRules(rules, action, pack) {
+			return
+		}
+		if !applyRules(rules, action, pack) {
+			return
+		}
+		if action.Action == rolerules.RoleRemove {
 			pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, role.ID)
-			pack.session.ChannelMessageSend(pack.channel.ID, "Removed role "+role.Name+" for "+pack.message.Author.Mention())
-		}
-	} else {
-		if group.Type == db.GroupTypeAny {
-			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
-			pack.session.ChannelMessageSend(pack.channel.ID, "Added role "+role.Name+" for "+pack.message.Author.Mention())
+			pack.session.ChannelMessageSend(pack.channel.ID, "Removed role `"+role.Name+"` for "+pack.message.Author.Mention())
 		} else {
-			// This case needs to check to see if the user has any other roles from this group, since they may not be allowed to add more
-			// (GroupTypeExclusive, GroupTypeExclusiveNoRemove)
-			fullGroupRoles, err := db.RoleQueryGroup(group.Id)
-			if err != nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, There was an issue finding that role group. This is an issue with moebot "+
-					"and not discord.")
-				return
-			}
-			// we'll always be adding a role here
-			err = pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
-			if err != nil {
-				// We can add better handling here for what kind of error we got and notify the server appropriately
-				log.Println("error adding role to user "+pack.message.Author.ID+" with role "+role.ID+" with error: ", err)
-				pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry there was an error adding your new role! Make sure moebot has "+
-					"permission to edit roles")
-				return
-			}
-			var message strings.Builder
-			message.WriteString("Added role `")
-			message.WriteString(role.Name)
-			message.WriteString("` for ")
-			message.WriteString(pack.message.Author.Mention())
-			// we should only find one other role, but just in case
-			foundOtherRole := false
-			for _, dbGroupRole := range fullGroupRoles {
-				// only send a message that we removed the role if they actually have it and it's not the one we just added
-				if dbGroupRole.RoleUid != role.ID && util.StrContains(pack.member.Roles, dbGroupRole.RoleUid, util.CaseSensitive) {
-					roleToRemove := moeDiscord.FindRoleById(pack.guild.Roles, dbGroupRole.RoleUid)
-
-					// Check for an error first
-					err = pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, dbGroupRole.RoleUid)
-					if err != nil {
-						message.WriteString("\nFailed to remove: `")
-						message.WriteString(roleToRemove.Name)
-						message.WriteString("`")
-						log.Println("error removing role from "+pack.message.Author.ID+" with role "+role.ID+" with error: ", err)
-						continue
-					}
-
-					// The user already has this role, remove it and tell them
-					if !foundOtherRole {
-						message.WriteString("\nAlso removed:")
-						foundOtherRole = true
-					}
-					message.WriteString(" `")
-					message.WriteString(roleToRemove.Name)
-					message.WriteString("`")
-				}
-			}
-			pack.session.ChannelMessageSend(pack.channel.ID, message.String())
+			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
+			pack.session.ChannelMessageSend(pack.channel.ID, "Added role `"+role.Name+"` for "+pack.message.Author.Mention())
 		}
 	}
 }
 
-func (rc *RoleCommand) processRoleConfirmation(dbRole db.Role, roleToAdd *discordgo.Role, pack *CommPackage, confirmCodes []string) (shouldProceed bool) {
-	// we only want to check for a confirmation when we have an actual confirmation message and they don't already have the role
-	if dbRole.ConfirmationMessage.Valid && dbRole.ConfirmationMessage.String != "" && !util.StrContains(pack.member.Roles, roleToAdd.ID, util.CaseSensitive) {
-		// no confirm codes provided, given them their confirmation code
-		if len(confirmCodes) <= 0 {
-			err := rc.sendConfirmationMessage(pack.session, pack.channel, dbRole, pack.message.Author)
-			if err == nil {
-				pack.session.ChannelMessageSend(pack.channel.ID, pack.message.Author.Mention()+" check your PM's for further instructions!")
-			} else {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, I couldn't send you a PM! Please check your settings to allow direct messages from "+
-					"users on this server.")
+func checkRules(rules []rolerules.RoleRule, action *rolerules.RoleAction, pack *CommPackage) bool {
+	for _, rule := range rules {
+		check, message := rule.Check(pack.session, action)
+		if !check {
+			if message != "" {
+				pack.session.ChannelMessageSend(pack.channel.ID, message)
 			}
 			return false
-		}
-
-		// they gave us some sort of confirmation code, delete their message
-		pack.session.ChannelMessageDelete(pack.channel.ID, pack.message.ID)
-
-		// Optionally check for a security answer, since we can have just a confirmation code and no security
-		if dbRole.ConfirmationSecurityAnswer.Valid && dbRole.ConfirmationSecurityAnswer.String != "" {
-			if len(confirmCodes) != 2 {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert a confirmation code and security answer to access "+
-					"this role. Use `"+rc.ComPrefix+" "+dbRole.Trigger.String+"` to receive a DM containing detailed instructions.")
-				return false
-			}
-			if !util.StrContains(confirmCodes, dbRole.ConfirmationSecurityAnswer.String, util.CaseSensitive) ||
-				!util.StrContains(confirmCodes, "-"+rc.getRoleCode(roleToAdd.ID, pack.message.Author.ID), util.CaseSensitive) {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert the correct confirmation code to access this role.")
-				return false
-			}
-		} else {
-			if len(confirmCodes) != 1 {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert a confirmation code to access this role. Use `"+
-					rc.ComPrefix+" "+dbRole.Trigger.String+"` to receive a DM containing detailed instructions.")
-				return false
-			}
-			if !util.StrContains(confirmCodes, "-"+rc.getRoleCode(roleToAdd.ID, pack.message.Author.ID), util.CaseSensitive) {
-				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you need to insert the correct confirmation code to access this role.")
-				return false
-			}
 		}
 	}
 	return true
 }
-func (rc *RoleCommand) sendConfirmationMessage(session *discordgo.Session, channel *discordgo.Channel, role db.Role, user *discordgo.User) error {
-	userChannel, err := session.UserChannelCreate(user.ID)
-	if err != nil {
-		// could log error creating user channel, but seems like it'll clutter the logs for a valid scenario..
-		return err
+
+func applyRules(rules []rolerules.RoleRule, action *rolerules.RoleAction, pack *CommPackage) bool {
+	for _, rule := range rules {
+		check, message := rule.Apply(pack.session, action)
+		if !check {
+			if message != "" {
+				pack.session.ChannelMessageSend(pack.channel.ID, message)
+			}
+			return false
+		}
 	}
-	roleCode := rc.getRoleCode(role.RoleUid, user.ID)
-	var messageText string
-	if strings.Contains(strings.ToLower(role.ConfirmationMessage.String), roleCodeSearchText) {
-		messageText = strings.Replace(role.ConfirmationMessage.String, roleCodeSearchText, roleCode, -1)
-	} else {
-		messageText = role.ConfirmationMessage.String + "\nYour confirmation code: `-" + roleCode + "`"
-	}
-	_, err = session.ChannelMessageSend(userChannel.ID, messageText)
-	return err
+	return true
 }
 
-/*
-Returns a 6 character role code string that is unique per user and per role.
-This should NOT be used for security features as it is not a secure algorithm.
-*/
-func (rc *RoleCommand) getRoleCode(roleUID, userUID string) string {
-	hash := sha256.New()
-	hash.Write([]byte(roleUID + userUID))
-	return string(fmt.Sprintf("%x", hash.Sum(nil))[0:roleCodeLength])
-}
-
-func (rc *RoleCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+func (rc *RoleCommand) GetPermLevel() types.Permission {
+	return types.PermAll
 }
 
 func (rc *RoleCommand) GetCommandKeys() []string {
@@ -275,7 +129,7 @@ func (rc *RoleCommand) GetCommandKeys() []string {
 func (rc *RoleCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s role <role name>` - Changes your role to one of the approved roles. `%[1]s role` to list all the roles", commPrefix)
 }
-func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage) {
+func printAllRoles(server types.Server, vetRole *discordgo.Role, pack *CommPackage) {
 	triggersByGroup := make(map[string][]string)
 	// go find all the roles for this server
 	roles, err := db.RoleQueryServer(server)
@@ -302,9 +156,11 @@ func printAllRoles(server db.Server, vetRole *discordgo.Role, pack *CommPackage)
 		// Could maybe make a map here, but the group size is going to be pretty small
 		foundGroup := false
 		for _, group := range roleGroups {
-			if role.GroupId == group.Id {
-				triggersByGroup[group.Name] = append(triggersByGroup[group.Name], role.Trigger.String)
-				foundGroup = true
+			for _, gr := range role.Groups {
+				if gr == group.Id {
+					triggersByGroup[group.Name] = append(triggersByGroup[group.Name], role.Trigger.String)
+					foundGroup = true
+				}
 			}
 		}
 		if !foundGroup {
