@@ -71,7 +71,7 @@ func RaffleEntryUpdateMany(entries []types.RaffleEntry, ticketAdd int) error {
 	idCollection := "{" + strings.Join(ids, ",") + "}"
 	_, err := moeDb.Exec(raffleUpdateMany, ticketAdd, idCollection)
 	if err != nil {
-		log.Println("Error updating raffle entry to database, ", err)
+		log.Println("Error updating multiple raffle entry to database, ", err)
 		return err
 	}
 	return nil
@@ -80,7 +80,7 @@ func RaffleEntryUpdateMany(entries []types.RaffleEntry, ticketAdd int) error {
 func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries []types.RaffleEntry, err error) {
 	rows, err := moeDb.Query(raffleQuery, userUid, guildUid)
 	if err != nil {
-		log.Println("Error querying for raffle entries")
+		log.Println("Error querying for raffle entries by user")
 		return nil, err
 	}
 	defer rows.Close()
@@ -98,7 +98,7 @@ func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries []types.Ra
 func RaffleEntryQueryAny(guildUid string) (raffleEntries []types.RaffleEntry, err error) {
 	rows, err := moeDb.Query(raffleQueryAny, guildUid)
 	if err != nil {
-		log.Println("Error querying for raffle entries")
+		log.Println("Error querying for raffle entries by guild")
 		return nil, err
 	}
 	defer rows.Close()

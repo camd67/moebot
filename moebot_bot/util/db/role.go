@@ -174,7 +174,7 @@ func RoleQueryOrInsert(role types.Role) (r types.Role, err error) {
 func RoleQueryServer(s types.Server) (roles []types.Role, err error) {
 	rows, err := moeDb.Query(roleQueryServer, s.Id)
 	if err != nil {
-		log.Println("Error querying for role", err)
+		log.Println("Error querying for role in server role query", err)
 		return
 	}
 	defer rows.Close()
@@ -198,7 +198,7 @@ func RoleQueryServer(s types.Server) (roles []types.Role, err error) {
 func RoleQueryGroup(groupId int) (roles []types.Role, err error) {
 	rows, err := moeDb.Query(roleQueryGroup, groupId)
 	if err != nil {
-		log.Println("Error querying for role", err)
+		log.Println("Error querying for role in group role query", err)
 		return
 	}
 	defer rows.Close()
