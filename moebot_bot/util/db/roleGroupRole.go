@@ -90,3 +90,11 @@ func contains(slice []int, value int) bool {
 	}
 	return false
 }
+
+func roleGroupRoleCreateTable() {
+	_, err := moeDb.Exec(roleGroupRoleTable)
+	if err != nil {
+		log.Println("Error creating role group relation table", err)
+		return
+	}
+}

@@ -50,5 +50,5 @@ func (r *Exclusive) Apply(session *discordgo.Session, action *RoleAction) (succe
 			builder.WriteString("`")
 		}
 	}
-	return err != nil, builder.String()
+	return err == nil, builder.String()
 }

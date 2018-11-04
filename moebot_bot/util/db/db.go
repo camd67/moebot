@@ -69,7 +69,8 @@ func createTables() {
 	scheduledOperationCreateTable()
 	//CHANNEL ROTATION SCHEDULER
 	channelRotationCreateTable()
-
+	//ROLE GROUP RELATION TABLE
+	roleGroupRoleCreateTable()
 }
 
 /*

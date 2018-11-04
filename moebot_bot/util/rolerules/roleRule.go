@@ -49,16 +49,19 @@ func GetRulesForRole(server *types.Server, role *types.Role, comPrefix string) (
 			log.Println("Error while retrieving role group during rules initialization", err)
 			return nil, err
 		}
+		relatedRoles, err := db.RoleQueryGroup(gID)
+		if err != nil {
+			log.Println("Error while retrieving related group roles during rules initialization", err)
+			return nil, err
+		}
 		if group.Type == types.GroupTypeExclusive || group.Type == types.GroupTypeExclusiveNoRemove {
-			relatedRoles, err := db.RoleQueryGroup(gID)
-			if err != nil {
-				log.Println("Error while retrieving related group roles during rules initialization", err)
-				return nil, err
-			}
 			result = append(result, &Exclusive{ExclusiveRoles: relatedRoles})
 		}
 		if group.Type == types.GroupTypeExclusiveNoRemove {
 			result = append(result, &NoRemove{ReferenceGroup: group})
+		}
+		if group.Type == types.GroupTypeNoContemporary {
+			result = append(result, &NoContemporary{ExclusiveRoles: relatedRoles})
 		}
 	}
 	return result, nil

@@ -33,9 +33,9 @@ const (
 							WHERE role_group_role.group_id = $1`
 	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
 
-	roleUpdate = `UPDATE role SET Permission = $3, ConfirmationMessage = $4, ConfirmationSecurityAnswer = $5, Trigger = $6 WHERE Id = $1`
+	roleUpdate = `UPDATE role SET Permission = $2, ConfirmationMessage = $3, ConfirmationSecurityAnswer = $4, Trigger = $5 WHERE Id = $1`
 
-	roleInsert = `INSERT INTO role(ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	roleInsert = `INSERT INTO role(ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger) VALUES($1, $2, $3, $4, $5, $6) RETURNING id`
 
 	roleDelete = `DELETE FROM role WHERE role.RoleUid = $1 AND role.ServerId = (SELECT server.id FROM server WHERE server.guilduid = $2)`
 )
@@ -236,12 +236,14 @@ func RoleQueryTrigger(trigger string, serverId int) (r types.Role, err error) {
 func RoleQueryRoleUid(roleUid string, serverId int) (r types.Role, err error) {
 	row := moeDb.QueryRow(roleQueryServerRole, roleUid, serverId)
 	err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
-	if err != nil && err != sql.ErrNoRows {
-		log.Println("Error querying for role by UID and serverID", err)
-	}
-	if r.Groups, err = roleGroupRelationQueryRole(r.Id); err != nil {
-		log.Println("Error scanning from role group relation table:", err)
-		return
+	if err == nil {
+		if r.Groups, err = roleGroupRelationQueryRole(r.Id); err != nil {
+			log.Println("Error scanning from role group relation table:", err)
+		}
+	} else {
+		if err != sql.ErrNoRows {
+			log.Println("Error querying for role by UID and serverID", err)
+		}
 	}
 	// return whatever we get, error or row
 	return

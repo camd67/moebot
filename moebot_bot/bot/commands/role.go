@@ -76,46 +76,52 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 		} else {
 			action.Action = rolerules.RoleAdd
 		}
-		if !checkRules(rules, action, pack) {
+		success, message := checkRules(rules, action, pack)
+		if message != "" {
+			pack.session.ChannelMessageSend(pack.channel.ID, message)
+		}
+		if !success {
 			return
 		}
-		if !applyRules(rules, action, pack) {
+		success, message = applyRules(rules, action, pack)
+		if !success {
 			return
 		}
+		var builder strings.Builder
 		if action.Action == rolerules.RoleRemove {
 			pack.session.GuildMemberRoleRemove(pack.guild.ID, pack.message.Author.ID, role.ID)
-			pack.session.ChannelMessageSend(pack.channel.ID, "Removed role `"+role.Name+"` for "+pack.message.Author.Mention())
+			builder.WriteString("Removed role `" + role.Name + "` for " + pack.message.Author.Mention())
 		} else {
 			pack.session.GuildMemberRoleAdd(pack.guild.ID, pack.message.Author.ID, role.ID)
-			pack.session.ChannelMessageSend(pack.channel.ID, "Added role `"+role.Name+"` for "+pack.message.Author.Mention())
+			builder.WriteString("Added role `" + role.Name + "` for " + pack.message.Author.Mention())
 		}
+		builder.WriteString(message) //messages from the apply functions are sent after the role change confirmation
+		pack.session.ChannelMessageSend(pack.channel.ID, builder.String())
 	}
 }
 
-func checkRules(rules []rolerules.RoleRule, action *rolerules.RoleAction, pack *CommPackage) bool {
+func checkRules(rules []rolerules.RoleRule, action *rolerules.RoleAction, pack *CommPackage) (bool, string) {
+	var builder strings.Builder
 	for _, rule := range rules {
 		check, message := rule.Check(pack.session, action)
+		builder.WriteString(message)
 		if !check {
-			if message != "" {
-				pack.session.ChannelMessageSend(pack.channel.ID, message)
-			}
-			return false
+			return false, builder.String()
 		}
 	}
-	return true
+	return true, builder.String()
 }
 
-func applyRules(rules []rolerules.RoleRule, action *rolerules.RoleAction, pack *CommPackage) bool {
+func applyRules(rules []rolerules.RoleRule, action *rolerules.RoleAction, pack *CommPackage) (bool, string) {
+	var builder strings.Builder
 	for _, rule := range rules {
 		check, message := rule.Apply(pack.session, action)
+		builder.WriteString(message)
 		if !check {
-			if message != "" {
-				pack.session.ChannelMessageSend(pack.channel.ID, message)
-			}
-			return false
+			return false, builder.String()
 		}
 	}
-	return true
+	return true, builder.String()
 }
 
 func (rc *RoleCommand) GetPermLevel() types.Permission {

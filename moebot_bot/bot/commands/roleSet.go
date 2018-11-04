@@ -136,7 +136,7 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			}
 			return
 		}
-		if updateRoleGroups(server, oldRole, group) != nil {
+		if updateRoleGroups(server, &oldRole, group) != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "There was an error updating role groups. This is an issue with moebot and not discord")
 			return
 		}
@@ -151,7 +151,7 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func updateRoleGroups(server types.Server, role types.Role, group types.RoleGroup) error {
+func updateRoleGroups(server types.Server, role *types.Role, group types.RoleGroup) error {
 	defaultGroup, err := db.RoleGroupQueryName(db.UncategorizedGroup, server.Id)
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Error while retrieving the default role group", err)
