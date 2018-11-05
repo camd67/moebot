@@ -9,6 +9,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
+	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type ChannelRotationScheduler struct {
@@ -26,7 +27,7 @@ func (s *ChannelRotationScheduler) Execute(operationId int64) {
 		log.Println(fmt.Sprintf("Failed to retrieve operation informations for Operation ID: %v (operation is possibly being created). ", operationId), err)
 		return
 	}
-	role := util.GetEveryoneRoleForServer(s.session, channelRotation.ServerID)
+	role := moeDiscord.GetEveryoneRoleForServer(s.session, channelRotation.ServerID)
 	if role == nil {
 		log.Println(fmt.Sprintf("Failed to retrieve everyone role informations for Server ID: %v. ", channelRotation.ServerID), err)
 		return
@@ -57,7 +58,7 @@ func (s *ChannelRotationScheduler) rotateChannels(role *discordgo.Role, channelT
 }
 
 func (s *ChannelRotationScheduler) hideChannel(role *discordgo.Role, channelUID string) error {
-	permissions, err := util.GetCurrentRolePermissionsForChannel(s.session, channelUID, role.ID)
+	permissions, err := moeDiscord.GetCurrentRolePermissionsForChannel(s.session, channelUID, role.ID)
 	if err != nil {
 		log.Println("Error while hiding channel, failed to get permissions for Role UID: " + role.ID + ".")
 		return err
@@ -75,7 +76,7 @@ func (s *ChannelRotationScheduler) hideChannel(role *discordgo.Role, channelUID 
 }
 
 func (s *ChannelRotationScheduler) showChannel(role *discordgo.Role, channelUID string) error {
-	permissions, err := util.GetCurrentRolePermissionsForChannel(s.session, channelUID, role.ID)
+	permissions, err := moeDiscord.GetCurrentRolePermissionsForChannel(s.session, channelUID, role.ID)
 	if err != nil {
 		log.Println("Error while showing channel, failed to get permissions for Role UID: " + role.ID + ".")
 		return err

@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/camd67/moebot/moebot_bot/util"
+
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -29,8 +31,8 @@ const (
 	roleQuery           = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE Id = $1`
 	roleQueryTrigger    = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE UPPER(Trigger) = UPPER($1) AND ServerId = $2`
 	roleQueryGroup      = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role 
-							INNER JOIN role_group_role ON role_group_role.role_id = role.Id
-							WHERE role_group_role.group_id = $1`
+							INNER JOIN group_membership ON group_membership.role_id = role.Id
+							WHERE group_membership.group_id = $1`
 	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
 
 	roleUpdate = `UPDATE role SET Permission = $2, ConfirmationMessage = $3, ConfirmationSecurityAnswer = $4, Trigger = $5 WHERE Id = $1`
@@ -76,7 +78,7 @@ func RoleInsertOrUpdate(role types.Role) error {
 				return err
 			}
 			for _, groupID := range role.Groups {
-				err = roleGroupRelationAdd(insertID, groupID)
+				err = groupMembershipAdd(insertID, groupID)
 				if err != nil {
 					log.Println("Error inserting role group relationship to db", err)
 					tx.Rollback()
@@ -90,7 +92,7 @@ func RoleInsertOrUpdate(role types.Role) error {
 		}
 	} else {
 		// got a row, update it
-		r.Groups, err = roleGroupRelationQueryRole(r.Id)
+		r.Groups, err = groupMembershipQueryByRoleID(r.Id)
 		if err != nil && err != sql.ErrNoRows {
 			log.Println("Error scanning for role group relationships", err)
 			return err
@@ -114,18 +116,18 @@ func RoleInsertOrUpdate(role types.Role) error {
 			tx.Rollback()
 			return err
 		}
-		groupsToAdd := subtract(role.Groups, r.Groups)
+		groupsToAdd := util.Subtract(role.Groups, r.Groups)
 		for _, groupID := range groupsToAdd {
-			err = roleGroupRelationAdd(r.Id, groupID)
+			err = groupMembershipAdd(r.Id, groupID)
 			if err != nil {
 				log.Println("Error inserting role group relationship to db", err)
 				tx.Rollback()
 				return err
 			}
 		}
-		groupsToRemove := subtract(r.Groups, role.Groups)
+		groupsToRemove := util.Subtract(r.Groups, role.Groups)
 		for _, groupID := range groupsToRemove {
-			err = roleGroupRelationRemove(r.Id, groupID)
+			err = groupMembershipRemove(r.Id, groupID)
 			if err != nil {
 				log.Println("Error removing role group relationship to db", err)
 				tx.Rollback()
@@ -154,7 +156,7 @@ func RoleQueryOrInsert(role types.Role) (r types.Role, err error) {
 				return
 			}
 			for _, groupID := range role.Groups {
-				err = roleGroupRelationAdd(role.Id, groupID)
+				err = groupMembershipAdd(role.Id, groupID)
 				if err != nil {
 					log.Println("Error inserting role group relationship to db", err)
 					tx.Rollback()
@@ -165,7 +167,7 @@ func RoleQueryOrInsert(role types.Role) (r types.Role, err error) {
 			r = role
 		}
 	} else {
-		r.Groups, err = roleGroupRelationQueryRole(r.Id)
+		r.Groups, err = groupMembershipQueryByRoleID(r.Id)
 	}
 	// got a row, return it
 	return
@@ -186,7 +188,7 @@ func RoleQueryServer(s types.Server) (roles []types.Role, err error) {
 			log.Println("Error scanning from role table:", err)
 			return
 		}
-		if r.Groups, err = roleGroupRelationQueryRole(r.Id); err != nil {
+		if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
 			log.Println("Error scanning from role group relation table:", err)
 			return
 		}
@@ -210,7 +212,7 @@ func RoleQueryGroup(groupId int) (roles []types.Role, err error) {
 			log.Println("Error scanning from role table:", err)
 			return
 		}
-		if r.Groups, err = roleGroupRelationQueryRole(r.Id); err != nil {
+		if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
 			log.Println("Error scanning from role group relation table:", err)
 			return
 		}
@@ -225,7 +227,7 @@ func RoleQueryTrigger(trigger string, serverId int) (r types.Role, err error) {
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Error querying for role by trigger", err)
 	}
-	if r.Groups, err = roleGroupRelationQueryRole(r.Id); err != nil {
+	if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
 		log.Println("Error scanning from role group relation table:", err)
 		return
 	}
@@ -237,7 +239,7 @@ func RoleQueryRoleUid(roleUid string, serverId int) (r types.Role, err error) {
 	row := moeDb.QueryRow(roleQueryServerRole, roleUid, serverId)
 	err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
 	if err == nil {
-		if r.Groups, err = roleGroupRelationQueryRole(r.Id); err != nil {
+		if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
 			log.Println("Error scanning from role group relation table:", err)
 		}
 	} else {
@@ -370,7 +372,7 @@ func roleDatabaseUpdate() {
 		return
 	}
 	const oldRoleSelectGroups = "SELECT Id, GroupId FROM role WHERE GroupId <> 0"
-	const insertRoleRelation = "INSERT INTO role_group_role(role_id, group_id) VALUES($1,$2) ON CONFLICT DO NOTHING"
+	const insertRoleRelation = "INSERT INTO group_membership(role_id, group_id) VALUES($1,$2) ON CONFLICT DO NOTHING"
 	const oldRoleRemoveRelation = "UPDATE role SET GroupId = 0 WHERE Id = $1"
 	rows, err := moeDb.Query(oldRoleSelectGroups)
 	if err != nil {

@@ -1,9 +1,12 @@
 package moeDiscord
 
 import (
+	"fmt"
+	"log"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util/db"
 )
 
 /*
@@ -51,4 +54,82 @@ func FindPermissionByRoleID(overwrites []*discordgo.PermissionOverwrite, toFind 
 		}
 	}
 	return nil, false
+}
+
+func RetrieveBasePermissions(session *discordgo.Session, channel *discordgo.Channel, role *discordgo.Role, flags []int) map[int]bool {
+	result := make(map[int]bool)
+	permission, ok := FindPermissionByRoleID(channel.PermissionOverwrites, role.ID)
+	if ok {
+		mapPermissions(result, permission, flags)
+	}
+	if !ok || unsetFlags(permission, flags) { //no overwrite defined for the channel, looking in parent category
+		parent, _ := session.Channel(channel.ParentID)
+		permission, ok = FindPermissionByRoleID(parent.PermissionOverwrites, role.ID)
+		if ok {
+			mapPermissions(result, permission, flags)
+		}
+		if !ok || unsetFlags(permission, flags) { //no overwrite defined for the channel, using role permissions
+			permission = &discordgo.PermissionOverwrite{
+				ID:   role.ID,
+				Type: "role",
+			}
+			for _, f := range flags {
+				if role.Permissions&f != 0 {
+					permission.Allow = permission.Allow | f
+				} else {
+					permission.Deny = permission.Deny | f
+				}
+			}
+			mapPermissions(result, permission, flags)
+		}
+	}
+	return result
+}
+
+func GetEveryoneRoleForServer(session *discordgo.Session, serverID int) *discordgo.Role {
+	server, err := db.ServerQueryById(serverID)
+	if err != nil {
+		log.Println(fmt.Sprintf("Failed to retrieve server informations for Server ID: %v. ", serverID), err)
+		return nil
+	}
+	roles, err := session.GuildRoles(server.GuildUid)
+	if err != nil {
+		log.Println("Failed to retrieve roles informations for Guild UID: "+server.GuildUid+". ", err)
+		return nil
+	}
+	return FindRoleByName(roles, "@everyone")
+}
+
+func GetCurrentRolePermissionsForChannel(session *discordgo.Session, channelUID string, roleUID string) (*discordgo.PermissionOverwrite, error) {
+	channel, err := session.Channel(channelUID)
+	if err != nil {
+		return nil, err
+	}
+	if p, ok := FindPermissionByRoleID(channel.PermissionOverwrites, roleUID); !ok {
+		return &discordgo.PermissionOverwrite{
+			ID:   roleUID,
+			Type: "role",
+		}, nil
+	} else {
+		return p, nil
+	}
+}
+
+func unsetFlags(permission *discordgo.PermissionOverwrite, flags []int) bool {
+	for _, f := range flags {
+		if permission.Allow&f == 0 && permission.Deny&f == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func mapPermissions(base map[int]bool, permission *discordgo.PermissionOverwrite, flags []int) {
+	for _, f := range flags {
+		if _, ok := base[f]; !ok { //only do this if the flag is unset, to allow hierarchy assignations
+			if permission.Allow&f != 0 || permission.Deny&f != 0 {
+				base[f] = permission.Allow&f != 0
+			}
+		}
+	}
 }

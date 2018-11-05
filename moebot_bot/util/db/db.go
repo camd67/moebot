@@ -70,7 +70,7 @@ func createTables() {
 	//CHANNEL ROTATION SCHEDULER
 	channelRotationCreateTable()
 	//ROLE GROUP RELATION TABLE
-	roleGroupRoleCreateTable()
+	groupMembershipCreateTable()
 }
 
 /*
