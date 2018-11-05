@@ -163,8 +163,8 @@ func GetGroupTypeFromString(s string) types.GroupType {
 		return types.GroupTypeExclusive
 	} else if toCheck == "EXCLUSIVE NO REMOVE" || toCheck == "ENR" {
 		return types.GroupTypeExclusiveNoRemove
-	} else if toCheck == "NOT CONTEMPORARY" || toCheck == "NOC" {
-		return types.GroupTypeNoContemporary
+	} else if toCheck == "NO MULTIPLES" || toCheck == "NOM" {
+		return types.GroupTypeNoMultiples
 	} else {
 		return -1
 	}
@@ -178,8 +178,8 @@ func GetStringFromGroupType(groupType types.GroupType) string {
 		return "Exclusive (EXC)"
 	case types.GroupTypeExclusiveNoRemove:
 		return "Exclusive No Remove (ENR)"
-	case types.GroupTypeNoContemporary:
-		return "Not Contemporary (NOC)"
+	case types.GroupTypeNoMultiples:
+		return "No Multiples (NOM)"
 	default:
 		return "Unknown"
 	}

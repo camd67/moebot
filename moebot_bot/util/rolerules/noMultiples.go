@@ -7,11 +7,11 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
-type NoContemporary struct {
+type NoMultiples struct {
 	ExclusiveRoles []types.Role
 }
 
-func (r *NoContemporary) Check(session *discordgo.Session, action *RoleAction) (success bool, message string) {
+func (r *NoMultiples) Check(session *discordgo.Session, action *RoleAction) (success bool, message string) {
 	if action.Action == RoleRemove {
 		return true, ""
 	}
@@ -25,6 +25,6 @@ func (r *NoContemporary) Check(session *discordgo.Session, action *RoleAction) (
 	return true, ""
 }
 
-func (r *NoContemporary) Apply(session *discordgo.Session, action *RoleAction) (success bool, message string) {
+func (r *NoMultiples) Apply(session *discordgo.Session, action *RoleAction) (success bool, message string) {
 	return true, ""
 }

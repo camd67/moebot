@@ -10,9 +10,9 @@ const (
 	// Same as the exclusive group, but can't be removed
 	GroupTypeExclusiveNoRemove = 3
 	// Same as the exclusive group, but will prevent changing if one of the roles is present
-	GroupTypeNoContemporary = 4
+	GroupTypeNoMultiples = 4
 
-	OptionsForGroupType = "ANY, EXC, ENR, NOC"
+	OptionsForGroupType = "ANY, EXC, ENR, NOM"
 )
 
 type RoleGroup struct {
