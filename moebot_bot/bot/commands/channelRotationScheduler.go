@@ -32,7 +32,7 @@ func (s *ChannelRotationScheduler) Execute(operationId int64) {
 		log.Println(fmt.Sprintf("Failed to retrieve everyone role informations for Server ID: %v. ", channelRotation.ServerID), err)
 		return
 	}
-	if !s.rotateChannels(role, channelRotation.CurrentChannelUID, channelRotation.NextChannelUID()) {
+	if !s.rotateChannels(role, channelRotation.CurrentChannelUID, NextChannelUID(channelRotation)) {
 		return
 	}
 
@@ -94,7 +94,7 @@ func (s *ChannelRotationScheduler) showChannel(role *discordgo.Role, channelUID 
 }
 
 func (s *ChannelRotationScheduler) updateChannelRotationOperation(channelRotation *types.ChannelRotation) bool {
-	err := db.ChannelRotationUpdate(channelRotation.ID, channelRotation.NextChannelUID())
+	err := db.ChannelRotationUpdate(channelRotation.ID, NextChannelUID(channelRotation))
 	if err != nil {
 		log.Println(fmt.Sprintf("Failed to update current channel in Operation ID: %v. ", channelRotation.ID), err)
 		return false
@@ -181,4 +181,28 @@ func (s *ChannelRotationScheduler) OperationDescription(operationID int64) strin
 		b.WriteString(" <#" + c + ">")
 	}
 	return b.String()
+}
+
+func NextChannelUID(c *types.ChannelRotation) string {
+	if len(c.ChannelUIDList) == 0 {
+		return ""
+	}
+	if len(c.ChannelUIDList) == 1 {
+		//this way, we handle single channels "rotations", which is a channel being visible and hidden on a set amount of time
+		if c.CurrentChannelUID == "" {
+			return c.ChannelUIDList[0]
+		}
+		return ""
+	}
+	var nextIndex int
+	for i := 0; i < len(c.ChannelUIDList); i++ {
+		if c.CurrentChannelUID == c.ChannelUIDList[i] {
+			nextIndex = i + 1
+			break
+		}
+	}
+	if nextIndex >= len(c.ChannelUIDList) {
+		nextIndex = 0
+	}
+	return c.ChannelUIDList[nextIndex]
 }
