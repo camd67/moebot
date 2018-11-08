@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type GroupSetCommand struct {
@@ -78,7 +79,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 		if err != nil {
 			if err == sql.ErrNoRows {
 				dbOperationType = "added"
-				dbRoleGroup = db.RoleGroup{}
+				dbRoleGroup = types.RoleGroup{}
 			} else {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error finding that role group. This is an error with moebot "+
 					"not discord!")
@@ -96,7 +97,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 		newType := db.GetGroupTypeFromString(typeText)
 		if newType < 0 {
 			// invalid type
-			pack.session.ChannelMessageSend(pack.channel.ID, "You must provide a valid group type from the following: "+db.OptionsForGroupType)
+			pack.session.ChannelMessageSend(pack.channel.ID, "You must provide a valid group type from the following: "+types.OptionsForGroupType)
 			return
 		}
 		dbRoleGroup.Type = newType
@@ -110,8 +111,8 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (gc *GroupSetCommand) GetPermLevel() db.Permission {
-	return db.PermMod
+func (gc *GroupSetCommand) GetPermLevel() types.Permission {
+	return types.PermMod
 }
 
 func (gc *GroupSetCommand) GetCommandKeys() []string {

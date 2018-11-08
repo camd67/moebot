@@ -3,12 +3,9 @@ package db
 import (
 	"database/sql"
 	"log"
-)
 
-type UserProfile struct {
-	Id      int
-	UserUid string
-}
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
+)
 
 const (
 	userProfileTable = `CREATE TABLE IF NOT EXISTS user_profile(
@@ -20,7 +17,7 @@ const (
 	userProfileInsert   = `INSERT INTO user_profile(UserUid) VALUES($1) RETURNING Id`
 )
 
-func UserQueryOrInsert(userUid string) (u UserProfile, err error) {
+func UserQueryOrInsert(userUid string) (u types.UserProfile, err error) {
 	row := moeDb.QueryRow(userProfileQueryUid, userUid)
 	if err = row.Scan(&u.Id, &u.UserUid); err != nil {
 		if err == sql.ErrNoRows {
@@ -31,7 +28,7 @@ func UserQueryOrInsert(userUid string) (u UserProfile, err error) {
 				return
 			}
 			// for now we can just return back that ID since we already have the rest of the user
-			return UserProfile{insertId, userUid}, nil
+			return types.UserProfile{insertId, userUid}, nil
 		}
 	}
 	// got a row, return it

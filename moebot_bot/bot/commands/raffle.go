@@ -11,6 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type RaffleCommand struct {
@@ -107,7 +108,7 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue fetching raffle entries for this server")
 				return
 			}
-			rafflesToUpdate := make([]db.RaffleEntry, 0)
+			rafflesToUpdate := make([]types.RaffleEntry, 0)
 			for user, count := range userReactCounts {
 				for _, r := range raffles {
 					// only those with valid raffle entries and the min number of votes get updated
@@ -170,7 +171,7 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 		}
 		if len(raffleEntries) == 0 {
 			// haven't joined the raffle yet, make an entry + add tickets
-			newRaffle := db.RaffleEntry{
+			newRaffle := types.RaffleEntry{
 				GuildUid:    pack.guild.ID,
 				UserUid:     pack.message.Author.ID,
 				RaffleType:  db.RaffleMIA,
@@ -240,8 +241,8 @@ func (rc *RaffleCommand) distributeTickets(guild *discordgo.Guild, message *disc
 	}
 }
 
-func (rc *RaffleCommand) GetPermLevel() db.Permission {
-	return db.PermNone
+func (rc *RaffleCommand) GetPermLevel() types.Permission {
+	return types.PermNone
 }
 
 func (rc *RaffleCommand) GetCommandKeys() []string {

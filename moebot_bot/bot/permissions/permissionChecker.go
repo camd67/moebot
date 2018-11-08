@@ -3,6 +3,7 @@ package permissions
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type PermissionChecker struct {
@@ -10,24 +11,24 @@ type PermissionChecker struct {
 }
 
 func (p *PermissionChecker) HasAllPerm(userId string, roles []string, guild *discordgo.Guild) bool {
-	return p.HasPermission(userId, roles, guild, db.PermAll)
+	return p.HasPermission(userId, roles, guild, types.PermAll)
 }
 
 func (p *PermissionChecker) HasModPerm(userId string, roles []string, guild *discordgo.Guild) bool {
-	return p.HasPermission(userId, roles, guild, db.PermMod)
+	return p.HasPermission(userId, roles, guild, types.PermMod)
 }
 
-func (p *PermissionChecker) HasPermission(userId string, roles []string, guild *discordgo.Guild, permToCheck db.Permission) bool {
-	if permToCheck == db.PermAll {
+func (p *PermissionChecker) HasPermission(userId string, roles []string, guild *discordgo.Guild, permToCheck types.Permission) bool {
+	if permToCheck == types.PermAll {
 		// if everyone can use this command, just allow it
 		return true
 	} else if p.IsMaster(userId) {
 		// masters are allowed to do anything
 		return true
-	} else if IsGuildOwner(guild, userId) && permToCheck <= db.PermGuildOwner {
+	} else if IsGuildOwner(guild, userId) && permToCheck <= types.PermGuildOwner {
 		// Special check for guild owners
 		return true
-	} else if permToCheck == db.PermNone {
+	} else if permToCheck == types.PermNone {
 		// if no one can use this command, never do it
 		// make sure this is the last thing to check before
 		return false

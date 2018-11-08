@@ -11,6 +11,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type ProfileCommand struct {
@@ -72,13 +73,13 @@ func (pc *ProfileCommand) Execute(pack *CommPackage) {
 func (pc *ProfileCommand) getPermissionLevel(pack *CommPackage) string {
 	// special checks for certain roles that aren't in the database
 	if pack.message.Author.ID == pc.MasterId {
-		return db.SprintPermission(db.PermMaster)
+		return db.SprintPermission(types.PermMaster)
 	} else if permissions.IsGuildOwner(pack.guild, pack.message.Author.ID) {
-		return db.SprintPermission(db.PermGuildOwner)
+		return db.SprintPermission(types.PermGuildOwner)
 	}
 
 	perms := db.RoleQueryPermission(pack.member.Roles)
-	highestPerm := db.PermAll
+	highestPerm := types.PermAll
 	// Find the highest permission level this user has
 	for _, userPerm := range perms {
 		if userPerm > highestPerm {
@@ -142,8 +143,8 @@ func convertToEmphasizedRankString(ranks []string, indexToApply int, sep string)
 	return s
 }
 
-func (pc *ProfileCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+func (pc *ProfileCommand) GetPermLevel() types.Permission {
+	return types.PermAll
 }
 
 func (pc *ProfileCommand) GetCommandKeys() []string {

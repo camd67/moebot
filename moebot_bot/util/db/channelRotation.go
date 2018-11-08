@@ -3,13 +3,9 @@ package db
 import (
 	"log"
 	"strings"
-)
 
-type ChannelRotation struct {
-	ChannelUIDList    []string
-	CurrentChannelUID string
-	ScheduledOperation
-}
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
+)
 
 const (
 	channelRotationTable = `CREATE TABLE IF NOT EXISTS channel_rotation(
@@ -32,8 +28,8 @@ func channelRotationCreateTable() {
 	moeDb.Exec(channelRotationTable)
 }
 
-func ChannelRotationQuery(operationID int64) (*ChannelRotation, error) {
-	cr := &ChannelRotation{}
+func ChannelRotationQuery(operationID int64) (*types.ChannelRotation, error) {
+	cr := &types.ChannelRotation{}
 	channelList := ""
 	row := moeDb.QueryRow(channelRotationQuery, operationID)
 	if e := row.Scan(&cr.ID, &cr.CurrentChannelUID, &channelList, &cr.ServerID); e != nil {
@@ -59,28 +55,4 @@ func ChannelRotationAdd(serverID int, currentChannelUID string, channels []strin
 	}
 	_, err = moeDb.Exec(channelRotationInsert, operation.ID, currentChannelUID, strings.Join(channels, " "))
 	return err
-}
-
-func (c *ChannelRotation) NextChannelUID() string {
-	if len(c.ChannelUIDList) == 0 {
-		return ""
-	}
-	if len(c.ChannelUIDList) == 1 {
-		//this way, we handle single channels "rotations", which is a channel being visible and hidden on a set amount of time
-		if c.CurrentChannelUID == "" {
-			return c.ChannelUIDList[0]
-		}
-		return ""
-	}
-	var nextIndex int
-	for i := 0; i < len(c.ChannelUIDList); i++ {
-		if c.CurrentChannelUID == c.ChannelUIDList[i] {
-			nextIndex = i + 1
-			break
-		}
-	}
-	if nextIndex >= len(c.ChannelUIDList) {
-		nextIndex = 0
-	}
-	return c.ChannelUIDList[nextIndex]
 }

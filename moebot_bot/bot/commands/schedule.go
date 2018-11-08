@@ -7,15 +7,16 @@ import (
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type ScheduleCommand struct {
-	schedulers map[db.SchedulerType]Scheduler
+	schedulers map[types.SchedulerType]Scheduler
 }
 
 func NewScheduleCommand(factory *SchedulerFactory) *ScheduleCommand {
 	return &ScheduleCommand{
-		schedulers: map[db.SchedulerType]Scheduler{
+		schedulers: map[types.SchedulerType]Scheduler{
 			db.SchedulerChannelRotation: factory.CreateScheduler(db.SchedulerChannelRotation),
 		},
 	}
@@ -39,8 +40,8 @@ func (c *ScheduleCommand) Execute(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Cannot find any scheduler with the command `"+pack.params[1]+"`, please check the commands list.")
 	}
 }
-func (c *ScheduleCommand) GetPermLevel() db.Permission {
-	return db.PermMod
+func (c *ScheduleCommand) GetPermLevel() types.Permission {
+	return types.PermMod
 }
 func (c *ScheduleCommand) GetCommandKeys() []string {
 	return []string{"SCHEDULE"}

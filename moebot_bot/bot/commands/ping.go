@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type PingCommand struct {
@@ -17,8 +17,8 @@ func (pc *PingCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, "Latency to server: "+pingTime.String())
 }
 
-func (pc *PingCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+func (pc *PingCommand) GetPermLevel() types.Permission {
+	return types.PermAll
 }
 
 func (pc *PingCommand) GetCommandKeys() []string {

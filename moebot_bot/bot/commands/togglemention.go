@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -52,8 +52,8 @@ func restoreMention(pack *CommPackage, role *discordgo.Role) {
 	pack.session.ChannelMessageSend(pack.channel.ID, message)
 }
 
-func (mc *MentionCommand) GetPermLevel() db.Permission {
-	return db.PermMod
+func (mc *MentionCommand) GetPermLevel() types.Permission {
+	return types.PermMod
 }
 
 func (mc *MentionCommand) GetCommandKeys() []string {
