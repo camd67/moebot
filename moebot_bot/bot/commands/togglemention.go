@@ -15,8 +15,9 @@ type MentionCommand struct {
 
 func (mc *MentionCommand) Execute(pack *CommPackage) {
 	roleName := strings.Join(pack.params, " ")
+	searchRoleName := strings.ToUpper(roleName)
 	for _, role := range pack.guild.Roles {
-		if role.Name == roleName {
+		if strings.ToUpper(role.Name) == searchRoleName {
 			editedRole, err := pack.session.GuildRoleEdit(pack.guild.ID, role.ID, role.Name, role.Color, role.Hoist, role.Permissions, !role.Mentionable)
 			if err != nil {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem editing the role, try again later")
