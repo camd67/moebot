@@ -3,20 +3,13 @@ package db
 import (
 	"log"
 	"time"
-)
 
-type SchedulerType int
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
+)
 
 const (
-	SchedulerChannelRotation SchedulerType = 1
+	SchedulerChannelRotation types.SchedulerType = 1
 )
-
-type ScheduledOperation struct {
-	ID                   int64
-	ServerID             int
-	Type                 SchedulerType
-	PlannedExecutionTime time.Time
-}
 
 const (
 	scheduledOperationTable = `CREATE TABLE IF NOT EXISTS scheduled_operation(
@@ -42,15 +35,15 @@ func scheduledOperationCreateTable() {
 	moeDb.Exec(scheduledOperationTable)
 }
 
-func ScheduledOperationQueryNow() ([]*ScheduledOperation, error) {
+func ScheduledOperationQueryNow() ([]*types.ScheduledOperation, error) {
 	rows, err := moeDb.Query(scheduledOperationQueryNow)
 	if err != nil {
 		log.Println("Error querying for current scheduled operations", err)
 		return nil, err
 	}
-	var result []*ScheduledOperation
+	var result []*types.ScheduledOperation
 	for rows.Next() {
-		operation := new(ScheduledOperation)
+		operation := new(types.ScheduledOperation)
 		err = rows.Scan(&operation.ID, &operation.ServerID, &operation.PlannedExecutionTime)
 		if err != nil {
 			log.Println("Error querying for current scheduled operations", err)
@@ -61,15 +54,15 @@ func ScheduledOperationQueryNow() ([]*ScheduledOperation, error) {
 	return result, nil
 }
 
-func ScheduledOperationQueryServer(serverID int) ([]*ScheduledOperation, error) {
+func ScheduledOperationQueryServer(serverID int) ([]*types.ScheduledOperation, error) {
 	rows, err := moeDb.Query(scheduledOperationQueryServer, serverID)
 	if err != nil {
 		log.Println("Error querying for server scheduled operations", err)
 		return nil, err
 	}
-	var result []*ScheduledOperation
+	var result []*types.ScheduledOperation
 	for rows.Next() {
-		operation := new(ScheduledOperation)
+		operation := new(types.ScheduledOperation)
 		err = rows.Scan(&operation.ID, &operation.ServerID, &operation.PlannedExecutionTime)
 		if err != nil {
 			log.Println("Error querying for server scheduled operations", err)
@@ -100,7 +93,7 @@ func ScheduledOperationDelete(operationID int64, serverID int) (bool, error) {
 	return rowsAffected > 0, err
 }
 
-func scheduledOperationInsertNew(serverID int, operationType SchedulerType, interval string) (*ScheduledOperation, error) {
+func scheduledOperationInsertNew(serverID int, operationType types.SchedulerType, interval string) (*types.ScheduledOperation, error) {
 	var insertID int64
 	err := moeDb.QueryRow(scheduledOperationInsert, serverID, operationType, interval).Scan(&insertID)
 	if err != nil {
@@ -111,6 +104,6 @@ func scheduledOperationInsertNew(serverID int, operationType SchedulerType, inte
 	if err != nil {
 		return nil, err
 	}
-	result := &ScheduledOperation{ID: insertID, ServerID: serverID, Type: operationType, PlannedExecutionTime: nextExecution}
+	result := &types.ScheduledOperation{ID: insertID, ServerID: serverID, Type: operationType, PlannedExecutionTime: nextExecution}
 	return result, nil
 }

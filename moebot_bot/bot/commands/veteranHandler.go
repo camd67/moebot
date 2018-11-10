@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/util"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -98,7 +99,7 @@ func (vh *VeteranHandler) veteranMessageCreate(session *discordgo.Session, messa
 	db.FlushServerCache()
 }
 
-func (vh *VeteranHandler) handleVeteranMessage(userUid string, guildUid string) (users []db.UserServerRankWrapper, err error) {
+func (vh *VeteranHandler) handleVeteranMessage(userUid string, guildUid string) (users []types.UserServerRankWrapper, err error) {
 	key := buildVeteranBufferKey(userUid, guildUid)
 	if isCooldownReached(key, messageCooldown, &vh.messageCooldownMap) {
 		return vh.handleVeteranChange(userUid, guildUid, messagePoints)
@@ -137,7 +138,7 @@ func (vh *VeteranHandler) veteranReactionAdd(session *discordgo.Session, reactio
 	db.FlushServerCache()
 }
 
-func (vh *VeteranHandler) handleVeteranReaction(userUid string, guildUid string) (users []db.UserServerRankWrapper, err error) {
+func (vh *VeteranHandler) handleVeteranReaction(userUid string, guildUid string) (users []types.UserServerRankWrapper, err error) {
 	key := buildVeteranBufferKey(userUid, guildUid)
 	if isCooldownReached(key, reactionCooldown, &vh.reactionCooldownMap) {
 		return vh.handleVeteranChange(userUid, guildUid, reactionPoints)
@@ -145,7 +146,7 @@ func (vh *VeteranHandler) handleVeteranReaction(userUid string, guildUid string)
 	return
 }
 
-func (vh *VeteranHandler) handleVeteranChange(userUid string, guildUid string, points int) (users []db.UserServerRankWrapper, err error) {
+func (vh *VeteranHandler) handleVeteranChange(userUid string, guildUid string, points int) (users []types.UserServerRankWrapper, err error) {
 	vh.vBuffer.Lock()
 	vh.vBuffer.m[buildVeteranBufferKey(userUid, guildUid)] += points
 	vh.vBuffer.buffCooldown--
@@ -177,7 +178,7 @@ func (vh *VeteranHandler) handleVeteranChange(userUid string, guildUid string, p
 			}
 			if !messageSent && server.VeteranRank.Valid && server.BotChannel.Valid && int64(newPoint) >= server.VeteranRank.Int64 {
 				// we haven't had an error so the user was updated
-				users = append(users, db.UserServerRankWrapper{
+				users = append(users, types.UserServerRankWrapper{
 					UserUid:   uid,
 					ServerUid: gid,
 					Rank:      newPoint,

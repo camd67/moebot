@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
@@ -44,10 +45,10 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// we don't want to return on a no row error, instead add a default group so we can add later
-			newGroupId, err := db.RoleGroupInsertOrUpdate(db.RoleGroup{
+			newGroupId, err := db.RoleGroupInsertOrUpdate(types.RoleGroup{
 				ServerId: s.Id,
 				Name:     db.UncategorizedGroup,
-				Type:     db.GroupTypeAny,
+				Type:     types.GroupTypeAny,
 			}, s)
 			if err != nil {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue adding an uncategorized group. This is an issue with moebot "+
@@ -55,7 +56,7 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 				return
 			}
 			// Then update the returned dbRole to get the correct information
-			dbRole.GroupId = newGroupId
+			dbRole.Groups = append(dbRole.Groups, newGroupId)
 		} else {
 			// if we got any other errors, then we want to bail out
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue retrieving that role. This is an issue with moebot and not discord")
@@ -74,8 +75,8 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 	pack.session.ChannelMessageSend(pack.channel.ID, "Edited role "+roleName+" successfully")
 }
 
-func (pc *PermitCommand) GetPermLevel() db.Permission {
-	return db.PermGuildOwner
+func (pc *PermitCommand) GetPermLevel() types.Permission {
+	return types.PermGuildOwner
 }
 
 func (pc *PermitCommand) GetCommandKeys() []string {

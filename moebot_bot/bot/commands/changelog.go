@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type ChangelogCommand struct {
@@ -18,6 +18,10 @@ const changeLogPrefix = "\n`->` "
 //   Please only edit this in develop before merging to master    //
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
+
+	"0.6.1": changeLogPrefix + "Added dual-roles as a new group type (Credit: Shadran)" +
+		changeLogPrefix + "Made help support more commands" +
+		changeLogPrefix + "Fixed various bugs",
 
 	"0.5.2": changeLogPrefix + "Added automatic rotating channels (Credit: Shadran)" +
 		changeLogPrefix + "Refactor timer command (Credit: Imbajoe)" +
@@ -86,8 +90,8 @@ func (cc *ChangelogCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (cc *ChangelogCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+func (cc *ChangelogCommand) GetPermLevel() types.Permission {
+	return types.PermAll
 }
 
 func (cc *ChangelogCommand) GetCommandKeys() []string {

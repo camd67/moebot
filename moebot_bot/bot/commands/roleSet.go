@@ -3,11 +3,14 @@ package commands
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
@@ -62,7 +65,7 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 		var typeString string
 		if err != nil {
 			if err == sql.ErrNoRows {
-				oldRole = db.Role{
+				oldRole = types.Role{
 					RoleUid: r.ID,
 				}
 				typeString = "added"
@@ -97,13 +100,13 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			}
 
 			// Make a dummy string that is as long as a role code for testing the length, plus one more for the hyphen
-			exampleRoleCode := strings.Repeat("#", roleCodeLength+1)
-			if strings.Contains(strings.ToLower(confirmText), roleCodeSearchText) {
-				postReplacementLength := len(strings.Replace(confirmText, roleCodeSearchText, exampleRoleCode, -1))
+			exampleRoleCode := strings.Repeat("#", types.RoleCodeLength+1)
+			if strings.Contains(strings.ToLower(confirmText), types.RoleCodeSearchText) {
+				postReplacementLength := len(strings.Replace(confirmText, types.RoleCodeSearchText, exampleRoleCode, -1))
 				if postReplacementLength > moeDiscord.MaxMessageLength {
 					charactersOver := postReplacementLength - moeDiscord.MaxMessageLength
-					pack.session.ChannelMessageSend(pack.channel.ID, "When replacing every instance of "+roleCodeSearchText+" with a "+
-						strconv.Itoa(roleCodeLength+1)+" character role code your confirmation message went over the discord max message length. "+
+					pack.session.ChannelMessageSend(pack.channel.ID, "When replacing every instance of "+types.RoleCodeSearchText+" with a "+
+						strconv.Itoa(types.RoleCodeLength+1)+" character role code your confirmation message went over the discord max message length. "+
 						"Please shorten it by "+strconv.Itoa(charactersOver))
 					return
 				}
@@ -133,7 +136,10 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			}
 			return
 		}
-		oldRole.GroupId = group.Id
+		if updateRoleGroups(server, &oldRole, group) != nil {
+			pack.session.ChannelMessageSend(pack.channel.ID, "There was an error updating role groups. This is an issue with moebot and not discord")
+			return
+		}
 
 		oldRole.ServerId = server.Id
 		err = db.RoleInsertOrUpdate(oldRole)
@@ -145,8 +151,26 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (rc *RoleSetCommand) GetPermLevel() db.Permission {
-	return db.PermMod
+func updateRoleGroups(server types.Server, role *types.Role, group types.RoleGroup) error {
+	defaultGroup, err := db.RoleGroupQueryName(db.UncategorizedGroup, server.Id)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error while retrieving the default role group", err)
+		return err
+	}
+	role.Groups = util.IntRemove(role.Groups, defaultGroup.Id)
+	if util.IntContains(role.Groups, group.Id) {
+		role.Groups = util.IntRemove(role.Groups, group.Id)
+		if len(role.Groups) == 0 && defaultGroup.Id != 0 {
+			role.Groups = append(role.Groups, defaultGroup.Id)
+		}
+	} else {
+		role.Groups = append(role.Groups, group.Id)
+	}
+	return nil
+}
+
+func (rc *RoleSetCommand) GetPermLevel() types.Permission {
+	return types.PermMod
 }
 
 func (rc *RoleSetCommand) GetCommandKeys() []string {
@@ -159,7 +183,7 @@ func (rc *RoleSetCommand) GetCommandHelp(commPrefix string) string {
 		"confirmation message if you want to include it.", commPrefix)
 }
 
-func (rc *RoleSetCommand) deleteRole(roleName string, pack *CommPackage, server db.Server) {
+func (rc *RoleSetCommand) deleteRole(roleName string, pack *CommPackage, server types.Server) {
 	role := moeDiscord.FindRoleByName(pack.guild.Roles, roleName)
 	// we don't really care about the role itself here, just if we got a row back or not (could use a row count check but oh well)
 	_, err := db.RoleQueryRoleUid(role.ID, server.Id)

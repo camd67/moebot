@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 const (
@@ -33,7 +33,7 @@ func (tc *TimerCommand) Execute(pack *CommPackage) {
 	channelID := pack.message.ChannelID
 	if len(pack.params) > 0 {
 		// Make sure the user has at least mod-level permissions before starting the timer
-		if tc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, db.PermMod) {
+		if tc.Checker.HasPermission(pack.message.Author.ID, pack.member.Roles, pack.guild, types.PermMod) {
 			tc.chTimers.Lock()
 
 			if strings.EqualFold(pack.params[0], "start") {
@@ -146,8 +146,8 @@ func fmtDuration(dur time.Duration) string {
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
 
-func (tc *TimerCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+func (tc *TimerCommand) GetPermLevel() types.Permission {
+	return types.PermAll
 }
 
 func (tc *TimerCommand) GetCommandKeys() []string {

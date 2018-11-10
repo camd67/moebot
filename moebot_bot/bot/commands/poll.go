@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type PollCommand struct {
@@ -27,8 +27,8 @@ func (pc *PollCommand) pollReactionsAdd(session *discordgo.Session, reactionAdd 
 	pc.PollsHandler.checkSingleVote(session, reactionAdd)
 }
 
-func (pc *PollCommand) GetPermLevel() db.Permission {
-	return db.PermMod
+func (pc *PollCommand) GetPermLevel() types.Permission {
+	return types.PermMod
 }
 
 func (pc *PollCommand) GetCommandKeys() []string {

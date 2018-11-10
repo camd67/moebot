@@ -2,7 +2,7 @@ package commands
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type SchedulerFactory struct {
@@ -13,6 +13,6 @@ func NewSchedulerFactory(session *discordgo.Session) *SchedulerFactory {
 	return &SchedulerFactory{session: session}
 }
 
-func (f *SchedulerFactory) CreateScheduler(t db.SchedulerType) Scheduler {
+func (f *SchedulerFactory) CreateScheduler(t types.SchedulerType) Scheduler {
 	return NewChannelRotationScheduler(t, f.session)
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 	"math/rand"
 
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/reddit"
 )
 
@@ -60,8 +60,8 @@ func getRandomWhitelistedSubreddit() string {
 	return defaultSubreddit // should only be reached in circumstance where the whitelistedSubreddits map is empty
 }
 
-func (sc *SubCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+func (sc *SubCommand) GetPermLevel() types.Permission {
+	return types.PermAll
 }
 func (sc *SubCommand) GetCommandKeys() []string {
 	return []string{"SUB"}

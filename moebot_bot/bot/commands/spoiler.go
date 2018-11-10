@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
@@ -39,8 +39,8 @@ func (sc *SpoilerCommand) Execute(pack *CommPackage) {
 	})
 }
 
-func (sc *SpoilerCommand) GetPermLevel() db.Permission {
-	return db.PermNone
+func (sc *SpoilerCommand) GetPermLevel() types.Permission {
+	return types.PermNone
 }
 
 func (sc *SpoilerCommand) GetCommandKeys() []string {

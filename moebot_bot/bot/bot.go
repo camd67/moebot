@@ -13,6 +13,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/event"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 	"github.com/camd67/moebot/moebot_bot/util/reddit"
@@ -21,7 +22,7 @@ import (
 )
 
 const (
-	version     = "0.5.2"
+	version     = "0.6.1"
 	timerPeriod = 60
 )
 
@@ -323,7 +324,7 @@ func ready(session *discordgo.Session, event *discordgo.Ready) {
 Helper handler to check if the message provided is a command and if so, executes the command
 */
 func runCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member,
-	userProfile *db.UserProfile, timer *event.Timer) {
+	userProfile *types.UserProfile, timer *event.Timer) {
 	messageParts := strings.Split(message.Content, " ")
 	if len(messageParts) <= 1 {
 		// bad command, missing command after prefix

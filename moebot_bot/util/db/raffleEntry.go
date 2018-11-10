@@ -4,28 +4,17 @@ import (
 	"log"
 	"strconv"
 	"strings"
-)
 
-// Raffle type enum
-type RaffleType int
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
+)
 
 // unfortunately these have to be pretty specific until I can come up with a better way to store them. or a more generic raffle system
 const (
-	_ RaffleType = iota
+	_ types.RaffleType = iota
 	JustRaffle
 	// Raffles for the made in abyss server
 	RaffleMIA
 )
-
-type RaffleEntry struct {
-	Id               int
-	GuildUid         string
-	UserUid          string
-	RaffleType       RaffleType
-	TicketCount      int
-	RaffleData       string
-	LastTicketUpdate int64
-}
 
 const (
 	raffleSelect = `SELECT Id, GuildUid, UserUid, RaffleType, TicketCount, RaffleData, LastTicketUpdate `
@@ -56,7 +45,7 @@ const (
 	RaffleDataSeparator = "|"
 )
 
-func RaffleEntryAdd(entry RaffleEntry) error {
+func RaffleEntryAdd(entry types.RaffleEntry) error {
 	_, err := moeDb.Exec(raffleInsert, entry.GuildUid, entry.UserUid, entry.RaffleType, entry.TicketCount, entry.RaffleData)
 	if err != nil {
 		log.Println("Error adding raffle entry to database, ", err)
@@ -65,7 +54,7 @@ func RaffleEntryAdd(entry RaffleEntry) error {
 	return nil
 }
 
-func RaffleEntryUpdate(entry RaffleEntry, ticketAdd int) error {
+func RaffleEntryUpdate(entry types.RaffleEntry, ticketAdd int) error {
 	_, err := moeDb.Exec(raffleUpdate, entry.Id, entry.RaffleData, ticketAdd, entry.LastTicketUpdate)
 	if err != nil {
 		log.Println("Error updating raffle entry to database, ", err)
@@ -74,7 +63,7 @@ func RaffleEntryUpdate(entry RaffleEntry, ticketAdd int) error {
 	return nil
 }
 
-func RaffleEntryUpdateMany(entries []RaffleEntry, ticketAdd int) error {
+func RaffleEntryUpdateMany(entries []types.RaffleEntry, ticketAdd int) error {
 	ids := make([]string, len(entries))
 	for i, e := range entries {
 		ids[i] = strconv.Itoa(e.Id)
@@ -82,21 +71,21 @@ func RaffleEntryUpdateMany(entries []RaffleEntry, ticketAdd int) error {
 	idCollection := "{" + strings.Join(ids, ",") + "}"
 	_, err := moeDb.Exec(raffleUpdateMany, ticketAdd, idCollection)
 	if err != nil {
-		log.Println("Error updating raffle entry to database, ", err)
+		log.Println("Error updating multiple raffle entry to database, ", err)
 		return err
 	}
 	return nil
 }
 
-func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries []RaffleEntry, err error) {
+func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries []types.RaffleEntry, err error) {
 	rows, err := moeDb.Query(raffleQuery, userUid, guildUid)
 	if err != nil {
-		log.Println("Error querying for raffle entries")
+		log.Println("Error querying for raffle entries by user")
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var re RaffleEntry
+		var re types.RaffleEntry
 		if err := rows.Scan(&re.Id, &re.GuildUid, &re.UserUid, &re.RaffleType, &re.TicketCount, &re.RaffleData, &re.LastTicketUpdate); err != nil {
 			log.Println("Error scanning raffle entry to object - ", err)
 			return nil, err
@@ -106,15 +95,15 @@ func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries []RaffleEn
 	return raffleEntries, nil
 }
 
-func RaffleEntryQueryAny(guildUid string) (raffleEntries []RaffleEntry, err error) {
+func RaffleEntryQueryAny(guildUid string) (raffleEntries []types.RaffleEntry, err error) {
 	rows, err := moeDb.Query(raffleQueryAny, guildUid)
 	if err != nil {
-		log.Println("Error querying for raffle entries")
+		log.Println("Error querying for raffle entries by guild")
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var re RaffleEntry
+		var re types.RaffleEntry
 		if err := rows.Scan(&re.Id, &re.GuildUid, &re.UserUid, &re.RaffleType, &re.TicketCount, &re.RaffleData, &re.LastTicketUpdate); err != nil {
 			log.Println("Error scanning raffle entry to object - ", err)
 			return nil, err
@@ -122,8 +111,4 @@ func RaffleEntryQueryAny(guildUid string) (raffleEntries []RaffleEntry, err erro
 		raffleEntries = append(raffleEntries, re)
 	}
 	return raffleEntries, nil
-}
-
-func (re *RaffleEntry) SetRaffleData(raffleData string) {
-	re.RaffleData = raffleData
 }

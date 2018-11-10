@@ -7,7 +7,7 @@ import (
 
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 type HelpCommand struct {
@@ -83,8 +83,8 @@ func (hc *HelpCommand) currentUserHasCommandPermission(pack *CommPackage, comman
 		command.GetCommandHelp(hc.ComPrefix) != ""
 }
 
-func (hc *HelpCommand) GetPermLevel() db.Permission {
-	return db.PermAll
+func (hc *HelpCommand) GetPermLevel() types.Permission {
+	return types.PermAll
 }
 
 func (hc *HelpCommand) GetCommandKeys() []string {

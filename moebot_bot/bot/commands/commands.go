@@ -5,7 +5,7 @@ package commands
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/event"
 )
 
@@ -15,14 +15,14 @@ type CommPackage struct {
 	guild   *discordgo.Guild
 	member  *discordgo.Member
 	channel *discordgo.Channel
-	user    *db.UserProfile
+	user    *types.UserProfile
 	timer   *event.Timer
 	params  []string
 }
 
 type Command interface {
 	Execute(pack *CommPackage)
-	GetPermLevel() db.Permission
+	GetPermLevel() types.Permission
 	GetCommandKeys() []string
 	GetCommandHelp(commPrefix string) string
 }
@@ -36,7 +36,7 @@ type SetupHandler interface {
 }
 
 func NewCommPackage(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, member *discordgo.Member, channel *discordgo.Channel,
-	params []string, user *db.UserProfile, timer *event.Timer) CommPackage {
+	params []string, user *types.UserProfile, timer *event.Timer) CommPackage {
 	return CommPackage{
 		session: session,
 		message: message,
