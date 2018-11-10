@@ -32,7 +32,7 @@ func (r *Confirmation) Check(session *discordgo.Session, action *RoleAction) (su
 			if err != nil {
 				return false, "Sorry, I couldn't send you a PM! Please check your settings to allow direct messages from users on this server."
 			}
-			return true, action.Member.User.Mention() + " check your PM's for further instructions!"
+			return false, action.Member.User.Mention() + " check your PM's for further instructions!"
 		}
 
 		session.ChannelMessageDelete(action.Channel.ID, action.OriginalMessage.ID)
