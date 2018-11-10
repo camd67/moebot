@@ -19,7 +19,7 @@ const changeLogPrefix = "\n`->` "
 ////////////////////////////////////////////////////////////////////
 var changeLog = map[string]string{
 
-	"0.6.0": changeLogPrefix + "Added dual-roles as a new group type (Credit: Shadran)" +
+	"0.6.1": changeLogPrefix + "Added dual-roles as a new group type (Credit: Shadran)" +
 		changeLogPrefix + "Made help support more commands" +
 		changeLogPrefix + "Fixed various bugs",
 

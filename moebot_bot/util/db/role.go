@@ -363,33 +363,3 @@ func roleCreateTable() {
 		}
 	}
 }
-
-func roleDatabaseUpdate() {
-	const veteranUpdate = "INSERT INTO role(ServerId, RoleUid, Permission, Trigger) SELECT server.Id, server.VeteranRole, 1, 'veteran' FROM server WHERE server.VeteranRole IS NOT NULL AND server.VeteranRole <> '' ON CONFLICT DO NOTHING"
-	_, err := moeDb.Exec(veteranUpdate)
-	if err != nil {
-		log.Println("Error updating role table", err)
-		return
-	}
-	const oldRoleSelectGroups = "SELECT Id, GroupId FROM role WHERE GroupId <> 0"
-	const insertRoleRelation = "INSERT INTO group_membership(role_id, group_id) VALUES($1,$2) ON CONFLICT DO NOTHING"
-	//const oldRoleRemoveRelation = "UPDATE role SET GroupId = 0 WHERE Id = $1"
-	rows, err := moeDb.Query(oldRoleSelectGroups)
-	if err != nil {
-		log.Println("Error updating role groups", err)
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var roleID int
-		var groupID int
-		if err = rows.Scan(&roleID, &groupID); err != nil {
-			log.Println("Error scanning from role table:", err)
-			return
-		}
-		_, err = moeDb.Exec(insertRoleRelation, roleID, groupID)
-		if err == nil {
-			//moeDb.Exec(oldRoleRemoveRelation, roleID)
-		}
-	}
-}

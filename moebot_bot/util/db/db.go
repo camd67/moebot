@@ -77,7 +77,6 @@ func createTables() {
 Updates all tables to clean old data and adapt to new db structures
 */
 func updateTables() {
-	roleDatabaseUpdate()
 }
 
 /*
