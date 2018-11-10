@@ -373,7 +373,7 @@ func roleDatabaseUpdate() {
 	}
 	const oldRoleSelectGroups = "SELECT Id, GroupId FROM role WHERE GroupId <> 0"
 	const insertRoleRelation = "INSERT INTO group_membership(role_id, group_id) VALUES($1,$2) ON CONFLICT DO NOTHING"
-	const oldRoleRemoveRelation = "UPDATE role SET GroupId = 0 WHERE Id = $1"
+	//const oldRoleRemoveRelation = "UPDATE role SET GroupId = 0 WHERE Id = $1"
 	rows, err := moeDb.Query(oldRoleSelectGroups)
 	if err != nil {
 		log.Println("Error updating role groups", err)
@@ -389,7 +389,7 @@ func roleDatabaseUpdate() {
 		}
 		_, err = moeDb.Exec(insertRoleRelation, roleID, groupID)
 		if err == nil {
-			moeDb.Exec(oldRoleRemoveRelation, roleID)
+			//moeDb.Exec(oldRoleRemoveRelation, roleID)
 		}
 	}
 }
