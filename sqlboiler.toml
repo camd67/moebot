@@ -1,0 +1,18 @@
+[psql]
+	dbname 	= 
+	host	= 
+	port	= 
+	user	= 
+	pass 	= 
+	schema	= 
+	sslmode	= 
+	
+
+	
+[[types]]
+	[types.match]
+	db_type		= "bigint"
+	nullable 	= false
+	
+	[types.replace]
+	types	= "int64"
