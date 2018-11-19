@@ -9,6 +9,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 	"github.com/camd67/moebot/moebot_bot/util/rolerules"
@@ -43,7 +44,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 			}
 		}
 		roleNameString := strings.TrimSpace(roleNameBuf.String())
-		dbRole, err = db.RoleQueryTrigger(roleNameString, server.Id)
+		dbRole, err = db.RoleQueryTrigger(roleNameString, server.ID)
 		// an invalid trigger should pretty much never happen, but checking for it anyways
 		// however an error may indicate that there were simply no roles in the result set
 		if err != nil || !dbRole.Trigger.Valid {
@@ -57,7 +58,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server. It may have been deleted.")
 			return
 		}
-		rules, err := rolerules.GetRulesForRole(&server, &dbRole, rc.ComPrefix)
+		rules, err := rolerules.GetRulesForRole(server, &dbRole, rc.ComPrefix)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem fetching the apply rules for the given role. Please try again.")
 			return
@@ -135,7 +136,7 @@ func (rc *RoleCommand) GetCommandKeys() []string {
 func (rc *RoleCommand) GetCommandHelp(commPrefix string) string {
 	return fmt.Sprintf("`%[1]s role <role name>` - Changes your role to one of the approved roles. `%[1]s role` to list all the roles", commPrefix)
 }
-func printAllRoles(server types.Server, vetRole *discordgo.Role, pack *CommPackage) {
+func printAllRoles(server *models.Server, vetRole *discordgo.Role, pack *CommPackage) {
 	triggersByGroup := make(map[string][]string)
 	// go find all the roles for this server
 	roles, err := db.RoleQueryServer(server)

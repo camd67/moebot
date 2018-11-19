@@ -51,7 +51,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, message.String())
 	} else if hasDelete {
 		// we want to delete the group they gave us (if it exists)
-		dbRoleGroup, err := db.RoleGroupQueryName(deleteName, server.Id)
+		dbRoleGroup, err := db.RoleGroupQueryName(deleteName, server.ID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				pack.session.ChannelMessageSend(pack.channel.ID, "It doesn't look like that's a group you can delete! Please provide a group that was "+
@@ -74,7 +74,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 			return
 		}
 		// add in a new group, or update an existing one
-		dbRoleGroup, err := db.RoleGroupQueryName(groupName, server.Id)
+		dbRoleGroup, err := db.RoleGroupQueryName(groupName, server.ID)
 		var dbOperationType string
 		if err != nil {
 			if err == sql.ErrNoRows {

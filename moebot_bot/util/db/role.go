@@ -8,6 +8,7 @@ import (
 
 	"github.com/camd67/moebot/moebot_bot/util"
 
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -173,8 +174,8 @@ func RoleQueryOrInsert(role types.Role) (r types.Role, err error) {
 	return
 }
 
-func RoleQueryServer(s types.Server) (roles []types.Role, err error) {
-	rows, err := moeDb.Query(roleQueryServer, s.Id)
+func RoleQueryServer(s *models.Server) (roles []types.Role, err error) {
+	rows, err := moeDb.Query(roleQueryServer, s.ID)
 	if err != nil {
 		log.Println("Error querying for role in server role query", err)
 		return

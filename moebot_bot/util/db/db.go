@@ -29,8 +29,6 @@ func SetupDatabase(host string, dbPass string, moeDataPass string) {
 
 	// actually connect with moebot now
 	moeDb = openDb(createConnString(host, "moebot", moeDataPass, "moebot"))
-	createTables()
-	updateTables()
 	log.Println("Finished initializing the DB and creating tables")
 }
 
@@ -41,42 +39,6 @@ func DisconnectAll() {
 			log.Println("Problem closing connection to database! - ", err)
 		}
 	}
-}
-
-/*
-Creates all the tables for moebot
-*/
-func createTables() {
-	// NOTE: varchar(20) for any snowflake ID's, which is the max for UINT64
-	// SERVER
-	serverCreateTable()
-	// USER
-	userCreateTable()
-	userServerRankCreateTable()
-	// ROLE
-	roleGroupCreateTable()
-	roleCreateTable()
-	// CHANNEL
-	channelCreateTable()
-	// RAFFLE ENTRY
-	moeDb.Exec(raffleTable)
-	//POLL
-	moeDb.Exec(pollTable)
-	moeDb.Exec(pollOptionTable)
-	// METRIC
-	metricCreateTable()
-	//SCHEDULER
-	scheduledOperationCreateTable()
-	//CHANNEL ROTATION SCHEDULER
-	channelRotationCreateTable()
-	//ROLE GROUP RELATION TABLE
-	groupMembershipCreateTable()
-}
-
-/*
-Updates all tables to clean old data and adapt to new db structures
-*/
-func updateTables() {
 }
 
 /*

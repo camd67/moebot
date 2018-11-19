@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/volatiletech/null"
+
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
@@ -89,7 +91,7 @@ func (pc *ProfileCommand) getPermissionLevel(pack *CommPackage) string {
 	return db.GetPermissionString(highestPerm)
 }
 
-func convertRankToString(rank int, serverMax sql.NullInt64) (rankString string) {
+func convertRankToString(rank int, serverMax null.Int) (rankString string) {
 	if !serverMax.Valid {
 		// no server max? just give back the rank itself
 		return strconv.Itoa(rank)
@@ -97,7 +99,7 @@ func convertRankToString(rank int, serverMax sql.NullInt64) (rankString string) 
 	// naming strategy: every 1% till 10%, then every 2% until 30%, then every 3% until 60% then every 4% until 100%, then every 100% forever
 	rankPrefixes := []string{"Newcomer", "Apprentice", "Rookie", "Regular", "Veteran"}
 	rankSeparator := " --> "
-	percent := float64(rank) / float64(serverMax.Int64) * 100.0
+	percent := float64(rank) / float64(serverMax.Int) * 100.0
 	var rankPrefixIndex int
 	var rankSuffix int
 	if percent < 10 {

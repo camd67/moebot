@@ -14,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
@@ -83,7 +84,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 		return
 	}
 
-	dbChannel, err := db.ChannelQueryOrInsert(sourceChannel.ID, &server)
+	dbChannel, err := db.ChannelQueryOrInsert(sourceChannel.ID, server)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error getting the channel. This is an issue with moebot not Discord.")
 		return
@@ -110,7 +111,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	// Then load the pins if necessary
 	pc.pinnedMessages.Lock()
 	if _, pinsLoaded := pc.pinnedMessages.M[sourceChannel.ID]; !pinsLoaded {
-		go pc.loadChannel(pack.session, &server, sourceChannel)
+		go pc.loadChannel(pack.session, server, sourceChannel)
 	}
 	pc.pinnedMessages.Unlock()
 
@@ -186,14 +187,14 @@ func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo
 			for _, dbC := range dbChannels {
 				// also only load text channels which have pin moving enabled
 				if dbC.ChannelUid == channel.ID && dbC.MovePins {
-					pc.loadChannel(session, &server, channel)
+					pc.loadChannel(session, server, channel)
 				}
 			}
 		}
 	}
 }
 
-func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *types.Server, channel *discordgo.Channel) {
+func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *models.Server, channel *discordgo.Channel) {
 	_, err := db.ChannelQueryOrInsert(channel.ID, server)
 	if err != nil {
 		log.Println("Error creating/retrieving channel during loading", err)
@@ -231,7 +232,7 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		log.Println("Error while retrieving server from database", err)
 		return
 	}
-	dbChannel, err := db.ChannelQueryOrInsert(pinsUpdate.ChannelID, &server)
+	dbChannel, err := db.ChannelQueryOrInsert(pinsUpdate.ChannelID, server)
 	if err != nil {
 		log.Println("Error while retrieving source channel from database", err)
 		return

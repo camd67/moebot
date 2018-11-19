@@ -53,7 +53,7 @@ func (handler *PollsHandler) openPoll(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return
 	}
-	channel, err := db.ChannelQueryOrInsert(pack.channel.ID, &server)
+	channel, err := db.ChannelQueryOrInsert(pack.channel.ID, server)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem creating the poll. Please try again.")
 		return

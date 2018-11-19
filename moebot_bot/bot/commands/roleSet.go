@@ -10,6 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
@@ -61,7 +62,7 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			return
 		}
 		// first check if we've already got this one
-		oldRole, err := db.RoleQueryRoleUid(r.ID, server.Id)
+		oldRole, err := db.RoleQueryRoleUid(r.ID, server.ID)
 		var typeString string
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -126,7 +127,7 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			oldRole.ConfirmationSecurityAnswer.Scan(securityText)
 		}
 
-		group, err := db.RoleGroupQueryName(groupText, server.Id)
+		group, err := db.RoleGroupQueryName(groupText, server.ID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				pack.session.ChannelMessageSend(pack.channel.ID, "You must provide a group that exists. You can create this with the groupset command.")
@@ -141,7 +142,7 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			return
 		}
 
-		oldRole.ServerId = server.Id
+		oldRole.ServerId = server.ID
 		err = db.RoleInsertOrUpdate(oldRole)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "There was an error adding or updating the role. This is an issue with moebot and not discord")
@@ -151,8 +152,8 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func updateRoleGroups(server types.Server, role *types.Role, group types.RoleGroup) error {
-	defaultGroup, err := db.RoleGroupQueryName(db.UncategorizedGroup, server.Id)
+func updateRoleGroups(server *models.Server, role *types.Role, group types.RoleGroup) error {
+	defaultGroup, err := db.RoleGroupQueryName(db.UncategorizedGroup, server.ID)
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Error while retrieving the default role group", err)
 		return err
@@ -183,10 +184,10 @@ func (rc *RoleSetCommand) GetCommandHelp(commPrefix string) string {
 		"confirmation message if you want to include it.", commPrefix)
 }
 
-func (rc *RoleSetCommand) deleteRole(roleName string, pack *CommPackage, server types.Server) {
+func (rc *RoleSetCommand) deleteRole(roleName string, pack *CommPackage, server *models.Server) {
 	role := moeDiscord.FindRoleByName(pack.guild.Roles, roleName)
 	// we don't really care about the role itself here, just if we got a row back or not (could use a row count check but oh well)
-	_, err := db.RoleQueryRoleUid(role.ID, server.Id)
+	_, err := db.RoleQueryRoleUid(role.ID, server.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			pack.session.ChannelMessageSend(pack.channel.ID, "It doesn't look like that's a role you can delete! Please provide a role that was "+

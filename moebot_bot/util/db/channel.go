@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -38,13 +39,13 @@ var channelUpdateTable = []string{
 	`ALTER TABLE channel ADD COLUMN IF NOT EXISTS delete_pin BOOLEAN NOT NULL DEFAULT FALSE`,
 }
 
-func ChannelQueryOrInsert(channelUid string, server *types.Server) (c *types.Channel, e error) {
+func ChannelQueryOrInsert(channelUid string, server *models.Server) (c *types.Channel, e error) {
 	c = new(types.Channel)
 	row := moeDb.QueryRow(channelQueryUid, channelUid)
 	if e = row.Scan(&c.Id, &c.ServerId, &c.ChannelUid, &c.BotAllowed, &c.MovePins, &c.MoveTextPins, &c.DeletePin, &c.MoveChannelUid); e != nil {
 		if e == sql.ErrNoRows {
 			// no row, so insert it add in default values
-			toInsert := &types.Channel{ChannelUid: channelUid, ServerId: server.Id}
+			toInsert := &types.Channel{ChannelUid: channelUid, ServerId: server.ID}
 			e = moeDb.QueryRow(channelInsert, toInsert.ServerId, toInsert.ChannelUid).Scan(&c.Id)
 			if e != nil {
 				log.Println("Error inserting channel to db ", e)
@@ -65,8 +66,8 @@ func ChannelUpdate(channel *types.Channel) (err error) {
 	return
 }
 
-func ChannelQueryByServer(server types.Server) (channels []types.Channel, err error) {
-	rows, err := moeDb.Query(channelQueryServerId, server.Id)
+func ChannelQueryByServer(server *models.Server) (channels []types.Channel, err error) {
+	rows, err := moeDb.Query(channelQueryServerId, server.ID)
 	if err != nil {
 		log.Println("Error querying for channels", err)
 		return

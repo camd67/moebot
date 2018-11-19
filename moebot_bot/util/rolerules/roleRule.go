@@ -5,6 +5,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -35,10 +36,10 @@ type RoleRule interface {
 	Apply(session *discordgo.Session, action *RoleAction) (success bool, message string)
 }
 
-func GetRulesForRole(server *types.Server, role *types.Role, comPrefix string) ([]RoleRule, error) {
+func GetRulesForRole(server *models.Server, role *types.Role, comPrefix string) ([]RoleRule, error) {
 	var result []RoleRule
 	if server.VeteranRole.String == role.RoleUid && server.VeteranRank.Valid {
-		result = append(result, &Points{PointsTreshold: int(server.VeteranRank.Int64)})
+		result = append(result, &Points{PointsTreshold: int(server.VeteranRank.Int)})
 	}
 	if role.ConfirmationMessage.Valid {
 		result = append(result, &Confirmation{ComPrefix: comPrefix})

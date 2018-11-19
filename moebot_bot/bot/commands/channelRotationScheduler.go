@@ -158,7 +158,7 @@ func (s *ChannelRotationScheduler) AddScheduledOperation(comm *CommPackage) erro
 		}
 	}
 
-	err = db.ChannelRotationAdd(server.Id, channels[0], channels, intervalString)
+	err = db.ChannelRotationAdd(server.ID, channels[0], channels, intervalString)
 	if err != nil {
 		comm.session.ChannelMessageSend(comm.channel.ID, "Sorry, there was a problem adding the rotation to the server.")
 		return err

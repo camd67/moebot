@@ -41,12 +41,12 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 		return
 	}
 	// Then check to see if the role exists in the server
-	dbRole, err := db.RoleQueryRoleUid(r.ID, s.Id)
+	dbRole, err := db.RoleQueryRoleUid(r.ID, s.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// we don't want to return on a no row error, instead add a default group so we can add later
 			newGroupId, err := db.RoleGroupInsertOrUpdate(types.RoleGroup{
-				ServerId: s.Id,
+				ServerId: s.ID,
 				Name:     db.UncategorizedGroup,
 				Type:     types.GroupTypeAny,
 			}, s)
@@ -64,7 +64,7 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 		}
 	}
 	// Overwrite the values even if present, since these should be the same
-	dbRole.ServerId = s.Id
+	dbRole.ServerId = s.ID
 	dbRole.RoleUid = r.ID
 	dbRole.Permission = permLevel
 	err = db.RoleInsertOrUpdate(dbRole)

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -30,7 +31,7 @@ const (
 	UncategorizedGroup = "Uncategorized"
 )
 
-func RoleGroupInsertOrUpdate(rg types.RoleGroup, s types.Server) (newId int, err error) {
+func RoleGroupInsertOrUpdate(rg types.RoleGroup, s *models.Server) (newId int, err error) {
 	row := moeDb.QueryRow(roleGroupQueryById, rg.Id)
 	var dbRg types.RoleGroup
 	if err := row.Scan(&dbRg.Id, &dbRg.ServerId, &dbRg.Name, &dbRg.Type); err != nil {
@@ -39,7 +40,7 @@ func RoleGroupInsertOrUpdate(rg types.RoleGroup, s types.Server) (newId int, err
 			if rg.Type <= 0 {
 				rg.Type = types.GroupTypeAny
 			}
-			err := moeDb.QueryRow(roleGroupInsert, s.Id, rg.Name, rg.Type).Scan(&newId)
+			err := moeDb.QueryRow(roleGroupInsert, s.ID, rg.Name, rg.Type).Scan(&newId)
 			if err != nil {
 				log.Println("Error inserting roleGroup to db")
 				return -1, err
@@ -71,7 +72,7 @@ func RoleGroupInsertOrUpdate(rg types.RoleGroup, s types.Server) (newId int, err
 /*
 Returns a RoleGroup matching the id inside the given RoleGroup. If no match is found, the RoleGroup is added to the database
 */
-func RoleGroupQueryOrInsert(rg types.RoleGroup, s types.Server) (newRg types.RoleGroup, err error) {
+func RoleGroupQueryOrInsert(rg types.RoleGroup, s *models.Server) (newRg types.RoleGroup, err error) {
 	row := moeDb.QueryRow(roleGroupQueryById, rg.Id)
 	if err = row.Scan(&newRg.Id, &newRg.ServerId, &newRg.Name, &newRg.Type); err != nil {
 		if err == sql.ErrNoRows {
@@ -80,7 +81,7 @@ func RoleGroupQueryOrInsert(rg types.RoleGroup, s types.Server) (newRg types.Rol
 				rg.Type = types.GroupTypeAny
 			}
 			var insertId int
-			err = moeDb.QueryRow(roleGroupInsert, s.Id, rg.Name, rg.Type).Scan(&insertId)
+			err = moeDb.QueryRow(roleGroupInsert, s.ID, rg.Name, rg.Type).Scan(&insertId)
 			if err != nil {
 				log.Println("Error inserting role to db")
 				return
@@ -95,8 +96,8 @@ func RoleGroupQueryOrInsert(rg types.RoleGroup, s types.Server) (newRg types.Rol
 	return
 }
 
-func RoleGroupQueryServer(s types.Server) (roleGroups []types.RoleGroup, err error) {
-	rows, err := moeDb.Query(roleGroupQueryByServer, s.Id)
+func RoleGroupQueryServer(s *models.Server) (roleGroups []types.RoleGroup, err error) {
+	rows, err := moeDb.Query(roleGroupQueryByServer, s.ID)
 	if err != nil {
 		log.Println("Error querying for roleGroup", err)
 		return

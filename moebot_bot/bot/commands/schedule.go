@@ -67,7 +67,7 @@ func (c *ScheduleCommand) listOperations(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "There was a problem retrieving the current server. Please try again.")
 		return
 	}
-	operations, err := db.ScheduledOperationQueryServer(server.Id)
+	operations, err := db.ScheduledOperationQueryServer(server.ID)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "There was a problem retrieving the current operations list. Please try again.")
 		return
@@ -95,7 +95,7 @@ func (c *ScheduleCommand) removeOperation(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, pack.params[1]+" is not a valid operation ID. Please try again.")
 		return
 	}
-	if ok, err := db.ScheduledOperationDelete(operationID, server.Id); err != nil || !ok {
+	if ok, err := db.ScheduledOperationDelete(operationID, server.ID); err != nil || !ok {
 		pack.session.ChannelMessageSend(pack.channel.ID, pack.params[1]+" is not a valid operation ID. Please try again.")
 		return
 	}
