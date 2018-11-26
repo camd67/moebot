@@ -88,3 +88,6 @@ fabric.properties
 
 # VS Code settings folder
 .vscode
+
+# Generated sqlboiler code
+/moebot_bot/util/db/models/
