@@ -5,6 +5,7 @@ package commands
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/event"
 )
@@ -15,7 +16,7 @@ type CommPackage struct {
 	guild   *discordgo.Guild
 	member  *discordgo.Member
 	channel *discordgo.Channel
-	user    *types.UserProfile
+	user    *models.UserProfile
 	timer   *event.Timer
 	params  []string
 }
@@ -36,7 +37,7 @@ type SetupHandler interface {
 }
 
 func NewCommPackage(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, member *discordgo.Member, channel *discordgo.Channel,
-	params []string, user *types.UserProfile, timer *event.Timer) CommPackage {
+	params []string, user *models.UserProfile, timer *event.Timer) CommPackage {
 	return CommPackage{
 		session: session,
 		message: message,

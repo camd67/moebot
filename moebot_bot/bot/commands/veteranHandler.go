@@ -171,7 +171,7 @@ func (vh *VeteranHandler) handleVeteranChange(userUid string, guildUid string, p
 				log.Println("Error getting user during veteran change", err)
 				return nil, err
 			}
-			id, newPoint, messageSent, err := db.UserServerRankUpdateOrInsert(user.Id, server.ID, count)
+			id, newPoint, messageSent, err := db.UserServerRankUpdateOrInsert(user.ID, server.ID, count)
 			if err != nil {
 				// we had an error, just don't delete the user and their points
 				continue
