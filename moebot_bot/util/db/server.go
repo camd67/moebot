@@ -25,8 +25,8 @@ func ServerQueryOrInsert(guildUid string) (s *models.Server, e error) {
 	if s, e := models.Servers(qm.Where(models.ServerColumns.GuildUID+" = ?", guildUid)).One(context.Background(), moeDb); e != nil {
 		if e == sql.ErrNoRows {
 			// no row, so insert it add in default values
-			srv := &models.Server{GuildUID: guildUid, Enabled: true}
-			e = srv.Insert(context.Background(), moeDb, boil.Infer())
+			s = &models.Server{GuildUID: guildUid, Enabled: true}
+			e = s.Insert(context.Background(), moeDb, boil.Infer())
 			if e != nil {
 				log.Println("Error inserting role to db ", e)
 				return &models.Server{}, e
