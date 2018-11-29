@@ -15,7 +15,7 @@ type RoleActionType int
 //RoleAction Action being performed on the role
 type RoleAction struct {
 	Role            *types.Role
-	UserRank        *types.UserServerRank
+	UserRank        *models.UserServerRank
 	Member          *discordgo.Member
 	Guild           *discordgo.Guild
 	Channel         *discordgo.Channel

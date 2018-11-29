@@ -1,12 +1,14 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"log"
-	"strconv"
-	"strings"
 
-	"github.com/camd67/moebot/moebot_bot/util/db/types"
+	"github.com/volatiletech/sqlboiler/boil"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
+	"github.com/volatiletech/sqlboiler/queries/qm"
 )
 
 const (
@@ -28,58 +30,46 @@ const (
 	userServerRankUpdateMessage = `UPDATE user_server_rank SET MessageSent = true WHERE Id = ANY ($1::integer[])`
 )
 
-func UserServerRankQuery(userUid string, guildUid string) (usr *types.UserServerRank, err error) {
-	row := moeDb.QueryRow(userServerRankQuery, guildUid, userUid)
-	u := types.UserServerRank{}
-	err = row.Scan(&u.Id, &u.ServerId, &u.UserId, &u.Rank, &u.MessageSent)
-	return &u, err
+func UserServerRankQuery(userUid string, guildUid string) (usr *models.UserServerRank, err error) {
+	return models.UserServerRanks(
+		qm.InnerJoin("server s on s.id = user_server_rank.server_id"),
+		qm.InnerJoin("user_profile u on u.id = user_server_rank.user_id"),
+		qm.Where("guild_uid = ? AND user_uid = ?", guildUid, userUid),
+	).One(context.Background(), moeDb)
 }
 
 func UserServerRankUpdateOrInsert(userId int, serverId int, points int) (id int, newPoint int, messageSent bool, err error) {
-	u := types.UserServerRank{
-		ServerId: serverId,
-		UserId:   userId,
-	}
-	row := moeDb.QueryRow(userServerRankQueryId, u.ServerId, u.UserId)
-	if err = row.Scan(&u.Id, &u.Rank, &u.MessageSent); err != nil {
-		if err == sql.ErrNoRows {
-			// no row, so insert it
-			err = moeDb.QueryRow(userServerRankInsert, serverId, userId, points).Scan(&id, &newPoint, &messageSent)
-			if err != nil {
-				log.Println("Error inserting userServerRank to db ", err)
-				return
-			}
+	u, err := models.UserServerRanks(qm.Where("server_id = ? AND user_id = ?", userId, userId)).One(context.Background(), moeDb)
+	if err == sql.ErrNoRows {
+		u = &models.UserServerRank{
+			ServerID: serverId,
+			UserID:   userId,
+			Rank:     points,
+		}
+		err = u.Insert(context.Background(), moeDb, boil.Infer())
+		if err != nil {
+			log.Println("Error inserting userServerRank to db ", err)
 			return
 		}
 	} else {
-		// already have a row, update it
-		err = moeDb.QueryRow(userServerRankUpdate, u.Id, points).Scan(&id, &newPoint, &messageSent)
+		u.Rank += points
+		u.Update(context.Background(), moeDb, boil.Infer())
 		if err != nil {
 			log.Println("Error updating userServerRank", err)
 			return
 		}
-		return
 	}
-	return u.Id, u.Rank, u.MessageSent, nil
+	return u.ID, u.Rank, u.MessageSent, nil
 }
 
 func UserServerRankSetMessageSent(entries []int) (err error) {
-	ids := make([]string, len(entries))
-	for i, e := range entries {
-		ids[i] = strconv.Itoa(e)
+	convertedIds := make([]interface{}, len(entries))
+	for index, num := range entries {
+		convertedIds[index] = num
 	}
-	idCollection := "{" + strings.Join(ids, ",") + "}"
-	_, err = moeDb.Exec(userServerRankUpdateMessage, idCollection)
+	_, err = models.UserServerRanks(qm.WhereIn("id in ?", convertedIds...)).UpdateAll(context.Background(), moeDb, models.M{"message_sent": true})
 	if err != nil {
 		log.Println("Error updating many user server ranks", err)
 	}
 	return
-}
-
-func userServerRankCreateTable() {
-	_, err := moeDb.Exec(userServerRankTable)
-	if err != nil {
-		log.Println("Error creating user server rank table", err)
-		return
-	}
 }
