@@ -85,6 +85,11 @@ RENAME serverid TO server_id;
 
 
 
+-- Group Membership
+ALTER TABLE group_membership
+RENAME group_id TO role_group_id;
+
+
 -- Server
 ALTER TABLE server
 RENAME guilduid TO guild_uid;
