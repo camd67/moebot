@@ -11,8 +11,20 @@
 	
 [[types]]
 	[types.match]
-	db_type		= "bigint"
-	nullable 	= false
+	name = "group_type"
 	
 	[types.replace]
-	types	= "int64"
+	type	=	"types.GroupType"
+	
+	[types.imports]
+	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']
+	
+[[types]]
+	[types.match]
+	name = "permission"
+	
+	[types.replace]
+	type	=	"types.Permission"
+	
+	[types.imports]
+	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']

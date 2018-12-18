@@ -63,11 +63,12 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 		}
 		// first check if we've already got this one
 		oldRole, err := db.RoleQueryRoleUid(r.ID, server.ID)
+		var oldGroups models.RoleGroupSlice
 		var typeString string
 		if err != nil {
 			if err == sql.ErrNoRows {
-				oldRole = types.Role{
-					RoleUid: r.ID,
+				oldRole = &models.Role{
+					RoleUID: r.ID,
 				}
 				typeString = "added"
 				// don't return on a no row error, that means we need to add a new role
@@ -83,6 +84,7 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			}
 		} else {
 			// we got a role back, so we're updating
+			oldGroups = oldRole.R.RoleGroups
 			typeString = "updated"
 		}
 		if hasTrigger {
@@ -137,13 +139,14 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			}
 			return
 		}
-		if updateRoleGroups(server, &oldRole, group) != nil {
+		groups, err := updateRoleGroups(server, oldGroups, group)
+		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "There was an error updating role groups. This is an issue with moebot and not discord")
 			return
 		}
 
-		oldRole.ServerId = server.ID
-		err = db.RoleInsertOrUpdate(oldRole)
+		oldRole.ServerID.Int = server.ID
+		err = db.RoleInsertOrUpdate(oldRole, groups)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "There was an error adding or updating the role. This is an issue with moebot and not discord")
 			return
@@ -152,22 +155,22 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func updateRoleGroups(server *models.Server, role *types.Role, group types.RoleGroup) error {
+func updateRoleGroups(server *models.Server, groups models.RoleGroupSlice, group *models.RoleGroup) (models.RoleGroupSlice, error) {
 	defaultGroup, err := db.RoleGroupQueryName(db.UncategorizedGroup, server.ID)
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Error while retrieving the default role group", err)
-		return err
+		return nil, err
 	}
-	role.Groups = util.IntRemove(role.Groups, defaultGroup.Id)
-	if util.IntContains(role.Groups, group.Id) {
-		role.Groups = util.IntRemove(role.Groups, group.Id)
-		if len(role.Groups) == 0 && defaultGroup.Id != 0 {
-			role.Groups = append(role.Groups, defaultGroup.Id)
+	groups = util.GroupRemove(groups, defaultGroup.ID)
+	if util.GroupContains(groups, group.ID) {
+		groups = util.GroupRemove(groups, group.ID)
+		if len(groups) == 0 && defaultGroup.ID != 0 {
+			groups = append(groups, &models.RoleGroup{ID: defaultGroup.ID})
 		}
 	} else {
-		role.Groups = append(role.Groups, group.Id)
+		groups = append(groups, &models.RoleGroup{ID: group.ID})
 	}
-	return nil
+	return groups, nil
 }
 
 func (rc *RoleSetCommand) GetPermLevel() types.Permission {

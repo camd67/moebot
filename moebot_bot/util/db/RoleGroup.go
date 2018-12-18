@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
+	"github.com/volatiletech/sqlboiler/queries/qm"
 )
 
 const (
@@ -31,16 +33,16 @@ const (
 	UncategorizedGroup = "Uncategorized"
 )
 
-func RoleGroupInsertOrUpdate(rg types.RoleGroup, s *models.Server) (newId int, err error) {
-	row := moeDb.QueryRow(roleGroupQueryById, rg.Id)
+func RoleGroupInsertOrUpdate(rg *models.RoleGroup, s *models.Server) (newId int, err error) {
+	row := moeDb.QueryRow(roleGroupQueryById, rg.ID)
 	var dbRg types.RoleGroup
 	if err := row.Scan(&dbRg.Id, &dbRg.ServerId, &dbRg.Name, &dbRg.Type); err != nil {
 		if err == sql.ErrNoRows {
 			// no row, so insert it add in default values
-			if rg.Type <= 0 {
-				rg.Type = types.GroupTypeAny
+			if rg.GroupType <= 0 {
+				rg.GroupType = types.GroupTypeAny
 			}
-			err := moeDb.QueryRow(roleGroupInsert, s.ID, rg.Name, rg.Type).Scan(&newId)
+			err := moeDb.QueryRow(roleGroupInsert, s.ID, rg.Name, rg.GroupType).Scan(&newId)
 			if err != nil {
 				log.Println("Error inserting roleGroup to db")
 				return -1, err
@@ -53,8 +55,8 @@ func RoleGroupInsertOrUpdate(rg types.RoleGroup, s *models.Server) (newId int, e
 		}
 	} else {
 		// got a row, update it
-		if rg.Type > 0 {
-			dbRg.Type = rg.Type
+		if rg.GroupType > 0 {
+			dbRg.Type = rg.GroupType
 		}
 		if rg.Name != "" {
 			dbRg.Name = rg.Name
@@ -114,9 +116,8 @@ func RoleGroupQueryServer(s *models.Server) (roleGroups []types.RoleGroup, err e
 	return
 }
 
-func RoleGroupQueryName(name string, serverId int) (rg types.RoleGroup, err error) {
-	row := moeDb.QueryRow(roleGroupQueryByName, name, serverId)
-	err = row.Scan(&rg.Id, &rg.ServerId, &rg.Name, &rg.Type)
+func RoleGroupQueryName(name string, serverId int) (rg *models.RoleGroup, err error) {
+	rg, err = models.RoleGroups(qm.Where("name = ? AND server_id = ?", name, serverId)).One(context.Background(), moeDb)
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Error querying for role group by name and serverID", err)
 	}

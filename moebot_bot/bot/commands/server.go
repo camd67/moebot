@@ -58,11 +58,11 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 		if currentVeteranUID != s.VeteranRole && s.VeteranRole.Valid {
 			r, err := db.RoleQueryRoleUid(s.VeteranRole.String, s.ID)
 			if err != nil && err == sql.ErrNoRows {
-				r.ServerId = s.ID
-				r.RoleUid = s.VeteranRole.String
+				r.ServerID.Int = s.ID
+				r.RoleUID = s.VeteranRole.String
 				r.Permission = types.PermAll
 				r.Trigger.Scan("veteran")
-				err = db.RoleInsertOrUpdate(r)
+				err = db.RoleInsertOrUpdateWithoutRoles(r)
 				if err != nil {
 					pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the veteran role. Your change was probably not applied.")
 					return

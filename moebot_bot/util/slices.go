@@ -1,6 +1,10 @@
 package util
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
+)
 
 func IntContains(s []int, e int) bool {
 	return IntIndexOf(s, e) > -1
@@ -51,6 +55,27 @@ func StrContainsPrefix(s []string, e string, caseInsensitive int) bool {
 		}
 	}
 	return false
+}
+
+func GroupContains(g models.RoleGroupSlice, id int) bool {
+	return GroupIndexOf(g, id) > -1
+}
+
+func GroupRemove(g models.RoleGroupSlice, id int) models.RoleGroupSlice {
+	index := GroupIndexOf(g, id)
+	if index > -1 {
+		g = append(g[:index], g[index+1:]...)
+	}
+	return g
+}
+
+func GroupIndexOf(g models.RoleGroupSlice, id int) int {
+	for i, a := range g {
+		if a.ID == id {
+			return i
+		}
+	}
+	return -1
 }
 
 //Subtract removes all values in slice2 from slice1
