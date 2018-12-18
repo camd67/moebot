@@ -83,6 +83,9 @@ DROP COLUMN groupid;
 ALTER TABLE role_group
 RENAME serverid TO server_id;
 
+ALTER TABLE role_group
+RENAME type TO group_type;
+
 
 
 -- Group Membership
