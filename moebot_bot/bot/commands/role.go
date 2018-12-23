@@ -160,15 +160,15 @@ func printAllRoles(server *models.Server, vetRole *discordgo.Role, pack *CommPac
 			// skip any invalid triggers. We don't want people thinking that they can choose roles they actually can't
 			continue
 		}
-		if vetRole != nil && role.RoleUid == vetRole.ID { //ignore veteran role since we already added it manually
+		if vetRole != nil && role.RoleUID == vetRole.ID { //ignore veteran role since we already added it manually
 			continue
 		}
 		// Could maybe make a map here, but the group size is going to be pretty small
 		foundGroup := false
 		for _, group := range roleGroups {
 			if group.Type != types.GroupTypeNoMultiples {
-				for _, gr := range role.Groups {
-					if gr == group.Id {
+				for _, gr := range role.R.RoleGroups {
+					if gr.ID == group.Id {
 						triggersByGroup[group.Name] = append(triggersByGroup[group.Name], role.Trigger.String)
 						foundGroup = true
 					}

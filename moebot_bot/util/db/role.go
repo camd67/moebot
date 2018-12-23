@@ -113,60 +113,10 @@ func RoleInsertOrUpdate(role *models.Role, groups models.RoleGroupSlice) error {
 	return nil
 }
 
-func RoleQueryOrInsert(role types.Role) (r types.Role, err error) {
-	row := moeDb.QueryRow(roleQueryServerRole, role.ServerId, role.RoleUid)
-	if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
-		if err == sql.ErrNoRows {
-			// no row, so insert it add in default values
-			if role.Permission == -1 {
-				role.Permission = types.PermAll
-			}
-			tx, _ := moeDb.Begin()
-			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.ConfirmationMessage,
-				role.ConfirmationSecurityAnswer, role.Trigger).Scan(&role.Id)
-			if err != nil {
-				log.Println("Error inserting role to db")
-				tx.Rollback()
-				return
-			}
-			for _, groupID := range role.Groups {
-				err = groupMembershipAdd(role.Id, groupID)
-				if err != nil {
-					log.Println("Error inserting role group relationship to db", err)
-					tx.Rollback()
-					return
-				}
-			}
-			tx.Commit()
-			r = role
-		}
-	} else {
-		r.Groups, err = groupMembershipQueryByRoleID(r.Id)
-	}
-	// got a row, return it
-	return
-}
-
-func RoleQueryServer(s *models.Server) (roles []types.Role, err error) {
-	rows, err := moeDb.Query(roleQueryServer, s.ID)
+func RoleQueryServer(s *models.Server) (roles models.RoleSlice, err error) {
+	roles, err = models.Roles(qm.Where("server_id = ?", s.ID)).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for role in server role query", err)
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var r types.Role
-		if err = rows.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer,
-			&r.Trigger); err != nil {
-
-			log.Println("Error scanning from role table:", err)
-			return
-		}
-		if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
-			log.Println("Error scanning from role group relation table:", err)
-			return
-		}
-		roles = append(roles, r)
 	}
 	return
 }
