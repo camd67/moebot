@@ -40,7 +40,15 @@ func ServerQueryOrInsert(guildUid string) (s *models.Server, e error) {
 
 func ServerQueryById(id int) (s *models.Server, e error) {
 	if s, e = models.FindServer(context.Background(), moeDb, id); e != nil {
-		log.Println("Error retrieving the server from db", e)
+		log.Println("Error retrieving the server from db by id", e)
+		return &models.Server{}, e
+	}
+	return s, e
+}
+
+func ServerQueryByGuildUid(guildUid string) (s *models.Server, e error) {
+	if s, e = models.Servers(qm.Where("guild_uid = ?", guildUid)).One(context.Background(), moeDb); e != nil {
+		log.Println("Error retrieving the server from db by guild uid", e)
 		return &models.Server{}, e
 	}
 	return s, e

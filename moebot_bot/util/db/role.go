@@ -169,7 +169,8 @@ func RoleQueryPermission(roleUids []string) (p []types.Permission) {
 }
 
 func RoleDelete(roleUid string, guildUid string) error {
-	_, err := moeDb.Exec(roleDelete, roleUid, guildUid)
+	s, _ := ServerQueryByGuildUid(guildUid)
+	_, err := models.Roles(qm.Where("role_uid = ? AND server_id = ?", roleUid, s.ID)).DeleteAll(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error deleting role: ", roleUid)
 	}
@@ -249,19 +250,4 @@ Gets a string representing all the possible assignable permission levels
 */
 func GetAssignableRoles() string {
 	return "{All, Mod}"
-}
-
-func roleCreateTable() {
-	_, err := moeDb.Exec(roleTable)
-	if err != nil {
-		log.Println("Error creating role table", err)
-		return
-	}
-	for _, alter := range roleUpdateTable {
-		_, err = moeDb.Exec(alter)
-		if err != nil {
-			log.Println("Error alterting role table", err)
-			return
-		}
-	}
 }
