@@ -151,16 +151,19 @@ func RoleQueryRoleUid(roleUid string, serverId int) (r *models.Role, err error) 
 }
 
 func RoleQueryPermission(roleUids []string) (p []types.Permission) {
-	idCollection := "{" + strings.Join(roleUids, ",") + "}"
-	r, err := moeDb.Query(roleQueryPermissions, idCollection)
+	convertedUids := make([]interface{}, len(roleUids))
+	for index, num := range roleUids {
+		convertedUids[index] = num
+	}
+
+	roles, err := models.Roles(qm.WhereIn("permission in ?", convertedUids...)).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for user permissions", err)
 		return
 	}
-	for r.Next() {
-		var newPerm types.Permission
-		r.Scan(&newPerm)
-		p = append(p, newPerm)
+
+	for _, role := range roles {
+		p = append(p, role.Permission)
 	}
 	return
 }
