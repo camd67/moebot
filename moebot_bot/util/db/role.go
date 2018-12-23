@@ -121,26 +121,13 @@ func RoleQueryServer(s *models.Server) (roles models.RoleSlice, err error) {
 	return
 }
 
-func RoleQueryGroup(groupId int) (roles []types.Role, err error) {
-	rows, err := moeDb.Query(roleQueryGroup, groupId)
+func RoleQueryGroup(groupId int) (roles models.RoleSlice, err error) {
+	roles, err = models.Roles(
+		qm.InnerJoin("group_membership gm ON gm.role_id = role.Id"),
+		qm.Where("gm.role_group_id = $1", groupId),
+	).All(context.Background(), moeDb)
 	if err != nil {
-		log.Println("Error querying for role in group role query", err)
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var r types.Role
-		if err = rows.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer,
-			&r.Trigger); err != nil {
-
-			log.Println("Error scanning from role table:", err)
-			return
-		}
-		if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
-			log.Println("Error scanning from role group relation table:", err)
-			return
-		}
-		roles = append(roles, r)
+		log.Println("Error querying for role in server role query", err)
 	}
 	return
 }
