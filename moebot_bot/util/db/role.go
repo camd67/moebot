@@ -127,22 +127,18 @@ func RoleQueryGroup(groupId int) (roles models.RoleSlice, err error) {
 		qm.Where("gm.role_group_id = $1", groupId),
 	).All(context.Background(), moeDb)
 	if err != nil {
-		log.Println("Error querying for role in server role query", err)
+		log.Println("Error querying for role in role group query", err)
 	}
 	return
 }
 
-func RoleQueryTrigger(trigger string, serverId int) (r types.Role, err error) {
-	row := moeDb.QueryRow(roleQueryTrigger, trigger, serverId)
-	err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
-	if err != nil && err != sql.ErrNoRows {
+func RoleQueryTrigger(trigger string, serverId int) (r *models.Role, err error) {
+	r, err = models.Roles(
+		qm.Where("qm.Where(server_id = ? AND UPPER(trigger) = UPPER(?)", serverId, trigger),
+	).One(context.Background(), moeDb)
+	if err != nil {
 		log.Println("Error querying for role by trigger", err)
 	}
-	if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
-		log.Println("Error scanning from role group relation table:", err)
-		return
-	}
-	// return whatever we get, error or row
 	return
 }
 

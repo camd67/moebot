@@ -27,7 +27,7 @@ func (r *Exclusive) Apply(session *discordgo.Session, action *RoleAction) (succe
 	foundOtherRole := false
 	for _, dbGroupRole := range r.ExclusiveRoles {
 		// only send a message that we removed the role if they actually have it and it's not the one we just added
-		if dbGroupRole.RoleUID != action.Role.RoleUid && util.StrContains(action.Member.Roles, dbGroupRole.RoleUID, util.CaseSensitive) {
+		if dbGroupRole.RoleUID != action.Role.RoleUID && util.StrContains(action.Member.Roles, dbGroupRole.RoleUID, util.CaseSensitive) {
 			roleToRemove := moeDiscord.FindRoleById(action.Guild.Roles, dbGroupRole.RoleUID)
 
 			// Check for an error first
@@ -36,7 +36,7 @@ func (r *Exclusive) Apply(session *discordgo.Session, action *RoleAction) (succe
 				builder.WriteString("\nFailed to remove: `")
 				builder.WriteString(roleToRemove.Name)
 				builder.WriteString("`")
-				log.Println("error removing role from "+action.Member.User.ID+" with role "+action.Role.RoleUid+" with error: ", err)
+				log.Println("error removing role from "+action.Member.User.ID+" with role "+action.Role.RoleUID+" with error: ", err)
 				continue
 			}
 

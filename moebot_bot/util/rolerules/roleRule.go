@@ -14,7 +14,7 @@ type RoleActionType int
 
 //RoleAction Action being performed on the role
 type RoleAction struct {
-	Role            *types.Role
+	Role            *models.Role
 	UserRank        *models.UserServerRank
 	Member          *discordgo.Member
 	Guild           *discordgo.Guild
@@ -36,21 +36,21 @@ type RoleRule interface {
 	Apply(session *discordgo.Session, action *RoleAction) (success bool, message string)
 }
 
-func GetRulesForRole(server *models.Server, role *types.Role, comPrefix string) ([]RoleRule, error) {
+func GetRulesForRole(server *models.Server, role *models.Role, comPrefix string) ([]RoleRule, error) {
 	var result []RoleRule
-	if server.VeteranRole.String == role.RoleUid && server.VeteranRank.Valid {
+	if server.VeteranRole.String == role.RoleUID && server.VeteranRank.Valid {
 		result = append(result, &Points{PointsTreshold: int(server.VeteranRank.Int)})
 	}
 	if role.ConfirmationMessage.Valid {
 		result = append(result, &Confirmation{ComPrefix: comPrefix})
 	}
-	for _, gID := range role.Groups {
-		group, err := db.RoleGroupQueryId(gID)
+	for _, g := range role.R.RoleGroups {
+		group, err := db.RoleGroupQueryId(g.ID)
 		if err != nil {
 			log.Println("Error while retrieving role group during rules initialization", err)
 			return nil, err
 		}
-		relatedRoles, err := db.RoleQueryGroup(gID)
+		relatedRoles, err := db.RoleQueryGroup(g.ID)
 		if err != nil {
 			log.Println("Error while retrieving related group roles during rules initialization", err)
 			return nil, err

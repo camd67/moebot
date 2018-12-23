@@ -17,7 +17,7 @@ func (r *NoMultiples) Check(session *discordgo.Session, action *RoleAction) (suc
 	}
 	for _, dbGroupRole := range r.ExclusiveRoles {
 		// only send a message that we removed the role if they actually have it and it's not the one we just added
-		if dbGroupRole.RoleUID != action.Role.RoleUid && util.StrContains(action.Member.Roles, dbGroupRole.RoleUID, util.CaseSensitive) {
+		if dbGroupRole.RoleUID != action.Role.RoleUID && util.StrContains(action.Member.Roles, dbGroupRole.RoleUID, util.CaseSensitive) {
 			existingRole := moeDiscord.FindRoleById(action.Guild.Roles, dbGroupRole.RoleUID)
 			return false, "You already have the role `" + existingRole.Name + "`, please remove it before adding this role."
 		}

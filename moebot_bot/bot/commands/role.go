@@ -34,7 +34,7 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 		printAllRoles(server, vetRole, pack)
 	} else {
 		var role *discordgo.Role
-		var dbRole types.Role
+		var dbRole *models.Role
 
 		var roleNameBuf strings.Builder
 		for _, param := range pack.params {
@@ -52,20 +52,20 @@ func (rc *RoleCommand) Execute(pack *CommPackage) {
 				"Please provide a valid role. `"+rc.ComPrefix+" role` to list all roles for this server.")
 			return
 		}
-		role = moeDiscord.FindRoleById(pack.guild.Roles, dbRole.RoleUid)
+		role = moeDiscord.FindRoleById(pack.guild.Roles, dbRole.RoleUID)
 		if role == nil {
-			log.Println("Nil dbRole when searching for dbRole id:" + dbRole.RoleUid)
+			log.Println("Nil dbRole when searching for dbRole id:" + dbRole.RoleUID)
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue finding that role in this server. It may have been deleted.")
 			return
 		}
-		rules, err := rolerules.GetRulesForRole(server, &dbRole, rc.ComPrefix)
+		rules, err := rolerules.GetRulesForRole(server, dbRole, rc.ComPrefix)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem fetching the apply rules for the given role. Please try again.")
 			return
 		}
 		usrRank, _ := db.UserServerRankQuery(pack.message.Author.ID, pack.guild.ID)
 		action := &rolerules.RoleAction{
-			Role:            &dbRole,
+			Role:            dbRole,
 			UserRank:        usrRank,
 			Member:          pack.member,
 			Guild:           pack.guild,
