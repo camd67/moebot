@@ -13,54 +13,6 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
-const (
-	roleTable = `CREATE TABLE IF NOT EXISTS role(
-		Id SERIAL NOT NULL PRIMARY KEY,
-		ServerId INTEGER REFERENCES server(Id) ON DELETE CASCADE,
-		GroupId INTEGER REFERENCES role_group(Id) ON DELETE CASCADE,
-		RoleUid VARCHAR(20) NOT NULL UNIQUE,
-		Permission SMALLINT NOT NULL DEFAULT 2,
-		ConfirmationMessage VARCHAR CONSTRAINT role_confirmation_message_length CHECK (char_length(ConfirmationMessage) <= 1900),
-		ConfirmationSecurityAnswer VARCHAR CONSTRAINT role_confirmation_security_answer_length CHECK (char_length(ConfirmationMessage) <= 1900),
-		Trigger TEXT CONSTRAINT role_trigger_length CHECK(char_length(Trigger) <= 100)
-	)`
-
-	RoleMaxTriggerLength       = 100
-	RoleMaxTriggerLengthString = "100"
-
-	roleQueryServerRole = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE RoleUid = $1 AND ServerId = $2`
-	roleQueryServer     = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE ServerId = $1`
-	roleQuery           = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE Id = $1`
-	roleQueryTrigger    = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE UPPER(Trigger) = UPPER($1) AND ServerId = $2`
-	roleQueryGroup      = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role 
-							INNER JOIN group_membership ON group_membership.role_id = role.Id
-							WHERE group_membership.group_id = $1`
-	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
-
-	roleUpdate = `UPDATE role SET Permission = $2, ConfirmationMessage = $3, ConfirmationSecurityAnswer = $4, Trigger = $5 WHERE Id = $1`
-
-	roleInsert = `INSERT INTO role(ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger) VALUES($1, $2, $3, $4, $5, $6) RETURNING id`
-
-	roleDelete = `DELETE FROM role WHERE role.RoleUid = $1 AND role.ServerId = (SELECT server.id FROM server WHERE server.guilduid = $2)`
-)
-
-var (
-	roleUpdateTable = []string{
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS ConfirmationMessage VARCHAR`,
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS ConfirmationSecurityAnswer VARCHAR`,
-		`ALTER TABLE role DROP COLUMN IF EXISTS RoleType`,
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS Trigger TEXT`,
-		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_trigger_length`,
-		`ALTER TABLE role ADD CONSTRAINT role_trigger_length CHECK(char_length(Trigger) <= 100)`,
-		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_confirmation_message_length`,
-		`ALTER TABLE role ADD CONSTRAINT role_confirmation_message_length CHECK(char_length(ConfirmationMessage) <= 1900)`,
-		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_confirmation_security_answer_length`,
-		`ALTER TABLE role ADD CONSTRAINT role_confirmation_security_answer_length CHECK(char_length(ConfirmationSecurityAnswer) <= 1900)`,
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS GroupId INTEGER REFERENCES role_group(Id) ON DELETE CASCADE`,
-		`ALTER TABLE role ALTER COLUMN Permission SET DEFAULT 2`,
-	}
-)
-
 func RoleInsertOrUpdateWithoutRoles(role *models.Role) error {
 	return RoleInsertOrUpdate(role, nil)
 }
