@@ -88,9 +88,8 @@ func RoleGroupQueryName(name string, serverId int) (rg *models.RoleGroup, err er
 	return
 }
 
-func RoleGroupQueryId(id int) (rg types.RoleGroup, err error) {
-	row := moeDb.QueryRow(roleGroupQueryById, id)
-	err = row.Scan(&rg.Id, &rg.ServerId, &rg.Name, &rg.Type)
+func RoleGroupQueryId(id int) (rg *models.RoleGroup, err error) {
+	rg, err = models.FindRoleGroup(context.Background(), moeDb, id)
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Error querying for role group by id", err)
 	}

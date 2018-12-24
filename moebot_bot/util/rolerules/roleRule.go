@@ -55,7 +55,7 @@ func GetRulesForRole(server *models.Server, role *models.Role, comPrefix string)
 			log.Println("Error while retrieving related group roles during rules initialization", err)
 			return nil, err
 		}
-		switch group.Type {
+		switch group.GroupType {
 		case types.GroupTypeExclusive:
 			result = append(result, &Exclusive{ExclusiveRoles: relatedRoles})
 			break
