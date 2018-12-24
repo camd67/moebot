@@ -166,9 +166,9 @@ func printAllRoles(server *models.Server, vetRole *discordgo.Role, pack *CommPac
 		// Could maybe make a map here, but the group size is going to be pretty small
 		foundGroup := false
 		for _, group := range roleGroups {
-			if group.Type != types.GroupTypeNoMultiples {
+			if group.GroupType != types.GroupTypeNoMultiples {
 				for _, gr := range role.R.RoleGroups {
-					if gr.ID == group.Id {
+					if gr.ID == group.ID {
 						triggersByGroup[group.Name] = append(triggersByGroup[group.Name], role.Trigger.String)
 						foundGroup = true
 					}

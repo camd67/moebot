@@ -46,7 +46,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 			message.WriteString("`")
 			message.WriteString(g.Name)
 			message.WriteString("`-Type(`")
-			message.WriteString(db.GetStringFromGroupType(g.Type))
+			message.WriteString(db.GetStringFromGroupType(g.GroupType))
 			message.WriteString("`), ")
 		}
 		pack.session.ChannelMessageSend(pack.channel.ID, message.String())

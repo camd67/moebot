@@ -61,20 +61,10 @@ func RoleGroupInsertOrUpdate(rg *models.RoleGroup, s *models.Server) (id int, er
 	return rg.ID, nil
 }
 
-func RoleGroupQueryServer(s *models.Server) (roleGroups []types.RoleGroup, err error) {
-	rows, err := moeDb.Query(roleGroupQueryByServer, s.ID)
+func RoleGroupQueryServer(s *models.Server) (roleGroups models.RoleGroupSlice, err error) {
+	roleGroups, err = models.RoleGroups(qm.Where("server_id = ?", s.ID)).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for roleGroup", err)
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var rg types.RoleGroup
-		if err = rows.Scan(&rg.Id, &rg.ServerId, &rg.Name, &rg.Type); err != nil {
-			log.Println("Error scanning from roleGroup table:", err)
-			return
-		}
-		roleGroups = append(roleGroups, rg)
 	}
 	return
 }
