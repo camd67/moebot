@@ -15,22 +15,8 @@ import (
 )
 
 const (
-	roleGroupTable = `CREATE TABLE IF NOT EXISTS role_group(
-			Id SERIAL NOT NULL PRIMARY KEY,
-			ServerId INTEGER NOT NULL REFERENCES Server(Id),
-			Name TEXT NOT NULL CHECK(char_length(Name) <= 500),
-			Type INTEGER NOT NULL
-		)`
-
 	RoleGroupMaxNameLength       = 500
 	RoleGroupMaxNameLengthString = "500"
-
-	roleGroupQueryById     = `SELECT Id, ServerId, Name, Type FROM role_group WHERE Id = $1`
-	roleGroupQueryByName   = `SELECT rg.Id, rg.ServerId, rg.Name, rg.Type FROM role_group AS rg WHERE rg.Name = $1 AND rg.ServerId = $2`
-	roleGroupQueryByServer = `SELECT Id, ServerId, Name, Type FROM role_group WHERE ServerId = $1`
-	roleGroupInsert        = `INSERT INTO role_group(ServerId, Name, Type) VALUES ($1, $2, $3) RETURNING Id`
-	roleGroupUpdate        = `UPDATE role_group SET Name = $2, Type = $3 WHERE Id = $1`
-	roleGroupDeleteId      = `DELETE FROM role_group WHERE Id = $1`
 
 	UncategorizedGroup = "Uncategorized"
 )
@@ -92,21 +78,6 @@ func RoleGroupDelete(id int) error {
 		log.Println("Error deleting role group: ", id)
 	}
 	return err
-}
-
-func roleGroupCreateTable() {
-	_, err := moeDb.Exec(roleGroupTable)
-	if err != nil {
-		log.Println("Error creating role group table", err)
-		return
-	}
-	//for _, alter := range roleUpdateTable {
-	//	_, err = moeDb.Exec(alter)
-	//	if err != nil {
-	//		log.Println("Error alterting role group table", err)
-	//		return
-	//	}
-	//}
 }
 
 func GetGroupTypeFromString(s string) types.GroupType {
