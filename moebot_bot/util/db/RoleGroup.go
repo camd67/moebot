@@ -97,7 +97,7 @@ func RoleGroupQueryId(id int) (rg *models.RoleGroup, err error) {
 }
 
 func RoleGroupDelete(id int) error {
-	_, err := moeDb.Exec(roleGroupDeleteId, id)
+	_, err := models.RoleGroups(qm.Where("ID = ?", id)).DeleteAll(context.Background(), moeDb)
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Error deleting role group: ", id)
 	}
