@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/volatiletech/sqlboiler/boil"
+
 	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/volatiletech/sqlboiler/queries/qm"
@@ -33,42 +35,30 @@ const (
 	UncategorizedGroup = "Uncategorized"
 )
 
-func RoleGroupInsertOrUpdate(rg *models.RoleGroup, s *models.Server) (newId int, err error) {
-	row := moeDb.QueryRow(roleGroupQueryById, rg.ID)
-	var dbRg types.RoleGroup
-	if err := row.Scan(&dbRg.Id, &dbRg.ServerId, &dbRg.Name, &dbRg.Type); err != nil {
+func RoleGroupInsertOrUpdate(rg *models.RoleGroup, s *models.Server) (id int, err error) {
+	if _, err := models.FindRoleGroup(context.Background(), moeDb, rg.ID); err != nil {
 		if err == sql.ErrNoRows {
-			// no row, so insert it add in default values
 			if rg.GroupType <= 0 {
 				rg.GroupType = types.GroupTypeAny
 			}
-			err := moeDb.QueryRow(roleGroupInsert, s.ID, rg.Name, rg.GroupType).Scan(&newId)
+			err = rg.Insert(context.Background(), moeDb, boil.Infer())
 			if err != nil {
 				log.Println("Error inserting roleGroup to db")
 				return -1, err
 			}
-
 		} else {
 			// got some other kind of error
 			log.Println("Error scanning roleGroup row from database", err)
 			return -1, err
 		}
 	} else {
-		// got a row, update it
-		if rg.GroupType > 0 {
-			dbRg.Type = rg.GroupType
-		}
-		if rg.Name != "" {
-			dbRg.Name = rg.Name
-		}
-		_, err = moeDb.Exec(roleGroupUpdate, dbRg.Id, dbRg.Name, dbRg.Type)
+		_, err = rg.Update(context.Background(), moeDb, boil.Infer())
 		if err != nil {
-			log.Println("Error updating roleGroup to db: Id - " + strconv.Itoa(dbRg.Id))
+			log.Println("Error updating roleGroup to db: Id - " + strconv.Itoa(rg.ID))
 			return -1, err
 		}
-		newId = dbRg.Id
 	}
-	return newId, nil
+	return rg.ID, nil
 }
 
 /*
