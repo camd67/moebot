@@ -28,3 +28,13 @@
 	
 	[types.imports]
 	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']
+	
+[[types]]
+	[types.match]
+	name = "raffle_type"
+	
+	[types.replace]
+	type	=	"types.RaffleType"
+	
+	[types.imports]
+	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']

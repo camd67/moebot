@@ -1,9 +1,13 @@
 package db
 
 import (
+	"context"
 	"log"
 	"strconv"
 	"strings"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
+	"github.com/volatiletech/sqlboiler/boil"
 
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
@@ -45,8 +49,8 @@ const (
 	RaffleDataSeparator = "|"
 )
 
-func RaffleEntryAdd(entry types.RaffleEntry) error {
-	_, err := moeDb.Exec(raffleInsert, entry.GuildUid, entry.UserUid, entry.RaffleType, entry.TicketCount, entry.RaffleData)
+func RaffleEntryAdd(entry models.RaffleEntry) error {
+	err := entry.Insert(context.Background(), moeDb, boil.Infer())
 	if err != nil {
 		log.Println("Error adding raffle entry to database, ", err)
 		return err

@@ -11,6 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -171,9 +172,9 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 		}
 		if len(raffleEntries) == 0 {
 			// haven't joined the raffle yet, make an entry + add tickets
-			newRaffle := types.RaffleEntry{
-				GuildUid:    pack.guild.ID,
-				UserUid:     pack.message.Author.ID,
+			newRaffle := models.RaffleEntry{
+				GuildUID:    pack.guild.ID,
+				UserUID:     pack.message.Author.ID,
 				RaffleType:  db.RaffleMIA,
 				TicketCount: startTickets,
 				RaffleData:  "NONE" + db.RaffleDataSeparator + "NONE",
