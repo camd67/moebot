@@ -61,33 +61,6 @@ func RoleGroupInsertOrUpdate(rg *models.RoleGroup, s *models.Server) (id int, er
 	return rg.ID, nil
 }
 
-/*
-Returns a RoleGroup matching the id inside the given RoleGroup. If no match is found, the RoleGroup is added to the database
-*/
-func RoleGroupQueryOrInsert(rg types.RoleGroup, s *models.Server) (newRg types.RoleGroup, err error) {
-	row := moeDb.QueryRow(roleGroupQueryById, rg.Id)
-	if err = row.Scan(&newRg.Id, &newRg.ServerId, &newRg.Name, &newRg.Type); err != nil {
-		if err == sql.ErrNoRows {
-			// no row, so insert it add in default values
-			if rg.Type <= 0 {
-				rg.Type = types.GroupTypeAny
-			}
-			var insertId int
-			err = moeDb.QueryRow(roleGroupInsert, s.ID, rg.Name, rg.Type).Scan(&insertId)
-			if err != nil {
-				log.Println("Error inserting role to db")
-				return
-			}
-			// no need to re-query since we inserted a row
-			newRg.Id = insertId
-		} else {
-			log.Println("Error scanning in roleGroup", err)
-			return types.RoleGroup{}, err
-		}
-	}
-	return
-}
-
 func RoleGroupQueryServer(s *models.Server) (roleGroups []types.RoleGroup, err error) {
 	rows, err := moeDb.Query(roleGroupQueryByServer, s.ID)
 	if err != nil {
