@@ -13,6 +13,11 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
+const (
+	RoleMaxTriggerLength       = 100
+	RoleMaxTriggerLengthString = "100"
+)
+
 func RoleInsertOrUpdateWithoutRoles(role *models.Role) error {
 	return RoleInsertOrUpdate(role, nil)
 }
