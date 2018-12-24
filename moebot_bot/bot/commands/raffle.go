@@ -166,13 +166,13 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 		}
 		// there should only be 1 of each raffle entry for every user + guild combo
 		if len(raffleEntries) > 1 {
-			log.Println("Queried for more than one raffle entry: userUid-", raffleEntries[0].UserUid)
+			log.Println("Queried for more than one raffle entry: userUid-", raffleEntries[0].UserUID)
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue fetching your raffle information!")
 			return
 		}
 		if len(raffleEntries) == 0 {
 			// haven't joined the raffle yet, make an entry + add tickets
-			newRaffle := models.RaffleEntry{
+			newRaffle := &models.RaffleEntry{
 				GuildUID:    pack.guild.ID,
 				UserUID:     pack.message.Author.ID,
 				RaffleType:  db.RaffleMIA,

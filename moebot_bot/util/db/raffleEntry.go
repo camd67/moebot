@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/volatiletech/sqlboiler/queries/qm"
+
 	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/volatiletech/sqlboiler/boil"
 
@@ -49,7 +51,7 @@ const (
 	RaffleDataSeparator = "|"
 )
 
-func RaffleEntryAdd(entry models.RaffleEntry) error {
+func RaffleEntryAdd(entry *models.RaffleEntry) error {
 	err := entry.Insert(context.Background(), moeDb, boil.Infer())
 	if err != nil {
 		log.Println("Error adding raffle entry to database, ", err)
@@ -58,8 +60,9 @@ func RaffleEntryAdd(entry models.RaffleEntry) error {
 	return nil
 }
 
-func RaffleEntryUpdate(entry types.RaffleEntry, ticketAdd int) error {
-	_, err := moeDb.Exec(raffleUpdate, entry.Id, entry.RaffleData, ticketAdd, entry.LastTicketUpdate)
+func RaffleEntryUpdate(entry *models.RaffleEntry, ticketAdd int) error {
+	entry.TicketCount += ticketAdd
+	_, err := entry.Update(context.Background(), moeDb, boil.Infer())
 	if err != nil {
 		log.Println("Error updating raffle entry to database, ", err)
 		return err
@@ -81,20 +84,11 @@ func RaffleEntryUpdateMany(entries []types.RaffleEntry, ticketAdd int) error {
 	return nil
 }
 
-func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries []types.RaffleEntry, err error) {
-	rows, err := moeDb.Query(raffleQuery, userUid, guildUid)
+func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries models.RaffleEntrySlice, err error) {
+	raffleEntries, err = models.RaffleEntries(qm.Where("user_uid = ? AND guild_uid = ?", userUid, guildUid)).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for raffle entries by user")
 		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var re types.RaffleEntry
-		if err := rows.Scan(&re.Id, &re.GuildUid, &re.UserUid, &re.RaffleType, &re.TicketCount, &re.RaffleData, &re.LastTicketUpdate); err != nil {
-			log.Println("Error scanning raffle entry to object - ", err)
-			return nil, err
-		}
-		raffleEntries = append(raffleEntries, re)
 	}
 	return raffleEntries, nil
 }

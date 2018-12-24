@@ -60,9 +60,9 @@ func (sc *SubmitCommand) Execute(pack *CommPackage) {
 		ticketsToAdd = 0
 	}
 	if raffleDataIndex == 0 {
-		raffles[0].SetRaffleData(pack.params[1] + db.RaffleDataSeparator + raffleData[1])
+		raffles[0].RaffleData = pack.params[1] + db.RaffleDataSeparator + raffleData[1]
 	} else if raffleDataIndex == 1 {
-		raffles[0].SetRaffleData(raffleData[0] + db.RaffleDataSeparator + pack.params[1])
+		raffles[0].RaffleData = raffleData[0] + db.RaffleDataSeparator + pack.params[1]
 	}
 	db.RaffleEntryUpdate(raffles[0], ticketsToAdd)
 	pack.session.ChannelMessageSend(pack.channel.ID, "Submission accepted!")

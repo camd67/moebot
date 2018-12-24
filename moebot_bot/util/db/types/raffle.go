@@ -12,7 +12,3 @@ type RaffleEntry struct {
 	RaffleData       string
 	LastTicketUpdate int64
 }
-
-func (re *RaffleEntry) SetRaffleData(raffleData string) {
-	re.RaffleData = raffleData
-}
