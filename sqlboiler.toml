@@ -38,3 +38,13 @@
 	
 	[types.imports]
 	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']
+	
+[[types]]
+	[types.match]
+	name = "scheduler_type"
+	
+	[types.replace]
+	type	=	"types.SchedulerType"
+	
+	[types.imports]
+	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']

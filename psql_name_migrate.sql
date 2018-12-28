@@ -138,3 +138,9 @@ RENAME userid TO user_id;
 
 ALTER TABLE user_server_rank
 RENAME messagesent TO message_sent;
+
+
+
+-- Scheduled Operation
+ALTER TABLE scheduled_operation
+RENAME type TO scheduler_type;
