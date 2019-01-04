@@ -79,7 +79,7 @@ func (c *ScheduleCommand) listOperations(pack *CommPackage) {
 	var b strings.Builder
 	b.WriteString("List of active operations for the server:")
 	for _, o := range operations {
-		fmt.Fprintf(&b, "\n`%d` %s - Planned Execution: %s", o.ID, c.schedulers[o.Type].OperationDescription(o.ID), o.PlannedExecutionTime.Format(time.Stamp))
+		fmt.Fprintf(&b, "\n`%d` %s - Planned Execution: %s", o.ID, c.schedulers[o.SchedulerType].OperationDescription(int64(o.ID)), o.PlannedExecutionTime.Format(time.Stamp))
 	}
 	pack.session.ChannelMessageSend(pack.channel.ID, b.String())
 }

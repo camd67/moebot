@@ -359,8 +359,8 @@ func startOperationsTimer(factory *commands.SchedulerFactory) {
 				continue
 			}
 			for _, o := range operations {
-				scheduler := factory.CreateScheduler(o.Type)
-				scheduler.Execute(o.ID)
+				scheduler := factory.CreateScheduler(o.SchedulerType)
+				scheduler.Execute(int64(o.ID))
 			}
 		}
 	}()
