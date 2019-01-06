@@ -52,7 +52,7 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 				submissions := strings.Split(r.RaffleData, db.RaffleDataSeparator)
 				if submissions[0] != "NONE" {
 					sent, _ := pack.session.ChannelMessageSend("392528129412956170", "-----------------------\n"+
-						util.UserIdToMention(r.UserUid)+"'s submitted art: "+submissions[0])
+						util.UserIdToMention(r.UserUID)+"'s submitted art: "+submissions[0])
 					if sent != nil {
 						pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
 					}
@@ -60,7 +60,7 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 				}
 				if submissions[1] != "NONE" {
 					sent, _ := pack.session.ChannelMessageSend("392528172245319680", "-----------------------\n"+
-						util.UserIdToMention(r.UserUid)+"'s submitted relic: "+submissions[1])
+						util.UserIdToMention(r.UserUID)+"'s submitted relic: "+submissions[1])
 					if sent != nil {
 						pack.session.MessageReactionAdd(sent.ChannelID, sent.ID, "👍")
 					}
@@ -109,11 +109,11 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 				pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue fetching raffle entries for this server")
 				return
 			}
-			rafflesToUpdate := make([]types.RaffleEntry, 0)
+			rafflesToUpdate := make(models.RaffleEntrySlice, 0)
 			for user, count := range userReactCounts {
 				for _, r := range raffles {
 					// only those with valid raffle entries and the min number of votes get updated
-					if r.UserUid == user && count >= minVotes {
+					if r.UserUID == user && count >= minVotes {
 						rafflesToUpdate = append(rafflesToUpdate, r)
 						break
 					}
@@ -150,7 +150,7 @@ func (rc *RaffleCommand) Execute(pack *CommPackage) {
 			users := make([]string, 0)
 			for _, r := range raffles {
 				for i := 0; i < r.TicketCount; i++ {
-					users = append(users, r.UserUid)
+					users = append(users, r.UserUID)
 				}
 			}
 			// now that we have a list of users and their ticket values ["123", "123", "123", "456", 456", "789" ...] figure out who won

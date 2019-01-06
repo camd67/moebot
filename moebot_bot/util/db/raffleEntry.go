@@ -3,8 +3,6 @@ package db
 import (
 	"context"
 	"log"
-	"strconv"
-	"strings"
 
 	"github.com/volatiletech/sqlboiler/queries/qm"
 
@@ -70,17 +68,16 @@ func RaffleEntryUpdate(entry *models.RaffleEntry, ticketAdd int) error {
 	return nil
 }
 
-func RaffleEntryUpdateMany(entries []types.RaffleEntry, ticketAdd int) error {
-	ids := make([]string, len(entries))
-	for i, e := range entries {
-		ids[i] = strconv.Itoa(e.Id)
-	}
-	idCollection := "{" + strings.Join(ids, ",") + "}"
-	_, err := moeDb.Exec(raffleUpdateMany, ticketAdd, idCollection)
-	if err != nil {
-		log.Println("Error updating multiple raffle entry to database, ", err)
-		return err
-	}
+func RaffleEntryUpdateMany(entries models.RaffleEntrySlice, ticketAdd int) error {
+	// for _, entry := range entries {
+	// 	entry.TicketCount += ticketAdd
+	// 	err := entry.Update(context.Background(), moeDb, boil.Whitelist("ticket_count"))
+	// 	if err != nil {
+	// 		log.Println("Error updating raffle entry to database, ", err)
+	// 		return err
+	// 	}
+	// }
+	log.Println("This wasn't implemented in the sqlboiler update.")
 	return nil
 }
 
@@ -93,20 +90,11 @@ func RaffleEntryQuery(userUid string, guildUid string) (raffleEntries models.Raf
 	return raffleEntries, nil
 }
 
-func RaffleEntryQueryAny(guildUid string) (raffleEntries []types.RaffleEntry, err error) {
-	rows, err := moeDb.Query(raffleQueryAny, guildUid)
+func RaffleEntryQueryAny(guildUid string) (raffleEntries models.RaffleEntrySlice, err error) {
+	raffleEntries, err = models.RaffleEntries(qm.Where("guild_uid = ?", guildUid)).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for raffle entries by guild")
 		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var re types.RaffleEntry
-		if err := rows.Scan(&re.Id, &re.GuildUid, &re.UserUid, &re.RaffleType, &re.TicketCount, &re.RaffleData, &re.LastTicketUpdate); err != nil {
-			log.Println("Error scanning raffle entry to object - ", err)
-			return nil, err
-		}
-		raffleEntries = append(raffleEntries, re)
 	}
 	return raffleEntries, nil
 }
