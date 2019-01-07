@@ -21,31 +21,6 @@ const (
 )
 
 const (
-	raffleSelect = `SELECT Id, GuildUid, UserUid, RaffleType, TicketCount, RaffleData, LastTicketUpdate `
-
-	raffleQuery = raffleSelect + `FROM raffle_entry AS re
-					WHERE re.UserUid = $1 AND re.GuildUid = $2`
-
-	raffleQueryAny = raffleSelect + `FROM raffle_entry AS re
-						WHERE re.GuildUid = $1`
-
-	raffleTable = `CREATE TABLE IF NOT EXISTS raffle_entry(
-					Id SERIAL NOT NULL PRIMARY KEY,
-					GuildUid VARCHAR(20) NOT NULL,
-					UserUid VARCHAR(20) NOT NULL,
-					RaffleType SMALLINT NOT NULL,
-					TicketCount INTEGER NOT NULL DEFAULT 0,
-					RaffleData VARCHAR(1000) NOT NULL,
-					LastTicketUpdate BIGINT NOT NULL DEFAULT 0,
-					UNIQUE (GuildUid, UserUid)
-				)`
-
-	raffleInsert = `INSERT INTO raffle_entry (GuildUid, UserUid, RaffleType, TicketCount, RaffleData) VALUES ($1, $2, $3, $4, $5)`
-
-	raffleUpdate = `UPDATE raffle_entry SET RaffleData = $2, TicketCount = TicketCount + $3, LastTicketUpdate = $4 WHERE Id = $1`
-
-	raffleUpdateMany = `UPDATE raffle_entry SET TicketCount = TicketCount + $1 WHERE Id = ANY ($2::integer[])`
-
 	RaffleDataSeparator = "|"
 )
 

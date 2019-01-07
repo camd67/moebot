@@ -1,50 +1,28 @@
 package db
 
 import (
+	"context"
 	"log"
 
-	"github.com/camd67/moebot/moebot_bot/util/db/types"
+	"github.com/volatiletech/sqlboiler/boil"
+
+	"github.com/volatiletech/sqlboiler/queries/qm"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 )
 
-const (
-	pollOptionTable = `CREATE TABLE IF NOT EXISTS poll_option(
-		Id SERIAL NOT NULL PRIMARY KEY,
-		PollId INTEGER REFERENCES poll(Id) ON DELETE CASCADE,
-		ReactionId VARCHAR(20) NOT NULL,
-		ReactionName VARCHAR(30) NOT NULL,
-		Description VARCHAR(200) NOT NULL,
-		Votes INTEGER NOT NULL DEFAULT 0
-	)`
-
-	pollOptionSelectPoll = `SELECT Id, PollId, ReactionId, ReactionName, Description, Votes FROM poll_option WHERE PollId = $1 ORDER BY Id`
-
-	pollOptionInsert = `INSERT INTO poll_option (PollId, ReactionId, ReactionName, Description) VALUES($1, $2, $3, $4) RETURNING Id`
-
-	pollOptionUpdateVotes = `UPDATE poll_option SET Votes = $1 WHERE Id = $2`
-)
-
-func PollOptionQuery(pollId int) ([]*types.PollOption, error) {
-	rows, err := moeDb.Query(pollOptionSelectPoll, pollId)
+func PollOptionQuery(pollId int) (models.PollOptionSlice, error) {
+	options, err := models.PollOptions(qm.Where("poll_id = ?", pollId), qm.OrderBy("id")).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for poll options", err)
 		return nil, err
 	}
-	result := []*types.PollOption{}
-	for rows.Next() {
-		option := new(types.PollOption)
-		err = rows.Scan(&option.Id, &option.PollId, &option.ReactionId, &option.ReactionName, &option.Description, &option.Votes)
-		if err != nil {
-			log.Println("Error querying for poll options", err)
-			return nil, err
-		}
-		result = append(result, option)
-	}
-	return result, nil
+	return options, nil
 }
 
-func PollOptionAdd(poll *types.Poll) error {
-	for _, o := range poll.Options {
-		err := moeDb.QueryRow(pollOptionInsert, poll.Id, o.ReactionId, o.ReactionName, o.Description).Scan(&o.Id)
+func PollOptionAdd(poll *models.Poll) error {
+	for _, o := range poll.R.PollOptions {
+		err := o.Insert(context.Background(), moeDb, boil.Whitelist("poll_id", "reaction_id", "reaction_name", "description"))
 		if err != nil {
 			log.Println("Error inserting poll options", err)
 			return err
@@ -53,9 +31,9 @@ func PollOptionAdd(poll *types.Poll) error {
 	return nil
 }
 
-func PollOptionUpdateVotes(poll *types.Poll) error {
-	for _, o := range poll.Options {
-		_, err := moeDb.Exec(pollOptionUpdateVotes, o.Votes, o.Id)
+func PollOptionUpdateVotes(poll *models.Poll) error {
+	for _, o := range poll.R.PollOptions {
+		_, err := o.Update(context.Background(), moeDb, boil.Whitelist("votes"))
 		if err != nil {
 			log.Println("Error updating poll votes", err)
 			return err
