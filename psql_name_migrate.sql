@@ -16,6 +16,12 @@ RENAME movetextpins TO move_text_pins;
 
 
 
+-- Metric
+ALTER TABLE Metric
+RENAME type TO metric_type;
+
+
+
 -- Poll
 ALTER TABLE poll
 RENAME channelid TO channel_id;

@@ -6,7 +6,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/util/event"
 )
 
-type MetricType int
+type MetricType int16
 
 type MetricTimerJson struct {
 	Events []event.TimerMark `json:"events"`

@@ -21,6 +21,16 @@
 	
 [[types]]
 	[types.match]
+	name = "metric_type"
+	
+	[types.replace]
+	type	=	"moetypes.MetricType"
+	
+	[types.imports]
+	third_party = ['moetypes "github.com/camd67/moebot/moebot_bot/util/db/types"']
+	
+[[types]]
+	[types.match]
 	name = "permission"
 	
 	[types.replace]
