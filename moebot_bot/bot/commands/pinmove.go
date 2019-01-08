@@ -89,7 +89,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error getting the channel. This is an issue with moebot not Discord.")
 		return
 	}
-	if !dbChannel.MoveChannelUid.Valid && !hasDest {
+	if !dbChannel.MoveChannelUID.Valid && !hasDest {
 		pack.session.ChannelMessageSend(pack.channel.ID, "The provided channel doesn't have a destination. Please provide one.")
 		return
 	}
@@ -97,7 +97,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	// Overwrite with our new properties
 	dbChannel.MovePins = true
 	if hasDest {
-		dbChannel.MoveChannelUid.Scan(destChannel.ID)
+		dbChannel.MoveChannelUID.Scan(destChannel.ID)
 	}
 	dbChannel.MoveTextPins = hasTextParam
 	dbChannel.DeletePin = hasDeleteParam
@@ -125,7 +125,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	message.WriteString(" on channel <#")
 	message.WriteString(sourceChannel.ID)
 	message.WriteString(">. Sending pinned images to <#")
-	message.WriteString(dbChannel.MoveChannelUid.String)
+	message.WriteString(dbChannel.MoveChannelUID.String)
 	message.WriteString(">")
 	if dbChannel.MoveTextPins {
 		message.WriteString(" Also moving text pins.")
@@ -186,7 +186,7 @@ func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo
 		if channel.Type == discordgo.ChannelTypeGuildText {
 			for _, dbC := range dbChannels {
 				// also only load text channels which have pin moving enabled
-				if dbC.ChannelUid == channel.ID && dbC.MovePins {
+				if dbC.ChannelUID == channel.ID && dbC.MovePins {
 					pc.loadChannel(session, server, channel)
 				}
 			}
@@ -237,7 +237,7 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		log.Println("Error while retrieving source channel from database", err)
 		return
 	}
-	if !dbChannel.MovePins || !dbChannel.MoveChannelUid.Valid {
+	if !dbChannel.MovePins || !dbChannel.MoveChannelUID.Valid {
 		return
 	}
 	newPinnedMessages, err := pc.getUpdatePinnedMessages(session, pinsUpdate.ChannelID)
@@ -266,7 +266,7 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		shouldMoveMessage = true
 	}
 	if shouldMoveMessage {
-		moveMessage(session, newPinnedMessage, dbChannel.MoveChannelUid.String, dbChannel.DeletePin)
+		moveMessage(session, newPinnedMessage, dbChannel.MoveChannelUID.String, dbChannel.DeletePin)
 	}
 }
 

@@ -61,7 +61,7 @@ func (handler *PollsHandler) openPoll(pack *CommPackage) {
 	poll := &models.Poll{
 		Title:     title,
 		UserUID:   pack.message.Author.ID,
-		ChannelID: channel.Id,
+		ChannelID: channel.ID,
 		Open:      true,
 	}
 	err = db.PollAdd(poll)
@@ -135,7 +135,7 @@ func (handler *PollsHandler) closePoll(pack *CommPackage) {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was a problem retrieving poll data")
 		return
 	}
-	if channel.ChannelUid != pack.channel.ID {
+	if channel.ChannelUID != pack.channel.ID {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, you can't close a poll opened in another channel")
 		return
 	}
@@ -189,7 +189,7 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 		log.Println("Cannot retrieve poll channel informations", err)
 		return
 	}
-	message, err := session.ChannelMessage(channel.ChannelUid, poll.MessageUID.String)
+	message, err := session.ChannelMessage(channel.ChannelUID, poll.MessageUID.String)
 	if err != nil {
 		log.Println("Cannot retrieve poll message informations", err)
 		return
@@ -202,7 +202,7 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 			continue
 		}
 		//Getting a list of users for every reaction
-		users, err := session.MessageReactions(channel.ChannelUid, poll.MessageUID.String, r.Emoji.Name, 100)
+		users, err := session.MessageReactions(channel.ChannelUID, poll.MessageUID.String, r.Emoji.Name, 100)
 		if err != nil {
 			log.Println("Cannot retrieve reaction informations", err)
 			return
@@ -210,7 +210,7 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 		for _, u := range users {
 			//If the user has other votes, we remove them
 			if u.ID == reactionAdd.UserID && r.Emoji.Name != reactionAdd.Emoji.Name && reactionIsOption(poll.R.PollOptions, reactionAdd.Emoji.Name) {
-				session.MessageReactionRemove(channel.ChannelUid, poll.MessageUID.String, r.Emoji.Name, u.ID)
+				session.MessageReactionRemove(channel.ChannelUID, poll.MessageUID.String, r.Emoji.Name, u.ID)
 				break
 			}
 		}
@@ -231,7 +231,7 @@ func updatePollVotes(poll *models.Poll, session *discordgo.Session) error {
 	if err != nil {
 		return err
 	}
-	message, err := session.ChannelMessage(channel.ChannelUid, poll.MessageUID.String)
+	message, err := session.ChannelMessage(channel.ChannelUID, poll.MessageUID.String)
 	if err != nil {
 		return err
 	}
