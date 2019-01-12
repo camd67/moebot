@@ -1,46 +1,43 @@
 package db
 
 import (
+	"context"
 	"log"
 	"strings"
 
+	"github.com/volatiletech/sqlboiler/boil"
+
+	"github.com/volatiletech/sqlboiler/queries/qm"
+
+	"github.com/volatiletech/sqlboiler/queries"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 const (
-	channelRotationTable = `CREATE TABLE IF NOT EXISTS channel_rotation(
-		operation_id INTEGER NOT NULL PRIMARY KEY REFERENCES scheduled_operation(id) ON DELETE CASCADE,
-		current_channel_uid VARCHAR(20) NOT NULL,
-		channel_uids VARCHAR(1000) NOT NULL
-	)`
-
-	channelRotationQuery = `SELECT channel_rotation.operation_id, channel_rotation.current_channel_uid, channel_rotation.channel_uids, scheduled_operation.server_id 
+	channelRotationQuery = `SELECT channel_rotation.operation_id as "operation.id", channel_rotation.current_channel_uid, 
+							channel_rotation.channel_uids, scheduled_operation.server_id as "operation.server_id"
 							FROM channel_rotation 
 							INNER JOIN scheduled_operation ON scheduled_operation.id = channel_rotation.operation_id
 							WHERE operation_id = $1`
 
-	channelRotationUpdate = `UPDATE channel_rotation SET current_channel_uid = $2 WHERE operation_id = $1`
-
 	channelRotationInsert = `INSERT INTO channel_rotation (operation_id, current_channel_uid, channel_uids) VALUES($1, $2, $3)`
 )
 
-func channelRotationCreateTable() {
-	moeDb.Exec(channelRotationTable)
-}
-
 func ChannelRotationQuery(operationID int64) (*types.ChannelRotation, error) {
-	cr := &types.ChannelRotation{}
-	channelList := ""
-	row := moeDb.QueryRow(channelRotationQuery, operationID)
-	if e := row.Scan(&cr.ID, &cr.CurrentChannelUID, &channelList, &cr.ServerID); e != nil {
-		return nil, e
+	var cr *types.ChannelRotation
+	err := queries.Raw(channelRotationQuery, operationID).Bind(context.Background(), moeDb, cr)
+	if err != nil {
+		return nil, err
 	}
-	cr.ChannelUIDList = strings.Split(channelList, " ")
+	cr.ChannelUIDList = strings.Split(cr.ChannelUIDs, " ")
 	return cr, nil
 }
 
 func ChannelRotationUpdate(operationID int64, currentChannelUID string) error {
-	_, err := moeDb.Exec(channelRotationUpdate, operationID, currentChannelUID)
+	_, err := models.ChannelRotations(qm.Where("operation_id = ?", operationID)).
+		UpdateAll(context.Background(), moeDb, models.M{"current_channel_uid": currentChannelUID})
 	if err != nil {
 		log.Println("Error updating channel rotation", err)
 		return err
@@ -53,6 +50,11 @@ func ChannelRotationAdd(serverID int, currentChannelUID string, channels []strin
 	if err != nil {
 		return err
 	}
-	_, err = moeDb.Exec(channelRotationInsert, operation.ID, currentChannelUID, strings.Join(channels, " "))
+	cr := &models.ChannelRotation{
+		OperationID:       operation.ID,
+		CurrentChannelUID: currentChannelUID,
+		ChannelUids:       strings.Join(channels, " "),
+	}
+	err = cr.Insert(context.Background(), moeDb, boil.Infer())
 	return err
 }

@@ -12,7 +12,8 @@ type ScheduledOperation struct {
 }
 
 type ChannelRotation struct {
-	ChannelUIDList    []string
-	CurrentChannelUID string
-	ScheduledOperation
+	ChannelUIDList     []string `-`
+	ChannelUIDs        string
+	CurrentChannelUID  string
+	ScheduledOperation `boil:"operation,bind"`
 }
