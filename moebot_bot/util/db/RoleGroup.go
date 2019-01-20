@@ -22,6 +22,7 @@ const (
 )
 
 func RoleGroupInsertOrUpdate(rg *models.RoleGroup, s *models.Server) (id int, err error) {
+	rg.ServerID = s.ID
 	if _, err := models.FindRoleGroup(context.Background(), moeDb, rg.ID); err != nil {
 		if err == sql.ErrNoRows {
 			if rg.GroupType <= 0 {
