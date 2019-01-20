@@ -22,7 +22,7 @@ var (
 )
 
 func ServerQueryOrInsert(guildUid string) (s *models.Server, e error) {
-	if s, e := models.Servers(qm.Where(models.ServerColumns.GuildUID+" = ?", guildUid)).One(context.Background(), moeDb); e != nil {
+	if s, e = models.Servers(qm.Where(models.ServerColumns.GuildUID+" = ?", guildUid)).One(context.Background(), moeDb); e != nil {
 		if e == sql.ErrNoRows {
 			// no row, so insert it add in default values
 			s = &models.Server{GuildUID: guildUid, Enabled: true}
@@ -33,6 +33,7 @@ func ServerQueryOrInsert(guildUid string) (s *models.Server, e error) {
 			}
 			return s, e
 		}
+		log.Println("Error retrieving server from db by guilduid: ", e)
 	}
 	// normal flow of querying a row
 	return
