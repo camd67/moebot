@@ -67,9 +67,11 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 		var typeString string
 		if err != nil {
 			if err == sql.ErrNoRows {
+				oldGroups = models.RoleGroupSlice{}
 				oldRole = &models.Role{
 					RoleUID: r.ID,
 				}
+				oldRole.ServerID.SetValid(server.ID)
 				typeString = "added"
 				// don't return on a no row error, that means we need to add a new role
 				// validate to make sure we got the required information for a new role as opposed to an update
@@ -145,7 +147,6 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 			return
 		}
 
-		oldRole.ServerID.Int = server.ID
 		err = db.RoleInsertOrUpdate(oldRole, groups)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "There was an error adding or updating the role. This is an issue with moebot and not discord")
@@ -156,16 +157,23 @@ func (rc *RoleSetCommand) Execute(pack *CommPackage) {
 }
 
 func updateRoleGroups(server *models.Server, groups models.RoleGroupSlice, group *models.RoleGroup) (models.RoleGroupSlice, error) {
+	var defaultGroupID int
 	defaultGroup, err := db.RoleGroupQueryName(db.UncategorizedGroup, server.ID)
-	if err != nil && err != sql.ErrNoRows {
-		log.Println("Error while retrieving the default role group", err)
-		return nil, err
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println("Error while retrieving the default role group", err)
+			return nil, err
+		} else {
+			defaultGroupID = 0
+		}
+	} else {
+		defaultGroupID = defaultGroup.ID
 	}
-	groups = util.GroupRemove(groups, defaultGroup.ID)
+	groups = util.GroupRemove(groups, defaultGroupID)
 	if util.GroupContains(groups, group.ID) {
 		groups = util.GroupRemove(groups, group.ID)
-		if len(groups) == 0 && defaultGroup.ID != 0 {
-			groups = append(groups, &models.RoleGroup{ID: defaultGroup.ID})
+		if len(groups) == 0 && defaultGroup != nil {
+			groups = append(groups, &models.RoleGroup{ID: defaultGroupID})
 		}
 	} else {
 		groups = append(groups, &models.RoleGroup{ID: group.ID})

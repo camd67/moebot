@@ -29,31 +29,9 @@ func RoleInsertOrUpdate(role *models.Role, groups models.RoleGroupSlice) error {
 		if role.Permission == -1 {
 			role.Permission = types.PermAll
 		}
-		r = &models.Role{
-			ServerID:   role.ServerID,
-			RoleUID:    role.RoleUID,
-			Permission: role.Permission,
-		}
-		err = r.Insert(context.Background(), moeDb, boil.Infer())
+		err = role.Insert(context.Background(), moeDb, boil.Infer())
 		if err != nil {
 			log.Println("Error inserting role to db ", err)
-			tx.Rollback()
-			return err
-		}
-		if groups != nil {
-			err = r.SetRoleGroups(context.Background(), moeDb, false, groups...)
-			if err != nil {
-				log.Println("Error updating role group relationship to db", err)
-				tx.Rollback()
-				return err
-			}
-		}
-		tx.Commit()
-	} else {
-		tx, _ := moeDb.Begin()
-		_, err = role.Update(context.Background(), moeDb, boil.Infer())
-		if err != nil {
-			log.Println("Error updating role", err)
 			tx.Rollback()
 			return err
 		}
@@ -66,12 +44,38 @@ func RoleInsertOrUpdate(role *models.Role, groups models.RoleGroupSlice) error {
 			}
 		}
 		tx.Commit()
+	} else {
+		r.ServerID = role.ServerID
+		r.RoleUID = role.RoleUID
+		r.Permission = role.Permission
+		r.Trigger = role.Trigger
+		r.ConfirmationMessage = role.ConfirmationMessage
+		r.ConfirmationSecurityAnswer = role.ConfirmationSecurityAnswer
+		tx, _ := moeDb.Begin()
+		_, err = r.Update(context.Background(), moeDb, boil.Infer())
+		if err != nil {
+			log.Println("Error updating role", err)
+			tx.Rollback()
+			return err
+		}
+		if groups != nil {
+			err = r.SetRoleGroups(context.Background(), moeDb, false, groups...)
+			if err != nil {
+				log.Println("Error updating role group relationship to db", err)
+				tx.Rollback()
+				return err
+			}
+		}
+		tx.Commit()
 	}
 	return nil
 }
 
 func RoleQueryServer(s *models.Server) (roles models.RoleSlice, err error) {
-	roles, err = models.Roles(qm.Where("server_id = ?", s.ID)).All(context.Background(), moeDb)
+	roles, err = models.Roles(
+		qm.Where("server_id = ?", s.ID),
+		qm.Load("RoleGroups"),
+	).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for role in server role query", err)
 	}
@@ -91,7 +95,8 @@ func RoleQueryGroup(groupId int) (roles models.RoleSlice, err error) {
 
 func RoleQueryTrigger(trigger string, serverId int) (r *models.Role, err error) {
 	r, err = models.Roles(
-		qm.Where("qm.Where(server_id = ? AND UPPER(trigger) = UPPER(?)", serverId, trigger),
+		qm.Where("server_id = ? AND UPPER(trigger) = UPPER(?)", serverId, trigger),
+		qm.Load("RoleGroups"),
 	).One(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for role by trigger", err)
@@ -100,7 +105,10 @@ func RoleQueryTrigger(trigger string, serverId int) (r *models.Role, err error) 
 }
 
 func RoleQueryRoleUid(roleUid string, serverId int) (r *models.Role, err error) {
-	r, err = models.Roles(qm.Where("role_uid = ? AND server_uid = ?", roleUid, serverId)).One(context.Background(), moeDb)
+	r, err = models.Roles(
+		qm.Where("role_uid = ? AND server_id = ?", roleUid, serverId),
+		qm.Load("RoleGroups"),
+	).One(context.Background(), moeDb)
 	if err == sql.ErrNoRows {
 		r = &models.Role{}
 	}
