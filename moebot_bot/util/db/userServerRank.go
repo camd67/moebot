@@ -20,7 +20,7 @@ func UserServerRankQuery(userUid string, guildUid string) (usr *models.UserServe
 }
 
 func UserServerRankUpdateOrInsert(userId int, serverId int, points int) (id int, newPoint int, messageSent bool, err error) {
-	u, err := models.UserServerRanks(qm.Where("server_id = ? AND user_id = ?", userId, userId)).One(context.Background(), moeDb)
+	u, err := models.UserServerRanks(qm.Where("server_id = ? AND user_id = ?", serverId, userId)).One(context.Background(), moeDb)
 	if err == sql.ErrNoRows {
 		u = &models.UserServerRank{
 			ServerID: serverId,

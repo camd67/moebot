@@ -13,7 +13,8 @@ import (
 )
 
 func UserQueryOrInsert(userUid string) (u *models.UserProfile, err error) {
-	if u, e := models.UserProfiles(qm.Where(models.UserProfileColumns.UserUID+" = ?", userUid)).One(context.Background(), moeDb); e != nil {
+	u, e := models.UserProfiles(qm.Where(models.UserProfileColumns.UserUID+" = ?", userUid)).One(context.Background(), moeDb)
+	if e != nil {
 		if e == sql.ErrNoRows {
 			u = &models.UserProfile{UserUID: userUid}
 			e = u.Insert(context.Background(), moeDb, boil.Infer())
