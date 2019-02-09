@@ -96,7 +96,7 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 			s.VeteranRank.Scan(int64(rank))
 		}
 	} else if configKey == "VETERANROLE" {
-		if !sc.defaultServerRoleSet(pack, configValue, s.VeteranRole, isHelp, "VeteranRole", shouldClear) {
+		if !sc.defaultServerRoleSet(pack, configValue, &s.VeteranRole, isHelp, "VeteranRole", shouldClear) {
 			return
 		}
 	} else if configKey == "BOTCHANNEL" {
@@ -158,11 +158,11 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 			s.RuleAgreement.Scan(configValue)
 		}
 	} else if configKey == "BASEROLE" {
-		if !sc.defaultServerRoleSet(pack, configValue, s.BaseRole, isHelp, "BaseRole", shouldClear) {
+		if !sc.defaultServerRoleSet(pack, configValue, &s.BaseRole, isHelp, "BaseRole", shouldClear) {
 			return
 		}
 	} else if configKey == "STARTERROLE" {
-		if !sc.defaultServerRoleSet(pack, configValue, s.StarterRole, isHelp, "StarterRole", shouldClear) {
+		if !sc.defaultServerRoleSet(pack, configValue, &s.StarterRole, isHelp, "StarterRole", shouldClear) {
 			return
 		}
 	} else if configKey == "ENABLED" {
@@ -186,11 +186,11 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 	return !isHelp
 }
 
-func (sc *ServerCommand) defaultServerRoleSet(pack *CommPackage, configValue string, toSet null.String, isHelp bool, name string,
+func (sc *ServerCommand) defaultServerRoleSet(pack *CommPackage, configValue string, toSet *null.String, isHelp bool, name string,
 	shouldClear bool) (shouldReturn bool) {
 
 	if isHelp {
-		pack.session.ChannelMessageSend(pack.channel.ID, name+": "+util.GetStringOrDefault(toSet))
+		pack.session.ChannelMessageSend(pack.channel.ID, name+": "+util.GetStringOrDefault(*toSet))
 		return false
 	} else if shouldClear {
 		toSet.Scan(nil)
