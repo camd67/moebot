@@ -58,7 +58,7 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 		if currentVeteranUID != s.VeteranRole && s.VeteranRole.Valid {
 			r, err := db.RoleQueryRoleUid(s.VeteranRole.String, s.ID)
 			if err != nil && err == sql.ErrNoRows {
-				r.ServerID.Int = s.ID
+				r.ServerID.SetValid(s.ID)
 				r.RoleUID = s.VeteranRole.String
 				r.Permission = types.PermAll
 				r.Trigger.Scan("veteran")
