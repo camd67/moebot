@@ -26,13 +26,13 @@ const (
 )
 
 func ChannelRotationQuery(operationID int64) (*types.ChannelRotation, error) {
-	var cr *types.ChannelRotation
-	err := queries.Raw(channelRotationQuery, operationID).Bind(context.Background(), moeDb, cr)
+	var cr types.ChannelRotation
+	err := queries.Raw(channelRotationQuery, operationID).Bind(context.Background(), moeDb, &cr)
 	if err != nil {
 		return nil, err
 	}
 	cr.ChannelUIDList = strings.Split(cr.ChannelUIDs, " ")
-	return cr, nil
+	return &cr, nil
 }
 
 func ChannelRotationUpdate(operationID int64, currentChannelUID string) error {
