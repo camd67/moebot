@@ -33,6 +33,7 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 	r := moeDiscord.FindRoleByName(pack.guild.Roles, roleName)
 	if r == nil {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a role that exists in this server")
+		return
 	}
 	// we've got the role, add it to the db, updating if necessary
 	// but first grab the server (probably want to move this out to include in the commPackage
