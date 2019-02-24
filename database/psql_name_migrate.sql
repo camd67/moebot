@@ -39,7 +39,7 @@ ALTER TABLE poll_option
 RENAME pollid TO poll_id;
 
 ALTER TABLE poll_option
-RENAME reactionid TO reaction_id;
+RENAME reactionid TO reaction_uid;
 
 ALTER TABLE poll_option
 RENAME reactionname TO reaction_name;
@@ -47,23 +47,24 @@ RENAME reactionname TO reaction_name;
 
 
 -- Raffle Entry
-ALTER TABLE raffle_entry
-RENAME guilduid TO guild_uid;
 
-ALTER TABLE raffle_entry
-RENAME useruid TO user_uid;
-
-ALTER TABLE raffle_entry
-RENAME raffletype TO raffle_type;
-
-ALTER TABLE raffle_entry
-RENAME ticketcount TO ticket_count;
-
-ALTER TABLE raffle_entry
-RENAME raffledata TO raffle_data;
-
-ALTER TABLE raffle_entry
-RENAME lastticketupdate TO last_ticket_update;
+-- ALTER TABLE raffle_entry
+-- RENAME guilduid TO guild_uid;
+--
+-- ALTER TABLE raffle_entry
+-- RENAME useruid TO user_uid;
+--
+-- ALTER TABLE raffle_entry
+-- RENAME raffletype TO raffle_type;
+--
+-- ALTER TABLE raffle_entry
+-- RENAME ticketcount TO ticket_count;
+--
+-- ALTER TABLE raffle_entry
+-- RENAME raffledata TO raffle_data;
+--
+-- ALTER TABLE raffle_entry
+-- RENAME lastticketupdate TO last_ticket_update;
 
 
 
