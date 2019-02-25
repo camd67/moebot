@@ -1,6 +1,5 @@
 token~your bot's token (find it on discord's developer page for your bot)
 prefix~prefix the needs to be typed to run commands on this bot
-dbPass~password to access root DB (see pg_pass.secret / pg_pass.example.txt)
 dbHost~ip/name of the db server (defaults to "database" if empty)
 moeDataPass~password to access moebot's user in postgres
 masterId~ID of the master of this bot

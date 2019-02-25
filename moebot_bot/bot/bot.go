@@ -47,7 +47,7 @@ func SetupMoebot(session *discordgo.Session, redditHandle *reddit.Handle) {
 	if dbHost == "" {
 		dbHost = "database"
 	}
-	db.SetupDatabase(dbHost, Config["dbPass"], Config["moeDataPass"])
+	db.SetupDatabase(dbHost, Config["moeDataPass"])
 	addGlobalHandlers(session)
 	setupOperations(session, redditHandle)
 	startOperationsTimer(commands.NewSchedulerFactory(session))
