@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# -n to ignore running tests after generation
+# -p to preserve old database
+
 stop_containers () {
     echo "[MOEBOT] Bringing down database container..."
     # Cleanup our previous state
@@ -19,9 +22,13 @@ print_logs () {
 
 stop_containers
 
-echo "[MOEBOT] Removing old volume so the database will re-init"
-docker volume remove moebot-data
-docker volume create moebot-data
+if ! [[ $1 =~ "p" ]]; then
+    echo "[MOEBOT] Removing old volume so the database will re-init"
+    docker volume remove moebot-data
+    docker volume create moebot-data
+else
+    echo "[MOEBOT] Skipping removal of old database volume"
+fi
 
 echo "[MOEBOT] Starting up database docker container..."
 # Startup our docker-compose, but including the dev version so we expose the db port
@@ -58,7 +65,7 @@ else
     exit
 fi
 
-if [[ $1 -eq "-n" ]] || [[ $1 -eq "--no-tests" ]]; then
+if ! [[ $1 =~ "n" ]]; then
     echo "[MOEBOT] Running SqlBoiler tests"
     if ! go test ./moebot_bot/util/db/models; then
         echo "[MOEBOT] Model testing failed!"
