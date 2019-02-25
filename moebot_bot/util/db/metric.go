@@ -19,10 +19,10 @@ const (
 	MetricTypeTimer types.MetricType = 1
 )
 
-func MetricInsertTimer(metric event.Timer, user types.UserProfile) error {
+func MetricInsertTimer(metric event.Timer, user models.UserProfile) error {
 	jsonData, err := json.Marshal(types.MetricTimerJson{
 		Events: metric.Marks,
-		UserId: user.Id,
+		UserId: user.ID,
 	})
 	if err != nil {
 		log.Println("Failed to serialize JSON data for metric timer", err)

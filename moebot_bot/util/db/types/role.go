@@ -1,7 +1,5 @@
 package types
 
-import "database/sql"
-
 // Permission enum
 type Permission int
 
@@ -20,14 +18,3 @@ const (
 	// Master level permission, can't ever be ignored or disabled
 	PermMaster Permission = 101
 )
-
-type Role struct {
-	Id                         int
-	ServerId                   int
-	Groups                     []int
-	RoleUid                    string
-	Permission                 Permission
-	ConfirmationMessage        sql.NullString
-	ConfirmationSecurityAnswer sql.NullString
-	Trigger                    sql.NullString
-}
