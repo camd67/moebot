@@ -64,8 +64,6 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.GroupSetCommand{ComPrefix: ComPrefix},
 		&commands.HelpCommand{ComPrefix: ComPrefix, Commands: getCommands, Checker: checker}, //using a delegate here because it will remain accurate regardless of what gets added to operations
 		&commands.ChangelogCommand{Version: version},
-		&commands.RaffleCommand{MasterId: masterId, DebugChannel: masterDebugChannel},
-		&commands.SubmitCommand{ComPrefix: ComPrefix},
 		&commands.EchoCommand{},
 		&commands.PermitCommand{},
 		&commands.PingCommand{},

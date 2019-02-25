@@ -77,7 +77,7 @@ func (handler *PollsHandler) openPoll(pack *CommPackage) {
 	}
 	message, _ := pack.session.ChannelMessageSend(pack.channel.ID, openPollMessage(poll, pack.message.Author))
 	for _, o := range poll.R.PollOptions {
-		err = pack.session.MessageReactionAdd(pack.channel.ID, message.ID, o.ReactionID)
+		err = pack.session.MessageReactionAdd(pack.channel.ID, message.ID, o.ReactionUID)
 		if err != nil {
 			log.Println("Cannot add reaction to poll message", err)
 		}
@@ -219,7 +219,7 @@ func (handler *PollsHandler) handleSingleVote(session *discordgo.Session, poll *
 
 func reactionIsOption(options models.PollOptionSlice, emojiID string) bool {
 	for _, o := range options {
-		if o.ReactionID == emojiID {
+		if o.ReactionUID == emojiID {
 			return true
 		}
 	}
@@ -236,7 +236,7 @@ func updatePollVotes(poll *models.Poll, session *discordgo.Session) error {
 		return err
 	}
 	for _, o := range poll.R.PollOptions {
-		r := moeDiscord.GetReactionByName(message, o.ReactionID)
+		r := moeDiscord.GetReactionByName(message, o.ReactionUID)
 		if r != nil {
 			o.Votes = r.Count - 1
 		}
@@ -375,7 +375,7 @@ func createPollOptions(poll *models.Poll, options []string) models.PollOptionSli
 	for i, s := range options {
 		opt := &models.PollOption{
 			Description:  strings.Trim(s, " "),
-			ReactionID:   optionIds[i],
+			ReactionUID:  optionIds[i],
 			ReactionName: optionNames[i],
 		}
 		opt.PollID.SetValid(poll.ID)
