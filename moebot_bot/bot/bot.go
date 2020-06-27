@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	version     = "0.6.1"
+	version     = "0.6.2"
 	timerPeriod = 60
 )
 
@@ -75,7 +75,7 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.ServerCommand{ComPrefix: ComPrefix},
 		&commands.ProfileCommand{MasterId: masterId},
 		&commands.PinMoveCommand{},
-		&commands.SubCommand{RedditHandle: redditHandle},
+		//&commands.SubCommand{RedditHandle: redditHandle},
 		&commands.FetchCommand{MasterId: masterId},
 		commands.NewTimerCommand(),
 		commands.NewVeteranHandler(ComPrefix, masterDebugChannel, masterId),
