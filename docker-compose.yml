@@ -8,7 +8,7 @@ secrets:
 
 services:
   db:
-    image: postgres
+    build: ./database
     restart: always
     container_name: "db"
     secrets:
@@ -23,6 +23,8 @@ services:
         target: /var/lib/postgresql/data
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/PG_PASS
+      POSTGRES_USER: "moebot"
+      POSTGRES_DB: "moebot"
 
   bot:
     build: ./moebot_bot

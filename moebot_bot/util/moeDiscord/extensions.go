@@ -92,9 +92,9 @@ func GetEveryoneRoleForServer(session *discordgo.Session, serverID int) *discord
 		log.Println(fmt.Sprintf("Failed to retrieve server informations for Server ID: %v. ", serverID), err)
 		return nil
 	}
-	roles, err := session.GuildRoles(server.GuildUid)
+	roles, err := session.GuildRoles(server.GuildUID)
 	if err != nil {
-		log.Println("Failed to retrieve roles informations for Guild UID: "+server.GuildUid+". ", err)
+		log.Println("Failed to retrieve roles informations for Guild UID: "+server.GuildUID+". ", err)
 		return nil
 	}
 	return FindRoleByName(roles, "@everyone")

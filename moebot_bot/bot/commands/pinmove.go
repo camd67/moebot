@@ -14,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
@@ -83,12 +84,12 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 		return
 	}
 
-	dbChannel, err := db.ChannelQueryOrInsert(sourceChannel.ID, &server)
+	dbChannel, err := db.ChannelQueryOrInsert(sourceChannel.ID, server)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error getting the channel. This is an issue with moebot not Discord.")
 		return
 	}
-	if !dbChannel.MoveChannelUid.Valid && !hasDest {
+	if !dbChannel.MoveChannelUID.Valid && !hasDest {
 		pack.session.ChannelMessageSend(pack.channel.ID, "The provided channel doesn't have a destination. Please provide one.")
 		return
 	}
@@ -96,7 +97,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	// Overwrite with our new properties
 	dbChannel.MovePins = true
 	if hasDest {
-		dbChannel.MoveChannelUid.Scan(destChannel.ID)
+		dbChannel.MoveChannelUID.Scan(destChannel.ID)
 	}
 	dbChannel.MoveTextPins = hasTextParam
 	dbChannel.DeletePin = hasDeleteParam
@@ -110,7 +111,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	// Then load the pins if necessary
 	pc.pinnedMessages.Lock()
 	if _, pinsLoaded := pc.pinnedMessages.M[sourceChannel.ID]; !pinsLoaded {
-		go pc.loadChannel(pack.session, &server, sourceChannel)
+		go pc.loadChannel(pack.session, server, sourceChannel)
 	}
 	pc.pinnedMessages.Unlock()
 
@@ -124,7 +125,7 @@ func (pc *PinMoveCommand) Execute(pack *CommPackage) {
 	message.WriteString(" on channel <#")
 	message.WriteString(sourceChannel.ID)
 	message.WriteString(">. Sending pinned images to <#")
-	message.WriteString(dbChannel.MoveChannelUid.String)
+	message.WriteString(dbChannel.MoveChannelUID.String)
 	message.WriteString(">")
 	if dbChannel.MoveTextPins {
 		message.WriteString(" Also moving text pins.")
@@ -185,15 +186,15 @@ func (pc *PinMoveCommand) loadGuild(session *discordgo.Session, guild *discordgo
 		if channel.Type == discordgo.ChannelTypeGuildText {
 			for _, dbC := range dbChannels {
 				// also only load text channels which have pin moving enabled
-				if dbC.ChannelUid == channel.ID && dbC.MovePins {
-					pc.loadChannel(session, &server, channel)
+				if dbC.ChannelUID == channel.ID && dbC.MovePins {
+					pc.loadChannel(session, server, channel)
 				}
 			}
 		}
 	}
 }
 
-func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *types.Server, channel *discordgo.Channel) {
+func (pc *PinMoveCommand) loadChannel(session *discordgo.Session, server *models.Server, channel *discordgo.Channel) {
 	_, err := db.ChannelQueryOrInsert(channel.ID, server)
 	if err != nil {
 		log.Println("Error creating/retrieving channel during loading", err)
@@ -231,12 +232,12 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		log.Println("Error while retrieving server from database", err)
 		return
 	}
-	dbChannel, err := db.ChannelQueryOrInsert(pinsUpdate.ChannelID, &server)
+	dbChannel, err := db.ChannelQueryOrInsert(pinsUpdate.ChannelID, server)
 	if err != nil {
 		log.Println("Error while retrieving source channel from database", err)
 		return
 	}
-	if !dbChannel.MovePins || !dbChannel.MoveChannelUid.Valid {
+	if !dbChannel.MovePins || !dbChannel.MoveChannelUID.Valid {
 		return
 	}
 	newPinnedMessages, err := pc.getUpdatePinnedMessages(session, pinsUpdate.ChannelID)
@@ -265,7 +266,7 @@ func (pc *PinMoveCommand) channelMovePinsUpdate(session *discordgo.Session, pins
 		shouldMoveMessage = true
 	}
 	if shouldMoveMessage {
-		moveMessage(session, newPinnedMessage, dbChannel.MoveChannelUid.String, dbChannel.DeletePin)
+		moveMessage(session, newPinnedMessage, dbChannel.MoveChannelUID.String, dbChannel.DeletePin)
 	}
 }
 

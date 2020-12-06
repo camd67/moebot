@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
@@ -32,6 +33,7 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 	r := moeDiscord.FindRoleByName(pack.guild.Roles, roleName)
 	if r == nil {
 		pack.session.ChannelMessageSend(pack.message.ChannelID, "Please provide a role that exists in this server")
+		return
 	}
 	// we've got the role, add it to the db, updating if necessary
 	// but first grab the server (probably want to move this out to include in the commPackage
@@ -41,22 +43,26 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 		return
 	}
 	// Then check to see if the role exists in the server
-	dbRole, err := db.RoleQueryRoleUid(r.ID, s.Id)
+	dbRole, err := db.RoleQueryRoleUid(r.ID, s.ID)
+	var groups models.RoleGroupSlice
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// we don't want to return on a no row error, instead add a default group so we can add later
-			newGroupId, err := db.RoleGroupInsertOrUpdate(types.RoleGroup{
-				ServerId: s.Id,
-				Name:     db.UncategorizedGroup,
-				Type:     types.GroupTypeAny,
+			newGroupId, err := db.RoleGroupInsertOrUpdate(&models.RoleGroup{
+				ServerID:  s.ID,
+				Name:      db.UncategorizedGroup,
+				GroupType: types.GroupTypeAny,
 			}, s)
 			if err != nil {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue adding an uncategorized group. This is an issue with moebot "+
 					"not Discord")
 				return
 			}
-			// Then update the returned dbRole to get the correct information
-			dbRole.Groups = append(dbRole.Groups, newGroupId)
+			groups = models.RoleGroupSlice{
+				{
+					ID: newGroupId,
+				},
+			}
 		} else {
 			// if we got any other errors, then we want to bail out
 			pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an issue retrieving that role. This is an issue with moebot and not discord")
@@ -64,10 +70,10 @@ func (pc *PermitCommand) Execute(pack *CommPackage) {
 		}
 	}
 	// Overwrite the values even if present, since these should be the same
-	dbRole.ServerId = s.Id
-	dbRole.RoleUid = r.ID
+	dbRole.ServerID.Int = s.ID
+	dbRole.RoleUID = r.ID
 	dbRole.Permission = permLevel
-	err = db.RoleInsertOrUpdate(dbRole)
+	err = db.RoleInsertOrUpdate(dbRole, groups)
 	if err != nil {
 		pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue editing that role. This is an issue with moebot not Discord.")
 		return

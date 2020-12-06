@@ -1,8 +1,16 @@
 package db
 
 import (
+	"context"
 	"log"
 	"time"
+
+	"github.com/volatiletech/sqlboiler/boil"
+
+	"github.com/volatiletech/sqlboiler/queries"
+	"github.com/volatiletech/sqlboiler/queries/qm"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
@@ -35,75 +43,59 @@ func scheduledOperationCreateTable() {
 	moeDb.Exec(scheduledOperationTable)
 }
 
-func ScheduledOperationQueryNow() ([]*types.ScheduledOperation, error) {
-	rows, err := moeDb.Query(scheduledOperationQueryNow)
+func ScheduledOperationQueryNow() (models.ScheduledOperationSlice, error) {
+	result, err := models.ScheduledOperations(qm.Where("planned_execution_time < CURRENT_TIMESTAMP")).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for current scheduled operations", err)
 		return nil, err
 	}
-	var result []*types.ScheduledOperation
-	for rows.Next() {
-		operation := new(types.ScheduledOperation)
-		err = rows.Scan(&operation.ID, &operation.ServerID, &operation.PlannedExecutionTime)
-		if err != nil {
-			log.Println("Error querying for current scheduled operations", err)
-			return nil, err
-		}
-		result = append(result, operation)
-	}
 	return result, nil
 }
 
-func ScheduledOperationQueryServer(serverID int) ([]*types.ScheduledOperation, error) {
-	rows, err := moeDb.Query(scheduledOperationQueryServer, serverID)
+func ScheduledOperationQueryServer(serverID int) (models.ScheduledOperationSlice, error) {
+	result, err := models.ScheduledOperations(qm.Where("server_id = ?", serverID)).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for server scheduled operations", err)
 		return nil, err
-	}
-	var result []*types.ScheduledOperation
-	for rows.Next() {
-		operation := new(types.ScheduledOperation)
-		err = rows.Scan(&operation.ID, &operation.ServerID, &operation.PlannedExecutionTime)
-		if err != nil {
-			log.Println("Error querying for server scheduled operations", err)
-			return nil, err
-		}
-		result = append(result, operation)
 	}
 	return result, nil
 }
 
 func ScheduledOperationUpdateTime(operationID int64) (time.Time, error) {
-	var nextExecution time.Time
-	err := moeDb.QueryRow(scheduledOperationUpdate, operationID).Scan(&nextExecution)
+	var sched models.ScheduledOperation
+	err := queries.Raw("UPDATE scheduled_operation SET planned_execution_time = CURRENT_TIMESTAMP + execution_interval WHERE id = $1 RETURNING *",
+		operationID).Bind(context.Background(), moeDb, &sched)
 	if err != nil {
 		log.Println("Error updating scheduled operations", err)
-		return nextExecution, err
+		return sched.PlannedExecutionTime, err
 	}
-	return nextExecution, nil
+	return sched.PlannedExecutionTime, nil
 }
 
 func ScheduledOperationDelete(operationID int64, serverID int) (bool, error) {
-	r, err := moeDb.Exec(scheduledOperationDelete, operationID, serverID)
+	rowsAffected, err := models.ScheduledOperations(qm.Where("id = ? AND server_id = ?", operationID, serverID)).DeleteAll(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error deleting scheduled operations", err)
 		return false, err
 	}
-	rowsAffected, err := r.RowsAffected()
 	return rowsAffected > 0, err
 }
 
-func scheduledOperationInsertNew(serverID int, operationType types.SchedulerType, interval string) (*types.ScheduledOperation, error) {
-	var insertID int64
-	err := moeDb.QueryRow(scheduledOperationInsert, serverID, operationType, interval).Scan(&insertID)
+func scheduledOperationInsertNew(serverID int, operationType types.SchedulerType, interval string) (*models.ScheduledOperation, error) {
+	operation := &models.ScheduledOperation{
+		ServerID:          serverID,
+		SchedulerType:     operationType,
+		ExecutionInterval: interval,
+	}
+	err := operation.Insert(context.Background(), moeDb, boil.Infer())
 	if err != nil {
 		log.Println("Error creating scheduled operation", err)
 		return nil, err
 	}
-	nextExecution, err := ScheduledOperationUpdateTime(insertID)
+	nextExecution, err := ScheduledOperationUpdateTime(int64(operation.ID))
 	if err != nil {
 		return nil, err
 	}
-	result := &types.ScheduledOperation{ID: insertID, ServerID: serverID, Type: operationType, PlannedExecutionTime: nextExecution}
-	return result, nil
+	operation.PlannedExecutionTime = nextExecution
+	return operation, nil
 }

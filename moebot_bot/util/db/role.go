@@ -1,135 +1,67 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"log"
-	"strconv"
 	"strings"
 
-	"github.com/camd67/moebot/moebot_bot/util"
+	"github.com/volatiletech/sqlboiler/boil"
+	"github.com/volatiletech/sqlboiler/queries/qm"
 
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
 const (
-	roleTable = `CREATE TABLE IF NOT EXISTS role(
-		Id SERIAL NOT NULL PRIMARY KEY,
-		ServerId INTEGER REFERENCES server(Id) ON DELETE CASCADE,
-		GroupId INTEGER REFERENCES role_group(Id) ON DELETE CASCADE,
-		RoleUid VARCHAR(20) NOT NULL UNIQUE,
-		Permission SMALLINT NOT NULL DEFAULT 2,
-		ConfirmationMessage VARCHAR CONSTRAINT role_confirmation_message_length CHECK (char_length(ConfirmationMessage) <= 1900),
-		ConfirmationSecurityAnswer VARCHAR CONSTRAINT role_confirmation_security_answer_length CHECK (char_length(ConfirmationMessage) <= 1900),
-		Trigger TEXT CONSTRAINT role_trigger_length CHECK(char_length(Trigger) <= 100)
-	)`
-
 	RoleMaxTriggerLength       = 100
 	RoleMaxTriggerLengthString = "100"
-
-	roleQueryServerRole = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE RoleUid = $1 AND ServerId = $2`
-	roleQueryServer     = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE ServerId = $1`
-	roleQuery           = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE Id = $1`
-	roleQueryTrigger    = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role WHERE UPPER(Trigger) = UPPER($1) AND ServerId = $2`
-	roleQueryGroup      = `SELECT Id, ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger FROM role 
-							INNER JOIN group_membership ON group_membership.role_id = role.Id
-							WHERE group_membership.group_id = $1`
-	roleQueryPermissions = `SELECT Permission FROM role WHERE RoleUid = ANY ($1::varchar[])`
-
-	roleUpdate = `UPDATE role SET Permission = $2, ConfirmationMessage = $3, ConfirmationSecurityAnswer = $4, Trigger = $5 WHERE Id = $1`
-
-	roleInsert = `INSERT INTO role(ServerId, RoleUid, Permission, ConfirmationMessage, ConfirmationSecurityAnswer, Trigger) VALUES($1, $2, $3, $4, $5, $6) RETURNING id`
-
-	roleDelete = `DELETE FROM role WHERE role.RoleUid = $1 AND role.ServerId = (SELECT server.id FROM server WHERE server.guilduid = $2)`
 )
 
-var (
-	roleUpdateTable = []string{
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS ConfirmationMessage VARCHAR`,
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS ConfirmationSecurityAnswer VARCHAR`,
-		`ALTER TABLE role DROP COLUMN IF EXISTS RoleType`,
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS Trigger TEXT`,
-		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_trigger_length`,
-		`ALTER TABLE role ADD CONSTRAINT role_trigger_length CHECK(char_length(Trigger) <= 100)`,
-		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_confirmation_message_length`,
-		`ALTER TABLE role ADD CONSTRAINT role_confirmation_message_length CHECK(char_length(ConfirmationMessage) <= 1900)`,
-		`ALTER TABLE role DROP CONSTRAINT IF EXISTS role_confirmation_security_answer_length`,
-		`ALTER TABLE role ADD CONSTRAINT role_confirmation_security_answer_length CHECK(char_length(ConfirmationSecurityAnswer) <= 1900)`,
-		`ALTER TABLE role ADD COLUMN IF NOT EXISTS GroupId INTEGER REFERENCES role_group(Id) ON DELETE CASCADE`,
-		`ALTER TABLE role ALTER COLUMN Permission SET DEFAULT 2`,
-	}
-)
+func RoleInsertOrUpdateWithoutRoles(role *models.Role) error {
+	return RoleInsertOrUpdate(role, nil)
+}
 
-func RoleInsertOrUpdate(role types.Role) error {
-	row := moeDb.QueryRow(roleQueryServerRole, role.RoleUid, role.ServerId)
-	var r types.Role
-	if err := row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
-		if err == sql.ErrNoRows {
-			// no row, so insert it add in default values
-			if role.Permission == -1 {
-				role.Permission = types.PermAll
-			}
-			tx, _ := moeDb.Begin()
-			var insertID int
-			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.ConfirmationMessage,
-				role.ConfirmationSecurityAnswer, role.Trigger).Scan(&insertID)
-			if err != nil {
-				log.Println("Error inserting role to db", err)
-				tx.Rollback()
-				return err
-			}
-			for _, groupID := range role.Groups {
-				err = groupMembershipAdd(insertID, groupID)
-				if err != nil {
-					log.Println("Error inserting role group relationship to db", err)
-					tx.Rollback()
-					return err
-				}
-			}
-			tx.Commit()
-		} else {
-			log.Println("Error scanning for role", err)
-			return err
-		}
-	} else {
-		// got a row, update it
-		r.Groups, err = groupMembershipQueryByRoleID(r.Id)
-		if err != nil && err != sql.ErrNoRows {
-			log.Println("Error scanning for role group relationships", err)
-			return err
-		}
-		if role.Permission > 0 {
-			r.Permission = role.Permission
-		}
-		if role.ConfirmationMessage.Valid {
-			r.ConfirmationMessage = role.ConfirmationMessage
-		}
-		if role.ConfirmationSecurityAnswer.Valid {
-			r.ConfirmationSecurityAnswer = role.ConfirmationSecurityAnswer
-		}
-		if role.Trigger.Valid {
-			r.Trigger = role.Trigger
-		}
+func RoleInsertOrUpdate(role *models.Role, groups models.RoleGroupSlice) error {
+	r, err := models.Roles(qm.Where("server_id = ? AND role_uid = ?", role.ServerID, role.RoleUID)).One(context.Background(), moeDb)
+	if err == sql.ErrNoRows {
 		tx, _ := moeDb.Begin()
-		_, err = moeDb.Exec(roleUpdate, r.Id, r.Permission, r.ConfirmationMessage, r.ConfirmationSecurityAnswer, r.Trigger)
+		if role.Permission == -1 {
+			role.Permission = types.PermAll
+		}
+		err = role.Insert(context.Background(), moeDb, boil.Infer())
 		if err != nil {
-			log.Println("Error updating role to db: Id "+strconv.Itoa(r.Id), err)
+			log.Println("Error inserting role to db ", err)
 			tx.Rollback()
 			return err
 		}
-		groupsToAdd := util.Subtract(role.Groups, r.Groups)
-		for _, groupID := range groupsToAdd {
-			err = groupMembershipAdd(r.Id, groupID)
+		if groups != nil {
+			err = role.SetRoleGroups(context.Background(), moeDb, false, groups...)
 			if err != nil {
-				log.Println("Error inserting role group relationship to db", err)
+				log.Println("Error updating role group relationship to db", err)
 				tx.Rollback()
 				return err
 			}
 		}
-		groupsToRemove := util.Subtract(r.Groups, role.Groups)
-		for _, groupID := range groupsToRemove {
-			err = groupMembershipRemove(r.Id, groupID)
+		tx.Commit()
+	} else {
+		r.ServerID = role.ServerID
+		r.RoleUID = role.RoleUID
+		r.Permission = role.Permission
+		r.Trigger = role.Trigger
+		r.ConfirmationMessage = role.ConfirmationMessage
+		r.ConfirmationSecurityAnswer = role.ConfirmationSecurityAnswer
+		tx, _ := moeDb.Begin()
+		_, err = r.Update(context.Background(), moeDb, boil.Infer())
+		if err != nil {
+			log.Println("Error updating role", err)
+			tx.Rollback()
+			return err
+		}
+		if groups != nil {
+			err = r.SetRoleGroups(context.Background(), moeDb, false, groups...)
 			if err != nil {
-				log.Println("Error removing role group relationship to db", err)
+				log.Println("Error updating role group relationship to db", err)
 				tx.Rollback()
 				return err
 			}
@@ -139,135 +71,74 @@ func RoleInsertOrUpdate(role types.Role) error {
 	return nil
 }
 
-func RoleQueryOrInsert(role types.Role) (r types.Role, err error) {
-	row := moeDb.QueryRow(roleQueryServerRole, role.ServerId, role.RoleUid)
-	if err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger); err != nil {
-		if err == sql.ErrNoRows {
-			// no row, so insert it add in default values
-			if role.Permission == -1 {
-				role.Permission = types.PermAll
-			}
-			tx, _ := moeDb.Begin()
-			err = moeDb.QueryRow(roleInsert, role.ServerId, strings.TrimSpace(role.RoleUid), role.Permission, role.ConfirmationMessage,
-				role.ConfirmationSecurityAnswer, role.Trigger).Scan(&role.Id)
-			if err != nil {
-				log.Println("Error inserting role to db")
-				tx.Rollback()
-				return
-			}
-			for _, groupID := range role.Groups {
-				err = groupMembershipAdd(role.Id, groupID)
-				if err != nil {
-					log.Println("Error inserting role group relationship to db", err)
-					tx.Rollback()
-					return
-				}
-			}
-			tx.Commit()
-			r = role
-		}
-	} else {
-		r.Groups, err = groupMembershipQueryByRoleID(r.Id)
-	}
-	// got a row, return it
-	return
-}
-
-func RoleQueryServer(s types.Server) (roles []types.Role, err error) {
-	rows, err := moeDb.Query(roleQueryServer, s.Id)
+func RoleQueryServer(s *models.Server) (roles models.RoleSlice, err error) {
+	roles, err = models.Roles(
+		qm.Where("server_id = ?", s.ID),
+		qm.Load("RoleGroups"),
+	).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for role in server role query", err)
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var r types.Role
-		if err = rows.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer,
-			&r.Trigger); err != nil {
-
-			log.Println("Error scanning from role table:", err)
-			return
-		}
-		if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
-			log.Println("Error scanning from role group relation table:", err)
-			return
-		}
-		roles = append(roles, r)
 	}
 	return
 }
 
-func RoleQueryGroup(groupId int) (roles []types.Role, err error) {
-	rows, err := moeDb.Query(roleQueryGroup, groupId)
+func RoleQueryGroup(groupId int) (roles models.RoleSlice, err error) {
+	roles, err = models.Roles(
+		qm.InnerJoin("group_membership gm ON gm.role_id = role.Id"),
+		qm.Where("gm.role_group_id = $1", groupId),
+	).All(context.Background(), moeDb)
 	if err != nil {
-		log.Println("Error querying for role in group role query", err)
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var r types.Role
-		if err = rows.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer,
-			&r.Trigger); err != nil {
-
-			log.Println("Error scanning from role table:", err)
-			return
-		}
-		if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
-			log.Println("Error scanning from role group relation table:", err)
-			return
-		}
-		roles = append(roles, r)
+		log.Println("Error querying for role in role group query", err)
 	}
 	return
 }
 
-func RoleQueryTrigger(trigger string, serverId int) (r types.Role, err error) {
-	row := moeDb.QueryRow(roleQueryTrigger, trigger, serverId)
-	err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
-	if err != nil && err != sql.ErrNoRows {
+func RoleQueryTrigger(trigger string, serverId int) (r *models.Role, err error) {
+	r, err = models.Roles(
+		qm.Where("server_id = ? AND UPPER(trigger) = UPPER(?)", serverId, trigger),
+		qm.Load("RoleGroups"),
+	).One(context.Background(), moeDb)
+	if err != nil {
 		log.Println("Error querying for role by trigger", err)
 	}
-	if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
-		log.Println("Error scanning from role group relation table:", err)
-		return
-	}
-	// return whatever we get, error or row
 	return
 }
 
-func RoleQueryRoleUid(roleUid string, serverId int) (r types.Role, err error) {
-	row := moeDb.QueryRow(roleQueryServerRole, roleUid, serverId)
-	err = row.Scan(&r.Id, &r.ServerId, &r.RoleUid, &r.Permission, &r.ConfirmationMessage, &r.ConfirmationSecurityAnswer, &r.Trigger)
-	if err == nil {
-		if r.Groups, err = groupMembershipQueryByRoleID(r.Id); err != nil {
-			log.Println("Error scanning from role group relation table:", err)
-		}
-	} else {
-		if err != sql.ErrNoRows {
-			log.Println("Error querying for role by UID and serverID", err)
-		}
+func RoleQueryRoleUid(roleUid string, serverId int) (r *models.Role, err error) {
+	r, err = models.Roles(
+		qm.Where("role_uid = ? AND server_id = ?", roleUid, serverId),
+		qm.Load("RoleGroups"),
+	).One(context.Background(), moeDb)
+	if err == sql.ErrNoRows {
+		r = &models.Role{}
 	}
-	// return whatever we get, error or row
 	return
 }
 
 func RoleQueryPermission(roleUids []string) (p []types.Permission) {
-	idCollection := "{" + strings.Join(roleUids, ",") + "}"
-	r, err := moeDb.Query(roleQueryPermissions, idCollection)
+	if len(roleUids) == 0 {
+		return
+	}
+	convertedUids := make([]interface{}, len(roleUids))
+	for index, num := range roleUids {
+		convertedUids[index] = num
+	}
+
+	roles, err := models.Roles(qm.WhereIn("role_uid in ?", convertedUids...)).All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for user permissions", err)
 		return
 	}
-	for r.Next() {
-		var newPerm types.Permission
-		r.Scan(&newPerm)
-		p = append(p, newPerm)
+
+	for _, role := range roles {
+		p = append(p, role.Permission)
 	}
 	return
 }
 
 func RoleDelete(roleUid string, guildUid string) error {
-	_, err := moeDb.Exec(roleDelete, roleUid, guildUid)
+	s, _ := ServerQueryByGuildUid(guildUid)
+	_, err := models.Roles(qm.Where("role_uid = ? AND server_id = ?", roleUid, s.ID)).DeleteAll(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error deleting role: ", roleUid)
 	}
@@ -347,19 +218,4 @@ Gets a string representing all the possible assignable permission levels
 */
 func GetAssignableRoles() string {
 	return "{All, Mod}"
-}
-
-func roleCreateTable() {
-	_, err := moeDb.Exec(roleTable)
-	if err != nil {
-		log.Println("Error creating role table", err)
-		return
-	}
-	for _, alter := range roleUpdateTable {
-		_, err = moeDb.Exec(alter)
-		if err != nil {
-			log.Println("Error alterting role table", err)
-			return
-		}
-	}
 }

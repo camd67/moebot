@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -25,7 +26,7 @@ func (r *Confirmation) Check(session *discordgo.Session, action *RoleAction) (su
 		}
 	}
 	// we only want to check for a confirmation when we have an actual confirmation message and they don't already have the role
-	if action.Role.ConfirmationMessage.Valid && action.Role.ConfirmationMessage.String != "" && !util.StrContains(action.Member.Roles, action.Role.RoleUid, util.CaseSensitive) {
+	if action.Role.ConfirmationMessage.Valid && action.Role.ConfirmationMessage.String != "" && !util.StrContains(action.Member.Roles, action.Role.RoleUID, util.CaseSensitive) {
 		// no confirm codes provided, given them their confirmation code
 		if len(confirmCodes) <= 0 {
 			err := r.sendConfirmationMessage(session, action.Channel, action.Role, action.Member)
@@ -43,7 +44,7 @@ func (r *Confirmation) Check(session *discordgo.Session, action *RoleAction) (su
 					"this role. Use `" + r.ComPrefix + " " + action.Role.Trigger.String + "` to receive a DM containing detailed instructions."
 			}
 			if !util.StrContains(confirmCodes, action.Role.ConfirmationSecurityAnswer.String, util.CaseSensitive) ||
-				!util.StrContains(confirmCodes, "-"+r.getRoleCode(action.Role.RoleUid, action.Member.User.ID), util.CaseSensitive) {
+				!util.StrContains(confirmCodes, "-"+r.getRoleCode(action.Role.RoleUID, action.Member.User.ID), util.CaseSensitive) {
 				return false, "Sorry, you need to insert the correct confirmation code to access this role."
 			}
 		} else {
@@ -51,7 +52,7 @@ func (r *Confirmation) Check(session *discordgo.Session, action *RoleAction) (su
 				return false, "Sorry, you need to insert a confirmation code to access this role. Use `" +
 					r.ComPrefix + " " + action.Role.Trigger.String + "` to receive a DM containing detailed instructions."
 			}
-			if !util.StrContains(confirmCodes, "-"+r.getRoleCode(action.Role.RoleUid, action.Member.User.ID), util.CaseSensitive) {
+			if !util.StrContains(confirmCodes, "-"+r.getRoleCode(action.Role.RoleUID, action.Member.User.ID), util.CaseSensitive) {
 				return false, "Sorry, you need to insert the correct confirmation code to access this role."
 			}
 		}
@@ -63,13 +64,13 @@ func (r *Confirmation) Apply(session *discordgo.Session, action *RoleAction) (su
 	return true, ""
 }
 
-func (r *Confirmation) sendConfirmationMessage(session *discordgo.Session, channel *discordgo.Channel, role *types.Role, member *discordgo.Member) error {
+func (r *Confirmation) sendConfirmationMessage(session *discordgo.Session, channel *discordgo.Channel, role *models.Role, member *discordgo.Member) error {
 	userChannel, err := session.UserChannelCreate(member.User.ID)
 	if err != nil {
 		// could log error creating user channel, but seems like it'll clutter the logs for a valid scenario..
 		return err
 	}
-	roleCode := r.getRoleCode(role.RoleUid, member.User.ID)
+	roleCode := r.getRoleCode(role.RoleUID, member.User.ID)
 	var messageText string
 	if strings.Contains(strings.ToLower(role.ConfirmationMessage.String), types.RoleCodeSearchText) {
 		messageText = strings.Replace(role.ConfirmationMessage.String, types.RoleCodeSearchText, roleCode, -1)

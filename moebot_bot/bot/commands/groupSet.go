@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -45,13 +46,13 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 			message.WriteString("`")
 			message.WriteString(g.Name)
 			message.WriteString("`-Type(`")
-			message.WriteString(db.GetStringFromGroupType(g.Type))
+			message.WriteString(db.GetStringFromGroupType(g.GroupType))
 			message.WriteString("`), ")
 		}
 		pack.session.ChannelMessageSend(pack.channel.ID, message.String())
 	} else if hasDelete {
 		// we want to delete the group they gave us (if it exists)
-		dbRoleGroup, err := db.RoleGroupQueryName(deleteName, server.Id)
+		dbRoleGroup, err := db.RoleGroupQueryName(deleteName, server.ID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				pack.session.ChannelMessageSend(pack.channel.ID, "It doesn't look like that's a group you can delete! Please provide a group that was "+
@@ -61,7 +62,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 			}
 			return
 		}
-		err = db.RoleGroupDelete(dbRoleGroup.Id)
+		err = db.RoleGroupDelete(dbRoleGroup.ID)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error deleting that role. This is an error with moebot not discord!")
 			return
@@ -74,12 +75,12 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 			return
 		}
 		// add in a new group, or update an existing one
-		dbRoleGroup, err := db.RoleGroupQueryName(groupName, server.Id)
+		dbRoleGroup, err := db.RoleGroupQueryName(groupName, server.ID)
 		var dbOperationType string
 		if err != nil {
 			if err == sql.ErrNoRows {
 				dbOperationType = "added"
-				dbRoleGroup = types.RoleGroup{}
+				dbRoleGroup = &models.RoleGroup{}
 			} else {
 				pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an error finding that role group. This is an error with moebot "+
 					"not discord!")
@@ -100,7 +101,7 @@ func (gc *GroupSetCommand) Execute(pack *CommPackage) {
 			pack.session.ChannelMessageSend(pack.channel.ID, "You must provide a valid group type from the following: "+types.OptionsForGroupType)
 			return
 		}
-		dbRoleGroup.Type = newType
+		dbRoleGroup.GroupType = newType
 		_, err = db.RoleGroupInsertOrUpdate(dbRoleGroup, server)
 		if err != nil {
 			pack.session.ChannelMessageSend(pack.channel.ID, "Sorry, there was an issue updating the role group. This most likely means your change "+

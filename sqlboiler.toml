@@ -1,0 +1,60 @@
+# Ideally your local dev environment should match this config file
+[psql]
+	dbname 	= "moebot"
+	host	= "localhost"
+	user	= "moebot"
+	pass 	= "moebotpass"
+	schema	= "public"
+	sslmode	= "disable"
+
+
+
+[[types]]
+	[types.match]
+	name = "group_type"
+
+	[types.replace]
+	type	=	"types.GroupType"
+
+	[types.imports]
+	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']
+
+[[types]]
+	[types.match]
+	name = "metric_type"
+
+	[types.replace]
+	type	=	"moetypes.MetricType"
+
+	[types.imports]
+	third_party = ['moetypes "github.com/camd67/moebot/moebot_bot/util/db/types"']
+
+[[types]]
+	[types.match]
+	name = "permission"
+
+	[types.replace]
+	type	=	"types.Permission"
+
+	[types.imports]
+	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']
+
+[[types]]
+	[types.match]
+	name = "raffle_type"
+
+	[types.replace]
+	type	=	"types.RaffleType"
+
+	[types.imports]
+	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']
+
+[[types]]
+	[types.match]
+	name = "scheduler_type"
+
+	[types.replace]
+	type	=	"types.SchedulerType"
+
+	[types.imports]
+	third_party = ['"github.com/camd67/moebot/moebot_bot/util/db/types"']

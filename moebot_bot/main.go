@@ -47,8 +47,9 @@ func main() {
 		bot.Config["redditPassword"])
 	if err != nil {
 		log.Println("Error getting reddit session, related functionality won't work", err)
+	} else {
+		log.Println("Successfully connected to reddit...")
 	}
-	log.Println("Sucessfully connected to reddit...")
 
 	bot.SetupMoebot(discord, redditHandle)
 	defer db.DisconnectAll()

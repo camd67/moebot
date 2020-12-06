@@ -1,41 +1,23 @@
 package db
 
 import (
+	"context"
 	"log"
 
-	"github.com/camd67/moebot/moebot_bot/util/db/types"
+	"github.com/volatiletech/sqlboiler/boil"
+
+	"github.com/volatiletech/sqlboiler/queries"
+
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 )
 
-const (
-	pollTable = `CREATE TABLE IF NOT EXISTS poll(
-		Id SERIAL NOT NULL PRIMARY KEY,
-		Title VARCHAR(100) NOT NULL,
-		ChannelId INTEGER NOT NULL REFERENCES channel(Id) ON DELETE CASCADE,
-		UserUid VARCHAR(20) NOT NULL,
-		MessageUid VARCHAR(20),
-		Open BOOLEAN NOT NULL DEFAULT TRUE
-	)`
-
-	pollSelect = `SELECT Id, Title, ChannelId, UserUid, MessageUid, Open FROM poll WHERE Id = $1`
-
-	pollSelectOpen = `SELECT Id, Title, ChannelId, UserUid, MessageUid, Open FROM poll WHERE Open = TRUE`
-
-	pollClose = `UPDATE poll SET Open = FALSE WHERE Id = $1`
-
-	pollInsert = `INSERT INTO poll (Title, ChannelId, UserUid) VALUES($1, $2, $3) RETURNING Id`
-
-	pollSetMessageId = `UPDATE poll SET MessageUid = $1 WHERE Id = $2`
-)
-
-func PollQuery(id int) (*types.Poll, error) {
-	var err error
-	row := moeDb.QueryRow(pollSelect, id)
-	result := new(types.Poll)
-	if err = row.Scan(&result.Id, &result.Title, &result.ChannelId, &result.UserUid, &result.MessageUid, &result.Open); err != nil {
+func PollQuery(id int) (*models.Poll, error) {
+	result, err := models.FindPoll(context.Background(), moeDb, id)
+	if err != nil {
 		log.Println("Error querying for poll", err)
 		return nil, err
 	}
-	result.Options, err = PollOptionQuery(result.Id)
+	result.R.PollOptions, err = PollOptionQuery(result.ID)
 	if err != nil {
 		log.Println("Error retreiving poll options", err)
 		return nil, err
@@ -43,23 +25,17 @@ func PollQuery(id int) (*types.Poll, error) {
 	return result, nil
 }
 
-func PollsOpenQuery() ([]*types.Poll, error) {
-	rows, err := moeDb.Query(pollSelectOpen)
+func PollsOpenQuery() (models.PollSlice, error) {
+	result, err := models.Polls().All(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error querying for polls", err)
 		return nil, err
-	}
-	result := []*types.Poll{}
-	for rows.Next() {
-		p := new(types.Poll)
-		rows.Scan(&p.Id, &p.Title, &p.ChannelId, &p.UserUid, &p.MessageUid, &p.Open)
-		result = append(result, p)
 	}
 	return result, nil
 }
 
 func PollClose(id int) error {
-	_, err := moeDb.Exec(pollClose, id)
+	_, err := queries.Raw("UPDATE poll SET Open = FALSE WHERE id = $1", id).ExecContext(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error closing the poll", err)
 		return err
@@ -67,8 +43,8 @@ func PollClose(id int) error {
 	return nil
 }
 
-func PollAdd(poll *types.Poll) error {
-	err := moeDb.QueryRow(pollInsert, poll.Title, poll.ChannelId, poll.UserUid).Scan(&poll.Id)
+func PollAdd(poll *models.Poll) error {
+	err := poll.Insert(context.Background(), moeDb, boil.Whitelist("title", "channel_id", "user_uid"))
 	if err != nil {
 		log.Println("Error creating the poll", err)
 		return err
@@ -76,11 +52,18 @@ func PollAdd(poll *types.Poll) error {
 	return nil
 }
 
-func PollSetMessageId(poll *types.Poll) error {
-	_, err := moeDb.Exec(pollSetMessageId, poll.MessageUid, poll.Id)
+func PollSetMessageId(poll *models.Poll) error {
+	_, err := queries.Raw("UPDATE poll SET  message_uid = $1 WHERE id = $2",
+		poll.MessageUID.String, poll.ID).ExecContext(context.Background(), moeDb)
 	if err != nil {
 		log.Println("Error updating the message Id for the poll", err)
 		return err
 	}
 	return nil
+}
+
+func PollSetOptions(poll *models.Poll, options models.PollOptionSlice) *models.Poll {
+	// adding options in db package since we need db handle even though we aren't adding them to db
+	poll.SetPollOptions(context.Background(), moeDb, false, options...)
+	return poll
 }

@@ -2,11 +2,11 @@ package rolerules
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"github.com/camd67/moebot/moebot_bot/util/db/types"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 )
 
 type NoRemove struct {
-	ReferenceGroup types.RoleGroup
+	ReferenceGroup *models.RoleGroup
 }
 
 func (r *NoRemove) Check(session *discordgo.Session, action *RoleAction) (success bool, message string) {

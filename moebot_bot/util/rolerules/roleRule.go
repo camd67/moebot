@@ -5,6 +5,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 )
 
@@ -13,8 +14,8 @@ type RoleActionType int
 
 //RoleAction Action being performed on the role
 type RoleAction struct {
-	Role            *types.Role
-	UserRank        *types.UserServerRank
+	Role            *models.Role
+	UserRank        *models.UserServerRank
 	Member          *discordgo.Member
 	Guild           *discordgo.Guild
 	Channel         *discordgo.Channel
@@ -35,26 +36,26 @@ type RoleRule interface {
 	Apply(session *discordgo.Session, action *RoleAction) (success bool, message string)
 }
 
-func GetRulesForRole(server *types.Server, role *types.Role, comPrefix string) ([]RoleRule, error) {
+func GetRulesForRole(server *models.Server, role *models.Role, comPrefix string) ([]RoleRule, error) {
 	var result []RoleRule
-	if server.VeteranRole.String == role.RoleUid && server.VeteranRank.Valid {
-		result = append(result, &Points{PointsTreshold: int(server.VeteranRank.Int64)})
+	if server.VeteranRole.String == role.RoleUID && server.VeteranRank.Valid {
+		result = append(result, &Points{PointsTreshold: int(server.VeteranRank.Int)})
 	}
 	if role.ConfirmationMessage.Valid {
 		result = append(result, &Confirmation{ComPrefix: comPrefix})
 	}
-	for _, gID := range role.Groups {
-		group, err := db.RoleGroupQueryId(gID)
+	for _, g := range role.R.RoleGroups {
+		group, err := db.RoleGroupQueryId(g.ID)
 		if err != nil {
 			log.Println("Error while retrieving role group during rules initialization", err)
 			return nil, err
 		}
-		relatedRoles, err := db.RoleQueryGroup(gID)
+		relatedRoles, err := db.RoleQueryGroup(g.ID)
 		if err != nil {
 			log.Println("Error while retrieving related group roles during rules initialization", err)
 			return nil, err
 		}
-		switch group.Type {
+		switch group.GroupType {
 		case types.GroupTypeExclusive:
 			result = append(result, &Exclusive{ExclusiveRoles: relatedRoles})
 			break

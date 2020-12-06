@@ -13,7 +13,7 @@ import (
 	"github.com/camd67/moebot/moebot_bot/bot/permissions"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
-	"github.com/camd67/moebot/moebot_bot/util/db/types"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/event"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 	"github.com/camd67/moebot/moebot_bot/util/reddit"
@@ -47,7 +47,7 @@ func SetupMoebot(session *discordgo.Session, redditHandle *reddit.Handle) {
 	if dbHost == "" {
 		dbHost = "database"
 	}
-	db.SetupDatabase(dbHost, Config["dbPass"], Config["moeDataPass"])
+	db.SetupDatabase(dbHost, Config["moeDataPass"])
 	addGlobalHandlers(session)
 	setupOperations(session, redditHandle)
 	startOperationsTimer(commands.NewSchedulerFactory(session))
@@ -64,8 +64,6 @@ func setupOperations(session *discordgo.Session, redditHandle *reddit.Handle) {
 		&commands.GroupSetCommand{ComPrefix: ComPrefix},
 		&commands.HelpCommand{ComPrefix: ComPrefix, Commands: getCommands, Checker: checker}, //using a delegate here because it will remain accurate regardless of what gets added to operations
 		&commands.ChangelogCommand{Version: version},
-		&commands.RaffleCommand{MasterId: masterId, DebugChannel: masterDebugChannel},
-		&commands.SubmitCommand{ComPrefix: ComPrefix},
 		&commands.EchoCommand{},
 		&commands.PermitCommand{},
 		&commands.PingCommand{},
@@ -279,7 +277,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			// We don't need to process anything else since by typing a bot command they couldn't type a rule confirmation
 			return
 		}
-		runCommand(session, message.Message, guild, channel, member, &userProfile, &timer)
+		runCommand(session, message.Message, guild, channel, member, userProfile, &timer)
 	}
 	// In this case we don't care about the error state as the user doesn't need to know we failed to serialize the metric and we already logged it
 	// Disabled for now as we're getting incorrect information in the db...
@@ -324,7 +322,7 @@ func ready(session *discordgo.Session, event *discordgo.Ready) {
 Helper handler to check if the message provided is a command and if so, executes the command
 */
 func runCommand(session *discordgo.Session, message *discordgo.Message, guild *discordgo.Guild, channel *discordgo.Channel, member *discordgo.Member,
-	userProfile *types.UserProfile, timer *event.Timer) {
+	userProfile *models.UserProfile, timer *event.Timer) {
 	messageParts := strings.Split(message.Content, " ")
 	if len(messageParts) <= 1 {
 		// bad command, missing command after prefix
@@ -359,8 +357,8 @@ func startOperationsTimer(factory *commands.SchedulerFactory) {
 				continue
 			}
 			for _, o := range operations {
-				scheduler := factory.CreateScheduler(o.Type)
-				scheduler.Execute(o.ID)
+				scheduler := factory.CreateScheduler(o.SchedulerType)
+				scheduler.Execute(int64(o.ID))
 			}
 		}
 	}()

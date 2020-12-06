@@ -1,5 +1,7 @@
 /config/*.secret
 
+# Generated sqlboiler code
+/moebot_bot/util/db/models/
 
 # Created by https://www.gitignore.io/api/go,jetbrains
 

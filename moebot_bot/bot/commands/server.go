@@ -9,8 +9,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
 	"github.com/camd67/moebot/moebot_bot/util/db"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/db/types"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
+	"github.com/volatiletech/null"
 )
 
 const serverPossibleCommands = "Possible configs: {WelcomeMessage -> string; max length " + db.MaxMessageLengthString + "} " +
@@ -52,15 +54,15 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 		configValue = strings.Join(pack.params[configKeyIndex+1:], " ")
 	}
 	currentVeteranUID := s.VeteranRole //Temporary before switching server veteran to an actual point-based group
-	if sc.processServerConfigKey(configKey, configValue, pack, &s, shouldClear) {
+	if sc.processServerConfigKey(configKey, configValue, pack, s, shouldClear) {
 		if currentVeteranUID != s.VeteranRole && s.VeteranRole.Valid {
-			r, err := db.RoleQueryRoleUid(s.VeteranRole.String, s.Id)
+			r, err := db.RoleQueryRoleUid(s.VeteranRole.String, s.ID)
 			if err != nil && err == sql.ErrNoRows {
-				r.ServerId = s.Id
-				r.RoleUid = s.VeteranRole.String
+				r.ServerID.SetValid(s.ID)
+				r.RoleUID = s.VeteranRole.String
 				r.Permission = types.PermAll
 				r.Trigger.Scan("veteran")
-				err = db.RoleInsertOrUpdate(r)
+				err = db.RoleInsertOrUpdateWithoutRoles(r)
 				if err != nil {
 					pack.session.ChannelMessageSend(pack.message.ChannelID, "Sorry, there was an error updating the veteran role. Your change was probably not applied.")
 					return
@@ -76,13 +78,13 @@ func (sc *ServerCommand) Execute(pack *CommPackage) {
 	}
 }
 
-func (sc *ServerCommand) processServerConfigKey(configKey string, configValue string, pack *CommPackage, s *types.Server, shouldClear bool) (success bool) {
+func (sc *ServerCommand) processServerConfigKey(configKey string, configValue string, pack *CommPackage, s *models.Server, shouldClear bool) (success bool) {
 	// todo: This function is starting to become a little cumbersome... Some has been refactored but more can be done
 	// We only have a help command if we got an empty config value and it's not a clear command
 	isHelp := configValue == "" && !shouldClear
 	if configKey == "VETERANRANK" {
 		if isHelp {
-			pack.session.ChannelMessageSend(pack.channel.ID, "VeteranRank: "+strconv.Itoa(int(util.GetInt64OrDefault(s.VeteranRank))))
+			pack.session.ChannelMessageSend(pack.channel.ID, "VeteranRank: "+strconv.Itoa(int(util.GetIntOrDefault(s.VeteranRank))))
 		} else if shouldClear {
 			s.VeteranRank.Scan(nil)
 		} else {
@@ -184,7 +186,7 @@ func (sc *ServerCommand) processServerConfigKey(configKey string, configValue st
 	return !isHelp
 }
 
-func (sc *ServerCommand) defaultServerRoleSet(pack *CommPackage, configValue string, toSet *sql.NullString, isHelp bool, name string,
+func (sc *ServerCommand) defaultServerRoleSet(pack *CommPackage, configValue string, toSet *null.String, isHelp bool, name string,
 	shouldClear bool) (shouldReturn bool) {
 
 	if isHelp {

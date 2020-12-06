@@ -14,10 +14,3 @@ const (
 
 	OptionsForGroupType = "ANY, EXC, ENR, NOM"
 )
-
-type RoleGroup struct {
-	Id       int
-	ServerId int
-	Name     string
-	Type     GroupType
-}

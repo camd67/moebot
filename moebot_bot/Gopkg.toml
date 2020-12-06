@@ -39,3 +39,15 @@
 [[constraint]]
   branch = "master"
   name = "github.com/jzelinskie/geddit"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/pkg/errors"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/volatiletech/null"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/volatiletech/sqlboiler"

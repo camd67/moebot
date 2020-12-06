@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/volatiletech/null"
 )
 
 const (
@@ -74,7 +76,7 @@ func MakeStringCode(s string) string {
 	return "`" + s + "`"
 }
 
-func GetStringOrDefault(s sql.NullString) string {
+func GetStringOrDefault(s null.String) string {
 	if s.Valid {
 		return s.String
 	} else {
@@ -85,6 +87,14 @@ func GetStringOrDefault(s sql.NullString) string {
 // Forces title case for the given string. This is necessary when your string may contain upper case characters
 func ForceTitleCase(s string) string {
 	return strings.Title(strings.ToLower(s))
+}
+
+func GetIntOrDefault(i null.Int) int {
+	if i.Valid {
+		return i.Int
+	} else {
+		return -1
+	}
 }
 
 func GetInt64OrDefault(i sql.NullInt64) int64 {

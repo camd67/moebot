@@ -6,12 +6,12 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/camd67/moebot/moebot_bot/util"
-	"github.com/camd67/moebot/moebot_bot/util/db/types"
+	"github.com/camd67/moebot/moebot_bot/util/db/models"
 	"github.com/camd67/moebot/moebot_bot/util/moeDiscord"
 )
 
 type Exclusive struct {
-	ExclusiveRoles []types.Role
+	ExclusiveRoles models.RoleSlice
 }
 
 func (r *Exclusive) Check(session *discordgo.Session, action *RoleAction) (success bool, message string) {
@@ -27,16 +27,16 @@ func (r *Exclusive) Apply(session *discordgo.Session, action *RoleAction) (succe
 	foundOtherRole := false
 	for _, dbGroupRole := range r.ExclusiveRoles {
 		// only send a message that we removed the role if they actually have it and it's not the one we just added
-		if dbGroupRole.RoleUid != action.Role.RoleUid && util.StrContains(action.Member.Roles, dbGroupRole.RoleUid, util.CaseSensitive) {
-			roleToRemove := moeDiscord.FindRoleById(action.Guild.Roles, dbGroupRole.RoleUid)
+		if dbGroupRole.RoleUID != action.Role.RoleUID && util.StrContains(action.Member.Roles, dbGroupRole.RoleUID, util.CaseSensitive) {
+			roleToRemove := moeDiscord.FindRoleById(action.Guild.Roles, dbGroupRole.RoleUID)
 
 			// Check for an error first
-			err = session.GuildMemberRoleRemove(action.Guild.ID, action.Member.User.ID, dbGroupRole.RoleUid)
+			err = session.GuildMemberRoleRemove(action.Guild.ID, action.Member.User.ID, dbGroupRole.RoleUID)
 			if err != nil {
 				builder.WriteString("\nFailed to remove: `")
 				builder.WriteString(roleToRemove.Name)
 				builder.WriteString("`")
-				log.Println("error removing role from "+action.Member.User.ID+" with role "+action.Role.RoleUid+" with error: ", err)
+				log.Println("error removing role from "+action.Member.User.ID+" with role "+action.Role.RoleUID+" with error: ", err)
 				continue
 			}
 
